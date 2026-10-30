@@ -12,14 +12,15 @@ const id=()=>crypto.randomUUID();
 const state={
  user:null,role:null,classId:null,page:'checkout',shows:[],selectedShow:'',
  student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',
- receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false
+ receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,
+ ticketCode:'',ticketResult:null,shift:null,printLog:[],cameraStream:null,cameraTimer:null,scanBusy:false,online:navigator.onLine
 };
 function movie(){
  return state.shows.find(x=>x.id===state.selectedShow)||null;
 }
 function canSell(){
  const sh=movie();
- return sh&&sh.active&&sh.show_date>=today()&&state.student&&state.quantity>=1&&state.quantity<=20;
+ return state.online&&sh&&sh.active&&sh.show_date>=today()&&state.student&&state.quantity>=1&&state.quantity<=20;
 }
 function total(){
  const sh=movie();
@@ -28,11 +29,16 @@ function total(){
 function header(){
  return '<header class="movie-header"><div class="movie-brand"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
  '<div><strong>Movie Booth POS</strong><small>BulSU Laboratory High School · Foundation Week</small></div></div>'+
- '<div class="movie-head-right"><span class="movie-role">'+(state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span>'+
+ '<div class="movie-head-right"><span class="movie-role">'+esc(state.role.replaceAll('_',' ').toUpperCase())+'</span>'+
  '<a href="./login.html#overview" class="movie-return">Back to LSC Dashboard</a></div></header>';
 }
 function tabs(){
- const items=[['checkout','Ticket Checkout'],['reports','Sales Reports']];
+ const items=[];
+ if(['official','class_mayor','cashier'].includes(state.role))items.push(['checkout','Ticket Checkout']);
+ if(['official','class_mayor','ticket_checker'].includes(state.role))items.push(['validator','Ticket Check-In']);
+ if(['official','class_mayor','cashier'].includes(state.role))items.push(['shifts','Cashier Shifts']);
+ if(['official','class_mayor','cashier','event_monitor'].includes(state.role))items.push(['reports','Sales Reports']);
+ if(['official','class_mayor','cashier'].includes(state.role))items.push(['recovery','Print Recovery']);
  if(state.role==='official')items.push(['setup','Movie Setup']);
  return '<nav class="movie-tabs" aria-label="Movie POS navigation">'+items.map(x=>
  '<button type="button" data-page="'+x[0]+'" class="'+(state.page===x[0]?'selected':'')+'">'+esc(x[1])+'</button>').join('')+'</nav>';
@@ -57,6 +63,7 @@ function checkout(){
  const cash=Number(state.cash||0),t=total();
  return '<div class="movie-layout"><section class="movie-panel"><div class="movie-panel-head"><h2>Ticket Checkout</h2><span>1 Student ID · Multiple tickets</span></div>'+
  (!options.length?'<div class="movie-alert">No active upcoming movie showings yet. An LSC Official must set a title, show date and ticket price in Movie Setup before selling.</div>':'')+
+ (selected&&selected.seat_capacity!==null?'<div class="movie-alert">Capacity: '+selected.seat_capacity+' seats. Availability is checked by the server at checkout to prevent overselling.</div>':'')+
  '<div class="movie-fields"><label>Movie showing<select id="movieShow"'+(!options.length?' disabled':'')+'>'+
  (options.length?options.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===state.selectedShow?' selected':'')+'>'+esc(x.title)+' · '+esc(x.show_date)+' · '+money(x.price_php)+'</option>').join(''):'<option value="">No show available</option>')+
  '</select></label>'+
@@ -114,11 +121,13 @@ function setup(){
  '<label>Movie title<input name="title" required minlength="3" maxlength="120" placeholder="Enter the movie booth title"></label>'+
  '<label>Showing date<input name="show_date" required type="date" min="'+today()+'" value="'+today()+'"></label>'+
  '<label>Ticket price (PHP)<input name="price_php" required type="number" step="0.01" min="0.01" max="10000" placeholder="Enter the approved price"></label>'+
- '<label>Venue (optional)<input name="venue" maxlength="120" placeholder="e.g., LHS Movie Booth"></label>'+
+ '<label>Venue (optional)<input name="venue" maxlength="120" placeholder="e.g., LHS Movie Booth"></label>'+ 
+ '<label>Showtime (PHT)<input name="show_time" type="time"></label>'+ 
+ '<label>Seat capacity (optional)<input name="seat_capacity" type="number" min="1" max="5000" placeholder="Leave blank for uncapped"></label>'+
  '<button type="submit" class="movie-btn movie-primary">Create Movie Showing</button></form></section>'+
  '<section class="movie-panel"><h2>Configured Showings</h2>'+
  (state.shows.length?state.shows.map(x=>'<div class="movie-show-item"><span><strong>'+esc(x.title)+'</strong><small>'+esc(x.show_date)+' · '+money(x.price_php)+' · '+esc(x.venue||'Movie Booth')+'</small></span>'+
- '<button type="button" class="movie-mini" data-toggle="'+esc(x.id)+'">'+(x.active?'Pause Sales':'Resume Sales')+'</button></div>').join(''):
+ '<div><button type="button" class="movie-mini" data-capacity="'+esc(x.id)+'">Capacity '+(x.seat_capacity??'Uncapped')+'</button><button type="button" class="movie-mini" data-toggle="'+esc(x.id)+'">'+(x.active?'Pause Sales':'Resume Sales')+'</button></div></div>').join(''):
  '<p class="movie-helper">No shows configured. New sales are disabled until setup is complete.</p>')+'</section></div>';
 }
 function render(){
@@ -133,7 +142,7 @@ function render(){
  '<footer class="movie-footer">Powered by Azure&lt;3 · Private event system · Tickets are not official tax invoices</footer></main>';
 }
 async function loadShows(){
- const {data,error}=await db.from('lsc_movie_shows').select('id,title,show_date,price_php,venue,active,created_at')
+ const {data,error}=await db.from('lsc_movie_shows').select('id,title,show_date,show_time,seat_capacity,price_php,venue,active,created_at')
  .order('show_date',{ascending:false}).order('created_at',{ascending:false}).limit(200);
  if(error)throw error;
  state.shows=data||[];
@@ -145,14 +154,14 @@ async function lookupStudent(){
  state.studentSearch=val;
  state.student=null;state.receipt=null;state.requestId=null;
  if(!/^[0-9]{7,12}$/.test(val)){state.notice='Enter a numeric Student ID (7–12 digits).';render();return;}
- const {data,error}=await db.from('lsc_students').select('id,student_id,full_name,grade_level,section,active')
- .eq('student_id',val).eq('active',true).maybeSingle();
+ const {data,error}=await db.rpc('lsc_movie_lookup_student',{p_student_number:val});
  if(error){state.notice='Student lookup failed: '+error.message;render();return;}
- if(!data){state.notice='Student not found in your assigned authorization scope.';render();return;}
+ if(!data?.found){state.notice='Student not found in your assigned authorization scope.';render();return;}
  state.student=data;state.notice='';render();
 }
 async function makeSale(){
  if(state.busy)return;
+ if(!navigator.onLine){state.notice='Offline. No sale can be issued until your connection is restored.';render();return;}
  const sh=movie();
  if(!sh||!canSell())return;
  state.busy=true;state.notice='';
@@ -174,10 +183,12 @@ async function createShow(form){
  if(state.role!=='official')return;
  const title=form.elements.title.value.trim(),show_date=form.elements.show_date.value;
  const price=Number(form.elements.price_php.value),venue=form.elements.venue.value.trim();
- if(title.length<3||!show_date||show_date<today()||!Number.isFinite(price)||price<.01||price>10000){
+ const cap=form.elements.seat_capacity.value?Number(form.elements.seat_capacity.value):null;
+ const showTime=form.elements.show_time.value||null;
+ if(title.length<3||!show_date||show_date<today()||!Number.isFinite(price)||price<.01||price>10000||(cap!==null&&(!Number.isInteger(cap)||cap<1||cap>5000))){
   state.notice='Check the movie title, future/today date, and approved ticket price.';render();return;
  }
- const {error}=await db.from('lsc_movie_shows').insert({title,show_date,price_php:price,venue:venue||null,created_by:state.user.id});
+ const {error}=await db.from('lsc_movie_shows').insert({title,show_date,show_time:showTime,seat_capacity:cap,price_php:price,venue:venue||null,created_by:state.user.id});
  if(error){state.notice=error.message;render();return;}
  await loadShows();state.notice='Movie showing created. Ticket sales can now begin.';state.page='checkout';render();
 }
@@ -268,10 +279,11 @@ async function start(){
  try{
   const {data:{user},error}=await db.auth.getUser();
   if(error||!user){render();return;}
-  const role=await db.from('lsc_staff_roles').select('role,class_id').eq('user_id',user.id).maybeSingle();
-  if(role.error||!role.data||!['official','class_mayor'].includes(role.data.role)){render();return;}
-  state.user=user;state.role=role.data.role;state.classId=role.data.class_id;
+  const {data:ctx,error:roleError}=await db.rpc('lsc_movie_context');
+  if(roleError||!ctx){render();return;}
+  state.user=user;state.role=ctx.role;state.classId=ctx.scope_id;
   if(state.role==='class_mayor'&&!state.classId){state.user=null;render();return;}
+  if(['ticket_checker','event_monitor'].includes(state.role))state.page=state.role==='ticket_checker'?'validator':'reports';
   await loadShows();
   render();
  }catch(e){root.innerHTML='<div class="movie-signin"><h1>Movie Booth unavailable</h1><p>'+esc(e.message)+'</p><a href="./login.html">Return to LSC Login</a></div>';}
