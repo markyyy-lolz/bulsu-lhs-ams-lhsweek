@@ -38,6 +38,36 @@ The database constraint `lsc_verified_before_active` prevents activation while `
 
 **Demo mode:** Student page demos IDs `2023107337` and `2023999999` without database writes. Login page provides demo previews for both LSC Official and Class Mayor roles, also without writes.
 
+## Foundation Week Experience — unique event features
+
+The **existing system name is unchanged**. A new, private **Foundation Passport** workspace has been added for Foundation Week operations; the original Student Time IN/OUT terminal and historical records remain separate and untouched.
+
+### Features
+
+- **Foundation Activity Studio** — LSC Officials create an activity, scheduled event date (Philippine Time) and optional venue, then pause/resume stamping. Class Mayors see those activities but cannot change them.
+- **Supervised Digital Event Passport** — an authorized Class Mayor/Official enters a student's *local attendance ID* and station name to award one participation stamp per student per activity; duplicate stamps return the original stamp without creating another row. Stamps can only be written on the configured activity date, from authorized sessions.
+- **Event Pulse** — counts of configured events, in-scope active students, stamps received and per-activity participation coverage. This is refreshed on demand and is **not** a public student directory or proof of absence.
+- **Private Personal Passport** — authenticated operators can review a student's own stamps and positive milestone badges at 1/3/5 activities, subject to section restrictions.
+- **Section-scoped Audit & CSV** — for a selected activity, see stamped students, timestamp, station and recorded-by operator; export permitted records to CSV. Both the table and the export obey Supabase RLS.
+- **Foundation Week Dashboard shortcut** — visible to both authorized account roles.
+
+### Event setup and operation
+
+1. An LSC Official signs into \`login.html\` and opens **Foundation Passport** from the sidebar.
+2. In **Organizer Studio**, create each Foundation Week activity with its **actual date** and optional venue. No activities or dates are auto-created because the school schedule has not been supplied.
+3. At the event, the authorized operator opens that activity, checks that the student is physically present, enters their attendance ID, labels the station and selects **Stamp Event Passport**.
+4. On a successful stamp, the system saves the authenticated operator's ID, email, role and station with a server timestamp. It rejects repeats and wrong-class scans.
+5. Use **Refresh Pulse** and **Event Stamp Audit** to monitor participation and export a per-activity CSV. Students without a stamp are *not* automatically classified absent.
+
+### Privacy and implementation notes
+
+- Uses additional \`lsc_fw_activities\` and \`lsc_fw_passport_stamps\` tables. No modification to BrewPOS tables or to existing daily \`lsc_attendance_events\` rows.
+- Only authenticated Class Mayors and LSC Officials may read activities. Stamp data is scoped by the student's class in RLS; direct browser inserts to stamps are denied. The \`lsc_fw_stamp\` RPC validates role/class/date and creates trusted server-side audit values.
+- An LSC Official can create/pause activities; Class Mayors may stamp only assigned classmates. The database, not just the UI, enforces access.
+- The demo screen does not write to Supabase. Stamping is an *event participation record*, not a replacement for verified physical identity.
+- All student details belong in private Supabase tables and authorized operator views; never put exported rosters, logs or private images in this public GitHub repository.
+- Unique stamp constraints + date checks reduce errors, but no software-only system can prove physical presence. Supervise stations.
+
 ## Email verification login + optional backup password
 
 The Class Mayor / LSC Official portal uses **Supabase email verification first**:
