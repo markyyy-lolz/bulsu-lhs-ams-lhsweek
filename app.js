@@ -7,10 +7,10 @@ const root = document.getElementById('app');
 const state = {
   demo: false, user: null, role: null, page: 'overview', loading: false,
   students: [], logs: [], classes: [], assignments: [], classId: null, lastResult: null, query: '', recordDate: todayPH(),
-  busy: false, mobileNav: false
+  busy: false, mobileNav: false, loginMode:'email', otpSent:false, otpEmail:'', showPasswordSetup:false
 };
 let clearResultTimer = null;
-const icons = {overview:'▦',kiosk:'▣',students:'♙',records:'◷',classes:'⌂',officials:'♛'};
+const icons = {overview:'▦',kiosk:'▣',students:'♙',records:'◷',classes:'⌂',officials:'♛',security:'⚿'};
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function todayPH(){
   const p = new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
@@ -53,15 +53,51 @@ async function loadData(){
   state.students=s.data || [];state.logs=l.data || [];state.classes=c.data||[];state.assignments=a.data||[];
 }
 function brand(){return '<img src="./assets/lsc-logo.webp" class="lsc-logo" alt="LSC official crest"><span><span class="brand-title" style="display:block">Attendance System</span><span class="brand-sub">BULSU LABORATORY HIGH SCHOOL</span></span>';}
-function loginHTML(){return '<div class="login"><section class="login-art"><div style="display:flex;align-items:center;gap:12px">'+brand()+'</div><div><span class="eyebrow" style="color:#a9c7ff">LABORATORY HIGH SCHOOL • LSC</span><h2 class="big">Every arrival.<br>Every departure.<br>Accounted for.</h2><p>A simpler, faster way to monitor student attendance with secure ID-based time logging.</p></div><div class="art-bottom small" style="color:#adc2e6">LSC Attendance Monitor · Powered by Azure&lt;3</div></section><section class="login-side"><div class="login-box"><div class="eyebrow">CLASS MAYOR &amp; LSC OFFICIAL ACCESS</div><h1>Welcome back</h1><p>Sign in as an assigned Class Mayor or LSC Official to access your authorized attendance dashboard.</p><form id="loginForm"><label class="field">Email address<input type="email" name="email" required autocomplete="username" placeholder="official@school.edu.ph"></label><label class="field">Password<input type="password" name="password" required autocomplete="current-password" placeholder="Enter password"></label><button class="btn" type="submit" id="loginBtn">Sign in to LSC Portal</button></form><div style="display:flex;align-items:center;gap:12px;margin:22px 0;color:#9aa6b9;font-size:12px"><div style="height:1px;background:#e2e8f0;flex:1"></div>OR TRY THE INTERFACE<div style="height:1px;background:#e2e8f0;flex:1"></div></div><button type="button" class="btn btn-secondary" style="width:100%" data-act="demo">Preview LSC Official</button><button type="button" class="btn btn-secondary" style="width:100%;margin-top:9px" data-act="demoMayor">Preview Class Mayor</button><div class="login-footer">Demo data stays in your browser session only. School authorization and an assigned LSC role are required for real attendance records. This prototype is not an official school service.</div></div></section></div>';}
+function loginHTML(){
+  let form='';
+  if(state.loginMode==='password'){
+    form='<form id="passwordLoginForm" class="stack">'+
+      '<label class="field">Email address<input type="email" name="email" required autocomplete="username" placeholder="official@school.edu.ph" value="'+esc(state.otpEmail)+'"></label>'+
+      '<label class="field">Backup password<input type="password" name="password" required autocomplete="current-password" placeholder="Your account password"></label>'+
+      '<button class="btn" type="submit" style="width:100%;height:50px">Sign in with password</button></form>'+
+      '<button type="button" class="btn btn-quiet" style="width:100%;margin-top:14px" data-act="useEmailLogin">← Sign in using email verification instead</button>';
+  } else if(state.otpSent) {
+    form='<div class="notice" role="status" style="margin-bottom:20px">Verification requested for <strong>'+esc(state.otpEmail)+'</strong>. Enter the 6-digit code from your email, or open the sign-in link in that email. The email template determines which method is sent.</div>'+
+      '<form id="verifyEmailForm" class="stack">'+
+      '<label class="field">Email verification code<input type="text" name="token" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" required placeholder="000000" class="otp-code"></label>'+
+      '<button class="btn" type="submit" style="width:100%;height:50px">Verify email & sign in</button></form>'+
+      '<div class="form-actions" style="justify-content:space-between"><button type="button" class="btn btn-quiet" data-act="changeEmail">Change email</button><button type="button" class="btn btn-secondary" data-act="resendOtp">Resend email</button></div>';
+  } else {
+    form='<form id="sendEmailForm" class="stack">'+
+      '<label class="field">Approved account email<input type="email" name="email" required autocomplete="username" placeholder="official@school.edu.ph" value="'+esc(state.otpEmail)+'"></label>'+
+      '<button class="btn" type="submit" style="width:100%;height:50px">Send verification email →</button></form>'+
+      '<button type="button" class="btn btn-quiet" style="width:100%;margin-top:14px" data-act="usePasswordLogin">Have a backup password? Sign in with password</button>';
+  }
+  return '<div class="login"><section class="login-art"><div style="display:flex;align-items:center;gap:12px">'+brand()+'</div>'+
+    '<div><span class="eyebrow" style="color:#a9c7ff">LABORATORY HIGH SCHOOL • LSC</span>'+
+    '<h2 class="big">Every arrival.<br>Every departure.<br>Accounted for.</h2>'+
+    '<p>Secure, email-verified access for Class Mayors and LSC Officials.</p></div>'+
+    '<div class="art-bottom small" style="color:#adc2e6">LSC Attendance Monitor · Powered by Azure&lt;3</div></section>'+
+    '<section class="login-side"><div class="login-box"><div class="eyebrow">CLASS MAYOR &amp; LSC OFFICIAL ACCESS</div>'+
+    '<h1>'+(state.otpSent && state.loginMode==='email'?'Verify your email':'Welcome back')+'</h1>'+
+    '<p>'+(state.loginMode==='password'?'Use a backup password previously set in your account.':
+      state.otpSent?'Check your email to complete sign-in.':
+      'Enter your approved email address. No password is needed for your primary sign-in method.')+'</p>'+
+    form+
+    '<div style="display:flex;align-items:center;gap:12px;margin:22px 0;color:#9aa6b9;font-size:12px"><div style="height:1px;background:#e2e8f0;flex:1"></div>OR TRY THE INTERFACE<div style="height:1px;background:#e2e8f0;flex:1"></div></div>'+
+    '<button type="button" class="btn btn-secondary" style="width:100%" data-act="demo">Preview LSC Official</button>'+
+    '<button type="button" class="btn btn-secondary" style="width:100%;margin-top:9px" data-act="demoMayor">Preview Class Mayor</button>'+
+    '<div class="login-footer">Email verification uses Supabase Auth. Only accounts already created and assigned a Class Mayor or LSC Official role can access attendance data. A backup password is an alternative sign-in method, not an additional mandatory factor. Demo Mode never saves attendance.</div>'+
+    '</div></section></div>';
+}
 function sidebar(){
-  let menu=[['overview','Dashboard'],['records','Attendance Records']];
+  let menu=[['overview','Dashboard'],['records','Attendance Records'],['security','Account Security']];
   if(state.role==='official'){menu.splice(1,0,['students','Student Directory'],['classes','Classes'],['officials','Role Assignments']);}
   return '<aside class="sidebar'+(state.mobileNav?' open':'')+'"><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+icons[v[0]]+'</span>'+v[1]+'</button>').join('')+(state.role==='official'?'<a class="nav-btn" href="./student.html"><span class="nav-ico">▣</span>Student Attendance ↗</a>':'')+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">↪ &nbsp;Sign out</button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
 }
-function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',records:'Attendance Records',classes:'Classes',officials:'Role Assignments'})[state.page]||'Dashboard';}
+function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security'})[state.page]||'Dashboard';}
 function appHTML(){
-  return '<div class="shell">'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open menu">☰</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():overviewHTML())+'</div></main></div>';
+  return '<div class="shell">'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open menu">☰</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():overviewHTML())+'</div></main></div>';
 }
 function header(head,sub,extra=''){return '<div class="page-header"><div><div class="eyebrow" style="margin-bottom:8px">LSC ATTENDANCE MONITOR</div><h1>'+head+'</h1><p>'+sub+'</p></div>'+extra+'</div>';}
 function metrics(){
@@ -103,24 +139,85 @@ function studentsHTML(){
  return header('Student Directory','Manage authorized Student IDs and enrollment status.','<button class="btn" data-act="addStudent">+ Add Student</button>')+
  '<div class="card pad"><div class="toolbar"><label class="field search">Find a student<input type="search" id="studentSearch" placeholder="Search by name, ID or section" value="'+esc(state.query)+'"></label><span class="muted small">'+rows.length+' students</span></div><div class="table-wrap"><table class="table"><thead><tr><th>Student ID</th><th>Full Name</th><th>Grade</th><th>Section</th><th>Status</th><th>Action</th></tr></thead><tbody>'+rows.map(s=>'<tr><td class="mono strong">'+esc(s.student_id)+'</td><td>'+esc(s.full_name)+'</td><td>'+esc(s.grade_level||'—')+'</td><td>'+esc(s.section||'—')+'</td><td><span class="badge '+(s.active?'':'off')+'">'+(s.active?'Active':'Inactive')+'</span></td><td><button class="linkbtn" data-act="editStudent" data-id="'+esc(s.id)+'">Edit</button></td></tr>').join('')+'</tbody></table></div>'+(rows.length?'':'<div class="empty">No students in this directory yet. Add one to start.</div>')+'</div>';
 }
+
+function passwordSetupReminder(){
+  return '<div class="notice" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">'+
+    '<span><strong>Email verified.</strong> You can now set a backup password to use when email verification is unavailable. This is optional, not two-factor authentication.</span>'+
+    '<div style="display:flex;gap:8px"><button type="button" class="btn btn-secondary" data-act="skipPasswordSetup">Maybe later</button>'+
+    '<button type="button" class="btn" data-nav="security">Set backup password</button></div></div>';
+}
+function securityHTML(){
+  return header('Account Security','Email is your primary sign-in method. Set a backup password for future logins.')+
+    '<div class="card pad" style="max-width:620px"><div class="section-title"><h3>Backup Password</h3></div>'+
+    '<div class="notice" style="margin-bottom:22px">Your email was verified through Supabase Auth. A backup password allows an alternative sign-in method; it does not create an additional authentication factor.</div>'+
+    (state.demo?'<div class="notice warn">Password changes are unavailable in Demo Mode.</div>':
+    '<form id="backupPasswordForm" class="stack">'+
+      '<label class="field">New backup password<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="At least 12 characters"></label>'+
+      '<label class="field">Confirm backup password<input name="confirmation" type="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="Repeat the password"></label>'+
+      '<button type="submit" class="btn">Set / Change Backup Password</button></form>')+
+    '</div>';
+}
+async function sendEmailOtp(email){
+  const clean=String(email||'').trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)){toast('Enter a valid email address.',true);return;}
+  try{
+    const {error}=await sb.auth.signInWithOtp({
+      email:clean,
+      options:{shouldCreateUser:false,emailRedirectTo:location.origin+location.pathname}
+    });
+    if(error)throw error;
+    state.otpEmail=clean;state.otpSent=true;state.loginMode='email';
+    render();toast('If this account is registered, check its email for a code or verification link.');
+  }catch(e){
+    toast('Could not send verification email. Check the approved account and email-service configuration.',true);
+  }
+}
+async function verifyEmailCode(form){
+  const token=form.elements.token.value.trim();
+  if(!/^[0-9]{6}$/.test(token)){toast('Enter the 6-digit code.',true);return;}
+  const btn=form.querySelector('button[type=submit]');btn.disabled=true;
+  try{
+    const {error}=await sb.auth.verifyOtp({email:state.otpEmail,token,type:'email'});
+    if(error)throw error;
+    state.otpSent=false;state.showPasswordSetup=true;
+    await verifySession();
+  }catch(e){toast(e.message||'Code invalid or expired.',true);}
+  finally{btn.disabled=false;}
+}
+async function loginWithBackup(form){
+  const btn=form.querySelector('button[type=submit]');btn.disabled=true;
+  try{
+    const email=form.elements.email.value.trim(),password=form.elements.password.value;
+    const {error}=await sb.auth.signInWithPassword({email,password});
+    if(error)throw error;
+    state.otpEmail=email;state.showPasswordSetup=false;
+    await verifySession();
+  }catch(e){toast(e.message||'Unable to sign in.',true);}
+  finally{btn.disabled=false;}
+}
+async function updateBackupPassword(form){
+  if(state.demo)return;
+  const password=form.elements.password.value;
+  if(password.length<12){toast('Use at least 12 characters.',true);return;}
+  if(password!==form.elements.confirmation.value){toast('Passwords do not match.',true);return;}
+  const btn=form.querySelector('button[type=submit]');btn.disabled=true;
+  try{
+    const {error}=await sb.auth.updateUser({password});
+    if(error)throw error;
+    form.reset();state.showPasswordSetup=false;
+    render();toast('Backup password saved. Email verification remains the primary sign-in method.');
+  }catch(e){toast(e.message||'Password could not be saved.',true);}
+  finally{btn.disabled=false;}
+}
 function render(){
  if(!state.user){root.innerHTML=loginHTML();return;}
  if((['students','classes','officials'].includes(state.page)&&state.role!=='official')||state.page==='kiosk')state.page='overview';
  root.innerHTML=appHTML();
  document.getElementById('studentID')?.focus();
 }
-async function logIn(form){
- const btn=form.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='Signing in…';
- try{
-  const email=form.elements.email.value.trim(),password=form.elements.password.value;
-  const {error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;
-  await verifySession();
- }catch(e){toast(e.message||'Sign in failed',true);}
- finally{btn.disabled=false;btn.textContent='Sign in to Attendance';}
-}
 async function logOut(){
  if(!state.demo)await sb.auth.signOut();
- Object.assign(state,{demo:false,user:null,role:null,students:[],logs:[],lastResult:null,query:'',page:'overview',mobileNav:false,classId:null,classes:[],assignments:[]});
+ Object.assign(state,{demo:false,user:null,role:null,students:[],logs:[],lastResult:null,query:'',page:'overview',mobileNav:false,classId:null,classes:[],assignments:[],loginMode:'email',otpSent:false,otpEmail:'',showPasswordSetup:false});
  render();
 }
 async function scan(){
@@ -273,7 +370,10 @@ function exportCsv(){
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='LSC-Attendance-'+state.recordDate+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 root.addEventListener('submit',async e=>{
- if(e.target.id==='loginForm'){e.preventDefault();await logIn(e.target);}
+ if(e.target.id==='sendEmailForm'){e.preventDefault();await sendEmailOtp(e.target.elements.email.value);}
+ if(e.target.id==='verifyEmailForm'){e.preventDefault();await verifyEmailCode(e.target);}
+ if(e.target.id==='passwordLoginForm'){e.preventDefault();await loginWithBackup(e.target);}
+ if(e.target.id==='backupPasswordForm'){e.preventDefault();await updateBackupPassword(e.target);}
  if(e.target.id==='scanForm'){e.preventDefault();await scan();}
  if(e.target.id==='studentForm'){e.preventDefault();await saveStudent(e.target);}
  if(e.target.id==='classForm'){e.preventDefault();await createClass(e.target);}
@@ -287,6 +387,11 @@ document.addEventListener('click',async e=>{
  if(key){const input=document.getElementById('studentID');if(!input)return;const value=key.dataset.key;if(value==='Clear')input.value='';else if(value==='⌫')input.value=input.value.slice(0,-1);else input.value=(input.value+value).slice(0,12);input.focus();return;}
  const b=e.target.closest('[data-act]');if(!b)return;
  const act=b.dataset.act;
+ if(act==='usePasswordLogin'){state.loginMode='password';state.otpSent=false;render();}
+ if(act==='useEmailLogin'){state.loginMode='email';state.otpSent=false;render();}
+ if(act==='changeEmail'){state.otpSent=false;render();}
+ if(act==='resendOtp'){await sendEmailOtp(state.otpEmail);}
+ if(act==='skipPasswordSetup'){state.showPasswordSetup=false;render();}
  if(act==='demo')demoStart();
  if(act==='demoMayor')demoStart(true);
  if(act==='logout')await logOut();
@@ -309,8 +414,8 @@ root.addEventListener('input',e=>{
 });
 window.addEventListener('hashchange',()=>{
  const page=location.hash.slice(1);
- if(['overview','students','records','classes','officials'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';render();}
+ if(['overview','students','records','classes','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';render();}
 });
 setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=stampPH()+' PHT';},15000);
-state.page=['overview','students','records','classes','officials'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
+state.page=['overview','students','records','classes','officials','security'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
 verifySession().catch(e=>{root.innerHTML=loginHTML();toast('Could not connect to the attendance service: '+e.message,true);});
