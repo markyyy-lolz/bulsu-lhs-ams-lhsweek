@@ -115,3 +115,17 @@ body.movie-site{margin:0;min-height:100vh;font-family:"DM Sans",system-ui,sans-s
  .movie-status{padding:0;background:none!important;color:#111!important}
  .movie-table tr{break-inside:avoid}
 }
+
+
+/* Movie Booth v2.1: admission validator, camera kiosk, recovered tickets and cash shifts */
+.movie-validator{padding:23px;border-radius:17px;border:1px solid #b1cbe5;background:rgba(226,240,254,.78);margin-top:22px;display:flex;flex-direction:column;gap:12px}
+.movie-validator strong{font:800 25px "Outfit",sans-serif}
+.movie-validator span{color:#435d83;font-size:13px}
+.movie-validator.VALID,.movie-validator.REDEEMED{background:#dff7e9;border-color:#9acdb3;color:#096846}
+.movie-validator.ALREADY_USED,.movie-validator.VOID,.movie-validator.WRONG_DAY,.movie-validator.UNKNOWN{background:#fff0ee;border-color:#f3b8b5;color:#9f3e4a}
+.movie-validator button{align-self:flex-start;min-width:170px}
+.movie-camera-holder{margin:16px 0;width:min(100%,430px);border:1px solid #ccd9ec;border-radius:17px;padding:9px;background:#101a2e}
+.movie-camera-holder[hidden]{display:none!important}
+.movie-camera-holder video{width:100%;height:auto;max-height:380px;border-radius:10px;background:#0b1223}
+.movie-site .movie-camera-holder~.movie-helper{line-height:1.6}
+@media(max-width:680px){.movie-validator button{width:100%}.movie-site .movie-tabs{grid-template-columns:1fr 1fr}.movie-site .movie-tabs button{font-size:12px;min-width:0}}
