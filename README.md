@@ -1,56 +1,75 @@
-# LSC Attendance Monitor — BulSU Laboratory High School
+# LSC Attendance Monitoring System
 
-Independent website prototype: **GitHub Pages** frontend; **BrewPOS Supabase** project `rfxzbuocxersgbshczbj` as database. Requires school approval for actual student records.
+Independent prototype for **Bulacan State University Laboratory High School LSC**. Not an official school system unless approved by the institution.
 
+**Website hosting:** GitHub Pages — `markyyy-lolz/bulsu-lhs-ams-lhsweek`
+**Database:** Existing BrewPOS Supabase project `rfxzbuocxersgbshczbj`, using only separately named `lsc_*` tables and functions. No BrewPOS customer data or tables changed.
+**Branding:** User-supplied LSC crest and **Powered by Azure<3**.
 
-## Separate websites (same GitHub Pages project)
+## Two independent website screens
 
-The student-facing Time IN/Time OUT and staff administration areas now have **separate pages and URLs**:
+| Screen | URL |
+|---|---|
+| Student Time IN / Time OUT | https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/student.html |
+| Class Mayor / LSC Official login | https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/login.html |
 
-- **Student attendance:** https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/student.html
-- **Staff login / admin dashboard:** https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/login.html
-- The main address `/` redirects to `student.html`.
+The root URL redirects to the student terminal.
 
-**Security model:** Student attendance page does not show a login form or any student directory/reporting UI. Actual attendance recording is **locked** unless a school-authorized staff user has logged in using `login.html` on the **same browser/device** and activated the session. Staff should then click **Student Attendance** in the administration sidebar to open the dedicated kiosk. This ensures that arbitrary visitors cannot create real records just by knowing a Student ID. The staff session should remain supervised and the device should be restricted/kiosk-mode for school use.
+## Access permissions
 
-If a student visits the public URL from their own phone with no school-approved station session, they can view the page and try **Demo Mode**, but cannot submit live records. Student self-check-in from arbitrary devices is **not yet enabled**, as it would need an approved verification/security model first.
+**Class Mayor:** Can see only the student roster and attendance history for the one class assigned by an LSC Official. Read-only; cannot create classes, edit students, assign roles, or activate a real attendance terminal. All restrictions enforced by PostgreSQL Row Level Security (RLS), not only by UI.
 
-The real Time IN / OUT handler and student database are unchanged, and all BrewPOS features remain isolated.
+**LSC Official:** May see attendance for the whole school, register students, create grade/section classes, and assign or revoke Class Mayor/LSC Official roles using the **Role Assignments** page. The server checks Official privileges for each role-management action. The initial Official must be provisioned by a Supabase project administrator as described below.
 
-## Functions
-- Student ID numeric 7–12 digits. Type, use touchscreen keypad, or compatible keyboard-wedge scanner.
-- The first valid entry each Philippine calendar day is **Time IN**, then **Time OUT**, then IN, etc.
-- Server-generated timestamp, database transaction/advisory lock, and 45-second duplicate-entry guard.
-- Staff sign-in (Supabase Auth), dashboard, attendance history, CSV export, and admin-managed student roster.
-- Demo Mode uses fake data in memory only. Demo IDs: `2023107337` and `2023999999`. No demo data writes to Supabase.
-- No real students or approved staff are preloaded.
+**Student terminal:** Public interface is a separate webpage without an administrator login form. A supervising **LSC Official** must log in at `login.html` on the **same browser/device** to activate real attendance logging. Entries will then alternate **IN / OUT / IN** for each registered Student ID and Philippine calendar day, with a **45-second duplicate guard** and a database timestamp in **Asia/Manila**. Class Mayors cannot activate the terminal. A student ID is a lookup identifier, not strong proof of identity; supervise the terminal.
 
-## First-time staff setup
-1. Obtain written school authorization before importing or processing real student data.
-2. In Supabase project `rfxzbuocxersgbshczbj`, go to **Authentication → Users**, then create/invite a school-authorized administrator email/password user.
-3. In the Supabase SQL editor, execute the following, replacing the placeholder with the account's **actual** email:
+**Demo mode:** Student page demos IDs `2023107337` and `2023999999` without database writes. Login page provides demo previews for both LSC Official and Class Mayor roles, also without writes.
+
+## First-time setup before real student attendance (required)
+
+1. Obtain explicit school approval and a data-processing policy before adding student names or attendance records, consistent with the Philippines Data Privacy Act.
+2. In [Supabase Auth Users](https://supabase.com/dashboard/project/rfxzbuocxersgbshczbj/auth/users), invite or create the first school-approved LSC Official email/password account. Do not reuse unrelated BrewPOS accounts.
+3. From the project's SQL Editor, execute the following with that exact authorized email (only after confirming the account is created):
 
 ```sql
-insert into public.lsc_staff_roles(user_id, role)
-select id, 'admin' from auth.users where email = 'approved-admin@school.example'
-on conflict (user_id) do update set role=excluded.role;
+insert into public.lsc_staff_roles (user_id, role, class_id)
+select id, 'official', null
+from auth.users
+where lower(email) = lower('approved-official@school.example')
+on conflict (user_id)
+do update set role = 'official', class_id = null;
 ```
 
-For a regular supervised kiosk operator, use `'staff'` instead of `'admin'`. Never give students staff accounts.
+Verify the account has a role:
 
-4. Sign in at **login.html** and use **Student Directory → Add Student** to register authorized roster entries. A nonregistered ID cannot log attendance.
-5. Open the dedicated **Student Attendance** page using the admin sidebar link in that same browser. Staff must supervise: knowing a student ID alone does not prove student identity.
+```sql
+select count(*) from public.lsc_staff_roles
+where role='official';
+```
 
-## Publishing
-Workflow `.github/workflows/pages.yml` tries to enable GitHub Pages on pushes to main. If needed, open the repository's **Settings → Pages**, choose **GitHub Actions** as publishing source, and rerun. Expected website URL:
+4. Sign in at `login.html`. Under **Classes**, create each grade-level/section, then under **Student Directory**, register only authorized real Student IDs and assign each student to a class. No real student records or user accounts are seeded by the software.
+5. Under **Role Assignments**, enter an already-created Supabase Auth email, choose **Class Mayor**, select that person's assigned class, and save. You may also grant other trusted LSC Officials access. Role changes are audited in `lsc_role_audit`.
+6. On a designated, supervised attendance device, sign in as an LSC Official from `login.html`, then navigate to `student.html`. On a different browser/device without an Official session, the live terminal stays locked.
 
-https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/
+## Security model
 
-If auth redirects require configuration, add the website URL in **Supabase → Authentication → URL Configuration**.
+- `lsc_staff_roles`: server-enforced official/mayor access list, with exactly one assigned class per mayor.
+- `lsc_classes`: grade-level/section definitions; only Officials may edit.
+- `lsc_students`: students scoped by class; Class Mayors only read their own class; Officials may edit.
+- `lsc_attendance_events`: append-only attendance data, scoped by class in RLS; no direct browser INSERT grant.
+- `lsc_role_audit`: audit log readable only by Officials.
+- `lsc_record_attendance`: Official-only atomic check-in/out RPC using server timestamps, advisory lock, and 45-second duplicate protection.
+- `lsc_assign_role`, `lsc_revoke_role`, `lsc_list_roles`: separately authorized Official-only actions.
+- The public website contains only the **Supabase publishable key**; no service-role secret or student database dump is checked in.
 
-## Isolation and safety
-Only `public.lsc_staff_roles`, `public.lsc_students`, `public.lsc_attendance_events`, and an LSC-only attendance RPC were created. The 18 existing `brew_*` tables remain untouched. All LSC tables use Row Level Security; direct log insertion is not granted to browser clients. The function authorizes caller's verified staff role on each entry.
+Security notes: privileged RPCs are security-definer functions callable by signed-in users but explicitly reject non-Officials on the server. Review Supabase security advisors periodically and enable leaked-password protection in Auth settings. Existing BrewPOS schema and policies are outside this system.
 
-The GitHub repository is public, so never upload student lists, passwords, service-role keys, or Supabase secrets. The publishable key in the frontend is intentionally public; Row Level Security protects records.
+## Known limitations / safeguards
 
-Before official school use, implement formal data retention, privacy notices and student verification procedures. Website demo displays no school logo or claims of official endorsement. The current records view loads at most 1,000 events for any selected day. Sessions crossing Philippine midnight start a fresh IN event the next day.
+- Staff and students remain **unprovisioned** until the school approves and onboards them.
+- GitHub Pages is public; database access is private and role-scoped.
+- No self-service student check-in from arbitrary phones; only Official-activated supervised station for actual records.
+- Current UI reads up to 2,000 students and 1,000 attendance events per selected date, with no pagination yet.
+- Each new Philippine calendar day starts with a new Time IN; no special overnight/late-session rules.
+- CSV exports should be handled securely according to the school's retention policy; use a school-managed device.
+- The project does not independently verify the student's identity from Student ID entry alone.
