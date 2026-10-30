@@ -222,17 +222,17 @@ async function getSaleReceipt(saleId){
  .eq('id',saleId).maybeSingle();
  if(error)throw error;
  if(!data)throw new Error('Sale not available for this operator.');
- return {status:data.status,show_title:data.lsc_movie_shows?.title,show_date:data.lsc_movie_shows?.show_date,
+ return {sale_id:data.id,status:data.status,show_title:data.lsc_movie_shows?.title,show_date:data.lsc_movie_shows?.show_date,
   venue:data.lsc_movie_shows?.venue,student_number:data.lsc_students?.student_id,
   student_name:data.lsc_students?.full_name,section:data.lsc_students?.section,quantity:data.quantity,
   unit_price:data.price_php,total:data.total_php,cash_received:data.cash_received_php,change:data.change_php,
   sold_at:data.sold_at,sold_by:data.sold_by_email,
   tickets:(data.lsc_movie_tickets||[]).map(x=>({number:x.ticket_number,code:x.code})).sort((a,b)=>a.number-b.number)};
 }
-function printTickets(receipt){
+function printTickets(receipt,readyWindow=null){
  const tickets=receipt?.tickets||[];
  if(!tickets.length){state.notice='No tickets available to print.';render();return;}
- const win=window.open('','_blank','width=460,height=700');
+ const win=readyWindow||window.open('','_blank','width=460,height=700');
  if(!win){state.notice='Enable pop-ups for this site to print tickets, or use your browser print settings.';render();return;}
  win.opener=null;
  const body=tickets.map(x=>'<section class="ticket">'+
@@ -242,14 +242,30 @@ function printTickets(receipt){
  '<p><b>VENUE</b><br>'+esc(receipt.venue||'LSC Movie Booth')+'</p>'+
  '<p><b>STUDENT ID</b><br>'+esc(receipt.student_number||'')+'</p>'+
  '<p><b>ADMIT ONE</b><br>Ticket '+esc(x.number)+' of '+esc(receipt.quantity||tickets.length)+'</p>'+
- '<div class="code">'+esc(x.code)+'</div>'+
+ '<div class="ticketqr" data-code="'+esc(x.code)+'"></div><div class="code">'+esc(x.code)+'</div>'+
  '<div class="rule"></div><div class="end">Keep this ticket for admission<br>Powered by Azure&lt;3</div>'+
  (receipt.status==='VOID'?'<div class="void">VOID — NOT VALID</div>':'')+'</section>').join('');
  const html='<!doctype html><html><head><meta charset="utf-8"><title>Movie Booth Tickets</title>'+
- '<style>@page{size:80mm auto;margin:2mm}*{box-sizing:border-box}body{font:13px Arial,sans-serif;color:#111;margin:0}.ticket{width:76mm;margin:0 auto 10mm;padding:5mm 3mm 7mm;border-bottom:2px dashed #000;break-after:page;page-break-after:always;text-align:center}.ticket-head{font-size:10px;font-weight:bold;letter-spacing:1px}h2{font-size:23px;margin:11px 0 4px}h3{font-size:17px;margin:5px 0 13px}.rule{border-top:1px dashed #444;margin:12px 0}p{font-size:13px;line-height:1.45;margin:12px 0}p b{font-size:10px;letter-spacing:1px}.code{font-size:18px;letter-spacing:1px;font-weight:bold;border:2px solid #000;padding:11px 3px;overflow-wrap:anywhere}.end{font-size:10px;line-height:1.6}.void{font-weight:bold;font-size:20px;margin-top:12px}@media screen{body{background:#e5e7eb;padding:20px}.ticket{background:white;box-shadow:0 4px 17px #aaa;padding:15px;margin-bottom:15px}}@media print{body{background:#fff}.ticket:last-child{break-after:auto;page-break-after:auto}}</style></head><body>'+body+'</body></html>';
+ '<style>@page{size:80mm auto;margin:2mm}*{box-sizing:border-box}body{font:13px Arial,sans-serif;color:#111;margin:0}.ticket{width:76mm;margin:0 auto 10mm;padding:5mm 3mm 7mm;border-bottom:2px dashed #000;break-after:page;page-break-after:always;text-align:center}.ticket-head{font-size:10px;font-weight:bold;letter-spacing:1px}h2{font-size:23px;margin:11px 0 4px}h3{font-size:17px;margin:5px 0 13px}.rule{border-top:1px dashed #444;margin:12px 0}p{font-size:13px;line-height:1.45;margin:12px 0}p b{font-size:10px;letter-spacing:1px}.ticketqr{min-height:98px;margin:8px auto;display:flex;align-items:center;justify-content:center}.ticketqr img,.ticketqr canvas{width:92px!important;height:92px!important;image-rendering:pixelated}.code{font-size:18px;letter-spacing:1px;font-weight:bold;border:2px solid #000;padding:11px 3px;overflow-wrap:anywhere}.end{font-size:10px;line-height:1.6}.void{font-weight:bold;font-size:20px;margin-top:12px}@media screen{body{background:#e5e7eb;padding:20px}.ticket{background:white;box-shadow:0 4px 17px #aaa;padding:15px;margin-bottom:15px}}@media print{body{background:#fff}.ticket:last-child{break-after:auto;page-break-after:auto}}</style></head><body>'+body+'</body></html>';
  win.document.open();win.document.write(html);win.document.close();win.focus();
- // No external assets are required; print immediately from the operator's click to avoid popup blockers.
- win.print();
+ // QR library is pinned. In offline/CDN failure cases, the readable code remains printable.
+ let didPrint=false;
+ const print=()=>{if(didPrint)return;didPrint=true;try{win.focus();win.print()}catch(e){console.warn('Browser print unavailable:',e)}};
+ const script=win.document.createElement('script');
+ script.src='https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+ script.onload=()=>{
+  try{win.document.querySelectorAll('.ticketqr').forEach(node=>new win.QRCode(node,{
+    text:node.dataset.code,width:92,height:92,correctLevel:win.QRCode.CorrectLevel.M
+  }));}
+  catch(e){console.warn('Could not draw ticket QR; printed codes remain valid',e)}
+  setTimeout(print,350);
+ };
+ script.onerror=()=>setTimeout(print,100);
+ win.document.head.appendChild(script);
+ setTimeout(print,2800);
+ if(receipt.sale_id){db.rpc('lsc_movie_note_print',{p_sale_id:receipt.sale_id}).then(x=>{
+  if(x.error)console.warn('Print request audit failed:',x.error.message);
+ }).catch(e=>console.warn('Print request audit unavailable:',e));}
 }
 function toCell(value){
  let s=String(value??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;
@@ -406,8 +422,10 @@ document.addEventListener('click',async e=>{
   await loadShows();state.notice='Capacity updated. Existing ticket sales remain untouched.';render();return;
  }
  if(target.dataset.print){
-  try{const receipt=await getSaleReceipt(target.dataset.print);printTickets(receipt)}
-  catch(e){state.notice=e.message;render()}return;
+  const printWindow=window.open('','_blank','width=460,height=700');
+  if(!printWindow){state.notice='Allow pop-ups to reprint.';render();return;}
+  try{const receipt=await getSaleReceipt(target.dataset.print);printTickets(receipt,printWindow)}
+  catch(e){printWindow.close();state.notice=e.message;render()}return;
  }
  if(target.dataset.void){
   if(state.role!=='official')return;
