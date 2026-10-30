@@ -52,7 +52,7 @@ async function loadData(){
   if(s.error || l.error || c.error || a.error){toast(s.error?.message || l.error?.message || c.error?.message || a.error?.message || 'Unable to load data.',true);return;}
   state.students=s.data || [];state.logs=l.data || [];state.classes=c.data||[];state.assignments=a.data||[];
 }
-function brand(){return '<img src="./assets/lsc-logo.webp" class="lsc-logo" alt="LSC official crest"><span><span class="brand-title" style="display:block">Attendance System</span><span class="brand-sub">BULSU LABORATORY HIGH SCHOOL</span></span>';}
+function brand(){return '<img src="./assets/lsc-crest-transparent.png?v=2" class="lsc-logo" alt="LSC official crest"><span><span class="brand-title" style="display:block">Attendance System</span><span class="brand-sub">BULSU LABORATORY HIGH SCHOOL</span></span>';}
 function loginHTML(){
   let form='';
   if(state.loginMode==='password'){
