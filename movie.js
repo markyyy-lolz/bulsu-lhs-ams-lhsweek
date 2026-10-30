@@ -30,7 +30,7 @@ function header(){
  return '<header class="movie-header"><div class="movie-brand"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
  '<div><strong>Movie Booth POS</strong><small>BulSU Laboratory High School · Foundation Week</small></div></div>'+
  '<div class="movie-head-right"><span class="movie-role">'+esc(state.role.replaceAll('_',' ').toUpperCase())+'</span>'+
- '<a href="./login.html#overview" class="movie-return">Back to LSC Dashboard</a></div></header>';
+ '<a href="./operations.html" class="movie-return">Event Command Center</a> · <a href="./login.html#overview" class="movie-return">LSC Dashboard</a></div></header>';
 }
 function tabs(){
  const items=[];
@@ -138,7 +138,7 @@ function render(){
  '<div class="movie-title"><div><span>FOUNDATION WEEK · SALES & TICKETING</span><h1>Movie Booth <em>Point of Sale</em></h1>'+
  '<p>Student ID checkout · Printable movie tickets · Audited sales</p></div><span class="movie-operator">Operator: '+esc(state.user.email||'Authorized LSC account')+'</span></div>'+
  tabs()+(state.notice?'<div class="movie-alert" role="status">'+esc(state.notice)+'</div>':'')+
- (state.page==='checkout'?checkout():state.page==='reports'?reports():setup())+
+ (state.page==='checkout'?checkout():state.page==='reports'?reports():state.page==='validator'?validator():state.page==='shifts'?shiftView():state.page==='recovery'?recovery():setup())+
  '<footer class="movie-footer">Powered by Azure&lt;3 · Private event system · Tickets are not official tax invoices</footer></main>';
 }
 async function loadShows(){
@@ -209,7 +209,7 @@ async function loadReport(){
  const [start,end]=phtRange(state.reportDate);
  const [summary,detail]=await Promise.all([
   db.rpc('lsc_movie_summary',{p_day:state.reportDate||null}),
-  scopedSalesQuery(start,end).range(0,249)
+  state.role==='event_monitor'?Promise.resolve({data:[],error:null}):scopedSalesQuery(start,end).range(0,249)
  ]);
  if(summary.error)throw summary.error;
  if(detail.error)throw detail.error;
@@ -275,6 +275,101 @@ async function exportReport(){
   setTimeout(()=>URL.revokeObjectURL(a.href),1500);
  }catch(e){state.notice='Could not export sales: '+e.message;render();}
 }
+
+/* Foundation Week v2.1: admissions are server-validated; scanner never trusts a local code. */
+function validator(){
+ const v=state.ticketResult;
+ return '<section class="movie-panel"><div class="movie-panel-head"><h2>Ticket Check-In</h2><span>One-time redemption · Staff-only station</span></div>'+
+ '<div class="movie-alert">Enter or scan the unique FW ticket code. Checking does not consume a ticket; tap Admit &amp; Redeem to use it exactly once. Internet connection required.</div>'+
+ '<div class="movie-student-row"><label>Ticket code<input id="movieTicketCode" autocomplete="off" autocapitalize="characters" value="'+esc(state.ticketCode)+'" placeholder="FW-XXXXXXXXXXXX"></label>'+
+ '<button type="button" class="movie-btn movie-secondary" data-act="check-ticket">Check Ticket</button></div>'+
+ '<div class="ops-actions"><button class="movie-btn movie-secondary" type="button" data-act="camera-start">Scan with Camera (supported browsers)</button>'+
+ '<button class="movie-btn movie-secondary" type="button" data-act="camera-stop">Stop Camera</button></div>'+
+ '<p class="movie-helper">USB/Bluetooth scanner keyboards work by typing into the ticket code field. Camera scanning requires browser support and HTTPS. For iPhone/Messenger, use manual ticket code or a compatible external scanner.</p>'+
+ '<div id="movieCameraHolder" class="movie-camera-holder" hidden><video id="movieCamera" autoplay muted playsinline></video></div>'+
+ (v?'<div class="movie-validator '+esc(v.result)+'"><strong>'+esc(v.result==='VALID'?'✓ VALID — Ready to admit':v.result==='REDEEMED'?'✓ ADMISSION RECORDED':v.result==='ALREADY_USED'?'✕ ALREADY USED':v.result==='VOID'?'✕ VOIDED':'✕ '+v.result)+'</strong>'+
+ '<span>'+esc(v.movie||'Unknown movie')+' · '+esc(v.date||'')+' · '+esc(v.code||'')+'</span>'+
+ (v.result==='VALID'?'<button type="button" class="movie-btn movie-primary" data-act="redeem-ticket"'+(!state.online?' disabled':'')+'>Admit &amp; Redeem Ticket</button>':'')+'</div>':'')+'</section>';
+}
+async function checkTicket(redeem=false){
+ if(state.scanBusy)return;
+ if(!navigator.onLine){state.notice='Offline. Ticket checks and redemption require the server.';render();return;}
+ state.ticketCode=(document.getElementById('movieTicketCode')?.value||state.ticketCode).trim().toUpperCase();
+ if(!/^FW-[0-9A-F]{12}$/.test(state.ticketCode)){state.notice='Enter a valid FW-XXXXXXXXXXXX ticket code.';state.ticketResult=null;render();return;}
+ state.scanBusy=true;
+ try{
+ const {data,error}=await db.rpc('lsc_movie_validate',{p_code:state.ticketCode,p_redeem:redeem});
+ if(error)throw error;
+ state.ticketResult=data;state.notice=data.result==='REDEEMED'?'Admission recorded by the server.':'Ticket status: '+data.result;
+ }catch(e){state.ticketResult=null;state.notice='Ticket check failed: '+e.message}
+ finally{state.scanBusy=false;render();}
+}
+function stopCamera(){
+ if(state.cameraTimer){clearInterval(state.cameraTimer);state.cameraTimer=null}
+ if(state.cameraStream){state.cameraStream.getTracks().forEach(t=>t.stop());state.cameraStream=null}
+}
+async function startCamera(){
+ stopCamera();
+ if(!navigator.mediaDevices?.getUserMedia||!window.BarcodeDetector){
+  state.notice='Camera scanning is not supported by this browser. Manual code and external scanner entry remain available.';
+  render();return;
+ }
+ try{
+ const formats=await BarcodeDetector.getSupportedFormats();
+ if(!formats.includes('qr_code'))throw Error('QR-code camera recognition unavailable');
+ const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'environment'}});
+ state.cameraStream=stream;
+ const holder=document.getElementById('movieCameraHolder'),video=document.getElementById('movieCamera');
+ if(!holder||!video){stopCamera();return}
+ holder.hidden=false;video.srcObject=stream;await video.play();
+ const detector=new BarcodeDetector({formats:['qr_code']});
+ state.cameraTimer=setInterval(async()=>{
+  if(!state.cameraStream||state.scanBusy||video.readyState<2)return;
+  try{const results=await detector.detect(video);
+   const value=results.find(x=>/^FW-[0-9A-F]{12}$/i.test(x.rawValue?.trim()||''))?.rawValue;
+   if(value){state.ticketCode=value.trim().toUpperCase();stopCamera();await checkTicket(false)}
+  }catch(e){console.warn('Barcode decode unavailable:',e.message)}
+ },600);
+ }catch(e){stopCamera();state.notice='Camera not available: '+e.message+'. You can type the code manually.';render()}
+}
+async function fetchShift(){
+ if(!['official','class_mayor','cashier'].includes(state.role))return;
+ const {data,error}=await db.from('lsc_movie_cash_shifts')
+ .select('id,opened_at,opening_php,closed_at,closing_php,expected_php,variance_php')
+ .eq('cashier_id',state.user.id).is('closed_at',null).maybeSingle();
+ if(!error)state.shift=data;
+}
+function shiftView(){
+ const sh=state.shift;
+ return '<section class="movie-panel"><h2>Cashier Shift Management</h2>'+
+ '<p class="movie-helper">Count cash carefully before opening and after closing. The server calculates the expected drawer balance from your paid sales. Voided sales are excluded; process refunds manually.</p>'+
+ (sh?'<div class="movie-student"><span>OPEN CASHIER SHIFT</span><strong>Opening float: '+money(sh.opening_php)+'</strong><small>Opened '+esc(pht(sh.opened_at))+'</small></div>':
+ '<div class="movie-alert">No shift is currently open. Assigned volunteer cashiers must open a shift before accepting cash.</div>')+
+ '<form id="movieShiftForm" class="movie-fields">'+
+ '<label>'+(sh?'Physical cash counted at close':'Opening cash float (PHP)')+
+ '<input name="amount" type="number" min="0" max="1000000" step=".01" required placeholder="0.00"></label>'+
+ '<label>Shift notes<input name="note" maxlength="400" placeholder="Cash drawer / operator notes (optional)"></label>'+
+ '<button type="submit" class="movie-btn movie-primary"'+(!state.online?' disabled':'')+'>'+(sh?'Close Shift & Reconcile':'Open Cashier Shift')+'</button></form></section>';
+}
+async function saveShift(form){
+ if(!navigator.onLine){state.notice='Offline. Cash shifts cannot be changed without the server.';render();return}
+ const action=state.shift?'close':'open';
+ const {data,error}=await db.rpc('lsc_movie_shift',{p_action:action,p_amount:Number(form.elements.amount.value),p_note:form.elements.note.value||null});
+ if(error){state.notice=error.message;render();return}
+ await fetchShift();
+ state.notice=action==='close'?'Shift closed. Expected '+money(data.expected_cash)+' · Counted '+money(data.counted_cash)+' · Difference '+money(data.difference):
+ 'Shift opened and logged.';
+ render();
+}
+function recovery(){
+ return '<section class="movie-panel"><h2>Print Recovery Center</h2>'+
+ '<p class="movie-helper">Print requests do not confirm successful physical printing. Recover a prior saved sale without charging the student again. If payment result was unclear, check Sales Reports before reattempting checkout.</p>'+
+ '<button type="button" class="movie-btn movie-secondary" data-act="recovery-refresh">Refresh Saved Sales</button>'+
+ '<div class="movie-table-scroll"><table class="movie-table"><thead><tr><th>Sold (PHT)</th><th>Student ID</th><th>Movie</th><th>Qty</th><th>Status</th><th>Action</th></tr></thead><tbody>'+
+ (state.sales||[]).map(x=>'<tr><td>'+esc(pht(x.sold_at))+'</td><td>'+esc(x.lsc_students?.student_id||'—')+'</td><td>'+esc(x.lsc_movie_shows?.title||'—')+'</td>'+
+ '<td>'+x.quantity+'</td><td>'+esc(x.status)+'</td><td><button class="movie-mini" data-print="'+esc(x.id)+'">Reprint Tickets</button></td></tr>').join('')+
+ '</tbody></table></div></section>';
+}
 async function start(){
  try{
   const {data:{user},error}=await db.auth.getUser();
@@ -285,16 +380,30 @@ async function start(){
   if(state.role==='class_mayor'&&!state.classId){state.user=null;render();return;}
   if(['ticket_checker','event_monitor'].includes(state.role))state.page=state.role==='ticket_checker'?'validator':'reports';
   await loadShows();
+  if(state.page==='shifts'||state.role==='cashier')await fetchShift();
+  if(state.role==='event_monitor'){try{const x=await db.rpc('lsc_movie_summary',{p_day:state.reportDate});state.summary=x.data}catch(e){}}
   render();
  }catch(e){root.innerHTML='<div class="movie-signin"><h1>Movie Booth unavailable</h1><p>'+esc(e.message)+'</p><a href="./login.html">Return to LSC Login</a></div>';}
 }
 document.addEventListener('click',async e=>{
- const target=e.target.closest('[data-act],[data-page],[data-print],[data-void],[data-toggle]');
+ const target=e.target.closest('[data-act],[data-page],[data-print],[data-void],[data-toggle],[data-capacity]');
  if(!target)return;
  if(target.dataset.page){
   state.page=target.dataset.page;state.notice='';
-  if(state.page==='reports'){try{await loadReport()}catch(e){state.notice='Report error: '+e.message}}
+  stopCamera();
+  if(state.page==='reports'||state.page==='recovery'){try{await loadReport()}catch(e){state.notice='Report error: '+e.message}}
+  if(state.page==='shifts')await fetchShift();
   render();return;
+ }
+ if(target.dataset.capacity){
+  if(state.role!=='official')return;
+  const raw=window.prompt('Maximum seats (1-5000). Leave empty for uncapped:',state.shows.find(x=>x.id===target.dataset.capacity)?.seat_capacity??'');
+  if(raw===null)return;
+  const cap=raw.trim()===''?null:Number(raw);
+  if(cap!==null&&(!Number.isInteger(cap)||cap<1||cap>5000)){state.notice='Enter 1–5000 seats or leave blank.';render();return}
+  const {error}=await db.rpc('lsc_movie_set_capacity',{p_show_id:target.dataset.capacity,p_capacity:cap});
+  if(error){state.notice=error.message;render();return}
+  await loadShows();state.notice='Capacity updated. Existing ticket sales remain untouched.';render();return;
  }
  if(target.dataset.print){
   try{const receipt=await getSaleReceipt(target.dataset.print);printTickets(receipt)}
@@ -318,6 +427,11 @@ document.addEventListener('click',async e=>{
  }
  const act=target.dataset.act;
  if(act==='lookup')await lookupStudent();
+ if(act==='check-ticket')await checkTicket(false);
+ if(act==='redeem-ticket')await checkTicket(true);
+ if(act==='camera-start')await startCamera();
+ if(act==='camera-stop'){stopCamera();state.notice='Camera stopped.';render()}
+ if(act==='recovery-refresh'){try{await loadReport();render()}catch(e){state.notice=e.message;render()}}
  if(act==='sell')await makeSale();
  if(act==='print-last')printTickets(state.receipt);
  if(act==='report-refresh'){state.reportDate=document.getElementById('movieReportDate')?.value||'';try{await loadReport()}catch(e){state.notice=e.message}render()}
@@ -327,6 +441,7 @@ document.addEventListener('click',async e=>{
 });
 document.addEventListener('submit',async e=>{
  if(e.target.id==='movieSetupForm'){e.preventDefault();await createShow(e.target);}
+ if(e.target.id==='movieShiftForm'){e.preventDefault();await saveShift(e.target);}
 });
 document.addEventListener('change',e=>{
  if(e.target.id==='movieShow'){
@@ -334,6 +449,7 @@ document.addEventListener('change',e=>{
  }
 });
 document.addEventListener('input',e=>{
+ if(e.target.id==='movieTicketCode'){state.ticketCode=e.target.value.toUpperCase();state.ticketResult=null;}
  if(e.target.id==='movieStudentId'){state.studentSearch=e.target.value;state.student=null;state.requestId=null;const b=document.getElementById('moviePay');if(b)b.disabled=true;}
  if(e.target.id==='movieQty'||e.target.id==='movieCash'){
   if(e.target.id==='movieQty'){
