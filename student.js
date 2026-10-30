@@ -51,16 +51,16 @@ function updateStation() {
     stationDetail.textContent='Simulated attendance only. No data is being sent to Supabase.';
   } else if(state.authorized) {
     stationLabel.textContent='Attendance station ready';
-    stationDetail.textContent='Authorized staff session active. Real attendance can be recorded.';
+    stationDetail.textContent='LSC Official session active. Real attendance can be recorded.';
   } else {
-    stationLabel.textContent='Staff activation required';
-    stationDetail.textContent='A staff member must sign in on this same browser before real entries can be recorded.';
+    stationLabel.textContent='LSC Official activation required';
+    stationDetail.textContent='An LSC Official must sign in on this same browser before live entries can be recorded.';
   }
   stationDot.classList.toggle('ok',state.demo||state.authorized);
   recordButton.disabled=state.busy||(!state.demo&&!state.authorized);
   demoButton.textContent=state.demo?'Exit Demo Mode':'Try Demo Mode';
   activationNotice.hidden=state.demo||state.authorized;
-  activationNotice.innerHTML='<strong>Attendance terminal is locked.</strong> Ask a school staff member to sign in from <a href="./login.html">Staff Login</a> on this same browser. Only supervised stations can record real attendance.';
+  activationNotice.innerHTML='<strong>Attendance terminal is locked.</strong> Ask an LSC Official to sign in from <a href="./login.html">Staff Login</a> on this same browser. Only supervised stations can record real attendance.';
 }
 async function checkAuthorization() {
   if(state.demo)return;
@@ -70,7 +70,7 @@ async function checkAuthorization() {
     if(error||!user){updateStation();return;}
     const {data:role,error:roleError}=await client.from('lsc_staff_roles')
       .select('role').eq('user_id',user.id).maybeSingle();
-    state.authorized=!roleError && (role?.role==='admin'||role?.role==='staff');
+    state.authorized=!roleError && (role?.role==='official');
   }catch(error) {
     console.warn('LSC station authorization failed:',error?.message||'unknown error');
   }
@@ -121,7 +121,7 @@ async function recordAttendance(event) {
     appendMessage('ERROR','Invalid Student ID',['Please enter a numeric ID containing 7–12 digits.']);return;
   }
   if(!state.demo&&!state.authorized){
-    appendMessage('ERROR','Station not activated',['Ask an authorized staff member to sign in on this device.']);return;
+    appendMessage('ERROR','Station not activated',['Ask an authorized LSC Official to sign in on this device.']);return;
   }
   state.busy=true;updateStation();
   recordButton.textContent='Saving attendance…';
