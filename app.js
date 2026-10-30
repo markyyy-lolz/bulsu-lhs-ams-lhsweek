@@ -159,7 +159,7 @@ function studentModal(student){
  const isEdit=!!student;
  const modal=document.createElement('div');modal.className='modal-backdrop';
  modal.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-label="'+(isEdit?'Edit student':'New student')+'"><div class="modal-header"><h2>'+(isEdit?'Edit Student':'Add Student')+'</h2><button class="modal-close" data-act="closeModal" aria-label="Close dialog">✕</button></div><form id="studentForm"><input type="hidden" name="rowid" value="'+esc(student?.id||'')+'"><div class="stack"><label class="field">Student ID<input name="student_id" type="text" inputmode="numeric" pattern="[0-9]{7,12}" maxlength="12" required value="'+esc(student?.student_id||'')+'" placeholder="2023107337"></label><label class="field">Full Name<input name="full_name" required minlength="2" maxlength="160" value="'+esc(student?.full_name||'')+'" placeholder="Student full name"></label><div class="field-row"><label class="field">Grade Level<input name="grade_level" maxlength="30" value="'+esc(student?.grade_level||'')+'" placeholder="Grade 10"></label><label class="field">Section<input name="section" maxlength="80" value="'+esc(student?.section||'')+'" placeholder="Section"></label></div><label class="field">Enrollment status<select name="active"><option value="true" '+(!student||student.active?'selected':'')+'>Active</option><option value="false" '+(student&&!student.active?'selected':'')+'>Inactive</option></select></label></div><div class="form-actions"><button type="button" class="btn btn-secondary" data-act="closeModal">Cancel</button><button type="submit" class="btn" id="saveStudentBtn">'+(isEdit?'Save Changes':'Add Student')+'</button></div></form></div>';
- document.body.appendChild(modal);modal.querySelector('input[name=student_id]')?.focus();
+ root.appendChild(modal);modal.querySelector('input[name=student_id]')?.focus();
 }
 async function saveStudent(form){
  const rowid=form.elements.rowid.value;
@@ -217,7 +217,6 @@ root.addEventListener('input',e=>{
   const next=document.getElementById('studentSearch');next?.focus();next?.setSelectionRange(sel,sel);
  }
 });
-document.addEventListener('submit',e=>{},false);
 window.addEventListener('hashchange',()=>{
  const page=location.hash.slice(1);
  if(['overview','kiosk','students','records'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';render();}
