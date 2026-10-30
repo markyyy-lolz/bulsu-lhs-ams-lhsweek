@@ -195,7 +195,7 @@ root.addEventListener('submit',async e=>{
 });
 document.addEventListener('click',async e=>{
  const nav=e.target.closest('[data-nav]');
- if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';location.hash=state.page;render();return;}
+ if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if((state.page==='overview'||state.page==='kiosk')&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
  const key=e.target.closest('[data-key]');
  if(key){const input=document.getElementById('studentID');if(!input)return;const value=key.dataset.key;if(value==='Clear')input.value='';else if(value==='⌫')input.value=input.value.slice(0,-1);else input.value=(input.value+value).slice(0,12);input.focus();return;}
  const b=e.target.closest('[data-act]');if(!b)return;
