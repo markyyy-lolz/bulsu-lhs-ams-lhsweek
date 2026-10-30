@@ -157,30 +157,112 @@ async function scan(){
  }catch(e){state.lastResult={status:'ERROR',message:e.message||'Please try again.'};render();}
  finally{state.busy=false;const btn2=document.getElementById('scanBtn');if(btn2){btn2.disabled=false;btn2.textContent='Record Attendance →';}}
 }
+
+function classTitle(id){
+ const c=state.classes.find(x=>x.id===id);
+ return c?c.grade_level+' · '+c.section:'Unassigned';
+}
+function classesHTML(){
+ if(state.role!=='official')return '<div class="notice">LSC Official access required.</div>';
+ return header('Classes & Sections','Create classes before registering students or assigning Class Mayors.')+
+ '<div class="two-col" style="margin-top:0;grid-template-columns:1.2fr 1fr"><div class="card pad"><div class="section-title"><h3>Registered Classes</h3><span class="muted small">'+state.classes.length+' total</span></div>'+
+ (state.classes.length?'<div class="table-wrap"><table class="table"><thead><tr><th>Grade Level</th><th>Section</th><th>Students</th></tr></thead><tbody>'+state.classes.map(c=>'<tr><td>'+esc(c.grade_level)+'</td><td>'+esc(c.section)+'</td><td>'+state.students.filter(s=>s.class_id===c.id).length+'</td></tr>').join('')+'</tbody></table></div>':'<div class="empty">No classes yet. Create your first class.</div>')+
+ '</div><div class="card pad"><div class="section-title"><h3>Add Class</h3></div><form id="classForm" class="stack"><label class="field">Grade level<input name="grade_level" placeholder="Grade 10" maxlength="30" required></label>'+
+ '<label class="field">Section<input name="section" placeholder="Mt. Makiling" maxlength="80" required></label><button class="btn" type="submit">Add Class</button></form><div class="notice" style="margin-top:20px">Each Class Mayor is assigned to exactly one class. Only LSC Officials may create classes.</div></div></div>';
+}
+function officialsHTML(){
+ if(state.role!=='official')return '<div class="notice">LSC Official access required.</div>';
+ const opts=state.classes.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.grade_level+' · '+c.section)+'</option>').join('');
+ return header('Role Assignments','Only LSC Officials may assign, change, or revoke roles.')+
+ '<div class="two-col" style="margin-top:0"><div class="card pad"><div class="section-title"><h3>Current Assignments</h3><span class="muted small">'+state.assignments.length+' accounts</span></div>'+
+ (state.assignments.length?'<div class="table-wrap"><table class="table"><thead><tr><th>User Email</th><th>Role</th><th>Class</th><th>Action</th></tr></thead><tbody>'+
+ state.assignments.map(a=>'<tr><td>'+esc(a.email)+'</td><td><span class="badge '+(a.role==='class_mayor'?'out':'')+'">'+(a.role==='official'?'LSC Official':'Class Mayor')+'</span></td><td>'+esc(a.class_id?classTitle(a.class_id):'Whole School')+'</td><td>'+(a.user_id===state.user?.id?'—':'<button type="button" class="linkbtn" data-act="revokeRole" data-id="'+esc(a.user_id)+'">Revoke</button>')+'</td></tr>').join('')+'</tbody></table></div>':'<div class="empty">No assignments have been made.</div>')+
+ '</div><div class="card pad"><div class="section-title"><h3>Assign a Role</h3></div><form id="roleForm" class="stack">'+
+ '<label class="field">Existing account email<input type="email" name="email" placeholder="mayor@school.example" required></label>'+
+ '<label class="field">Access role<select name="role" id="roleSelect" required><option value="class_mayor">Class Mayor</option><option value="official">LSC Official</option></select></label>'+
+ '<label class="field" id="roleClassWrap">Assigned Class<select name="class_id" id="roleClassSelect" required><option value="">Select class…</option>'+opts+'</select></label>'+
+ '<button class="btn" type="submit">Assign / Update Role</button></form><div class="notice warn" style="margin-top:18px">The account must already exist in Supabase Authentication. Invitations and password creation remain under the school administrator’s control.</div></div></div>';
+}
 function studentModal(student){
  document.querySelector('.modal-backdrop')?.remove();
- const isEdit=!!student;
+ if(!state.classes.length){toast('Create a class first under Classes.',true);return;}
+ const editing=!!student;
+ const options=state.classes.map(c=>'<option value="'+esc(c.id)+'"'+(student?.class_id===c.id?' selected':'')+'>'+esc(c.grade_level+' · '+c.section)+'</option>').join('');
  const modal=document.createElement('div');modal.className='modal-backdrop';
- modal.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-label="'+(isEdit?'Edit student':'New student')+'"><div class="modal-header"><h2>'+(isEdit?'Edit Student':'Add Student')+'</h2><button class="modal-close" data-act="closeModal" aria-label="Close dialog">✕</button></div><form id="studentForm"><input type="hidden" name="rowid" value="'+esc(student?.id||'')+'"><div class="stack"><label class="field">Student ID<input name="student_id" type="text" inputmode="numeric" pattern="[0-9]{7,12}" maxlength="12" required value="'+esc(student?.student_id||'')+'" placeholder="2023107337"></label><label class="field">Full Name<input name="full_name" required minlength="2" maxlength="160" value="'+esc(student?.full_name||'')+'" placeholder="Student full name"></label><div class="field-row"><label class="field">Grade Level<input name="grade_level" maxlength="30" value="'+esc(student?.grade_level||'')+'" placeholder="Grade 10"></label><label class="field">Section<input name="section" maxlength="80" value="'+esc(student?.section||'')+'" placeholder="Section"></label></div><label class="field">Enrollment status<select name="active"><option value="true" '+(!student||student.active?'selected':'')+'>Active</option><option value="false" '+(student&&!student.active?'selected':'')+'>Inactive</option></select></label></div><div class="form-actions"><button type="button" class="btn btn-secondary" data-act="closeModal">Cancel</button><button type="submit" class="btn" id="saveStudentBtn">'+(isEdit?'Save Changes':'Add Student')+'</button></div></form></div>';
- root.appendChild(modal);modal.querySelector('input[name=student_id]')?.focus();
+ modal.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-label="'+(editing?'Edit student':'Add student')+'"><div class="modal-header"><h2>'+(editing?'Edit Student':'Add Student')+'</h2><button class="modal-close" data-act="closeModal" aria-label="Close dialog">✕</button></div>'+
+ '<form id="studentForm"><input type="hidden" name="rowid" value="'+esc(student?.id||'')+'"><div class="stack"><label class="field">Student ID<input name="student_id" type="text" pattern="[0-9]{7,12}" maxlength="12" inputmode="numeric" required value="'+esc(student?.student_id||'')+'"></label>'+
+ '<label class="field">Full Name<input name="full_name" required minlength="2" maxlength="160" value="'+esc(student?.full_name||'')+'"></label>'+
+ '<label class="field">Class / Section<select name="class_id" required><option value="">Select class…</option>'+options+'</select></label>'+
+ '<label class="field">Enrollment status<select name="active"><option value="true"'+(!student||student.active?' selected':'')+'>Active</option><option value="false"'+(student&&!student.active?' selected':'')+'>Inactive</option></select></label></div>'+
+ '<div class="form-actions"><button type="button" class="btn btn-secondary" data-act="closeModal">Cancel</button><button type="submit" class="btn" id="saveStudentBtn">Save Student</button></div></form></div>';
+ root.appendChild(modal);
+ modal.querySelector('input[name=student_id]')?.focus();
 }
 async function saveStudent(form){
+ if(state.role!=='official')return toast('LSC Official access required.',true);
  const rowid=form.elements.rowid.value;
- const value={student_id:form.elements.student_id.value.trim(),full_name:form.elements.full_name.value.trim(),grade_level:form.elements.grade_level.value.trim(),section:form.elements.section.value.trim(),active:form.elements.active.value==='true'};
+ const classId=form.elements.class_id.value;
+ const cls=state.classes.find(c=>c.id===classId);
+ if(!cls)return toast('Select an existing class.',true);
+ const value={
+  student_id:form.elements.student_id.value.trim(),full_name:form.elements.full_name.value.trim(),
+  class_id:cls.id,grade_level:cls.grade_level,section:cls.section,active:form.elements.active.value==='true'
+ };
  const btn=document.getElementById('saveStudentBtn');btn.disabled=true;
- try{
-  if(!/^[0-9]{7,12}$/.test(value.student_id))throw new Error('Student ID must be 7–12 digits.');
+ try {
+  if(!/^[0-9]{7,12}$/.test(value.student_id))throw new Error('Student ID must contain 7–12 digits.');
   if(state.demo){
-   if(state.students.some(s=>s.student_id===value.student_id&&s.id!==rowid))throw new Error('Student ID already exists.');
-   if(rowid){let s=state.students.find(s=>s.id===rowid);Object.assign(s,value);}
+   if(state.students.some(s=>s.student_id===value.student_id&&s.id!==rowid))throw new Error('Student ID is already registered.');
+   if(rowid)Object.assign(state.students.find(s=>s.id===rowid),value);
    else state.students.push({...value,id:'demo'+Date.now()});
   }else{
-   const query=rowid?sb.from('lsc_students').update(value).eq('id',rowid):sb.from('lsc_students').insert(value);
-   const {error}=await query;if(error)throw error;await loadData();
+   const q=rowid?sb.from('lsc_students').update(value).eq('id',rowid):sb.from('lsc_students').insert(value);
+   const {error}=await q;if(error)throw error;await loadData();
   }
   document.querySelector('.modal-backdrop')?.remove();render();toast('Student saved successfully.');
- }catch(e){toast(e.message||'Unable to save student.',true);}
+ }catch(e){toast(e.message||'Could not save student.',true);}
  finally{btn.disabled=false;}
+}
+async function createClass(form){
+ if(state.role!=='official')return;
+ const value={grade_level:form.elements.grade_level.value.trim(),section:form.elements.section.value.trim()};
+ try{
+  if(!value.grade_level||!value.section)throw new Error('Enter both grade level and section.');
+  if(state.demo){
+   if(state.classes.some(c=>c.grade_level===value.grade_level&&c.section===value.section))throw new Error('Class already exists.');
+   state.classes.push({...value,id:'demo-class-'+Date.now()});
+  }else{
+   const {error}=await sb.from('lsc_classes').insert(value);if(error)throw error;await loadData();
+  }
+  render();toast('Class created.');
+ }catch(e){toast(e.message||'Unable to create class.',true);}
+}
+async function assignRole(form){
+ if(state.role!=='official')return;
+ const email=form.elements.email.value.trim().toLowerCase();
+ const role=form.elements.role.value;
+ const class_id=role==='class_mayor'?form.elements.class_id.value:null;
+ if(role==='class_mayor'&&!class_id)return toast('Select the Class Mayor’s class.',true);
+ try{
+  if(state.demo){
+   const existing=state.assignments.find(a=>a.email===email);
+   if(existing)Object.assign(existing,{role,class_id});
+   else state.assignments.push({user_id:'demo-user-'+Date.now(),email,role,class_id});
+  }else{
+   const {error}=await sb.rpc('lsc_assign_role',{p_email:email,p_role:role,p_class_id:class_id||null});
+   if(error)throw error;await loadData();
+  }
+  render();toast('Role assigned successfully.');
+ }catch(e){toast(e.message||'Could not assign role.',true);}
+}
+async function revokeRole(userId){
+ if(state.role!=='official'||userId===state.user?.id)return;
+ if(!confirm('Revoke this user’s LSC access?'))return;
+ try{
+  if(state.demo)state.assignments=state.assignments.filter(a=>a.user_id!==userId);
+  else{const {error}=await sb.rpc('lsc_revoke_role',{p_user_id:userId});if(error)throw error;await loadData();}
+  render();toast('Role revoked.');
+ }catch(e){toast(e.message||'Could not revoke access.',true);}
 }
 function toCsvCell(value){let x=String(value??'');if(/^[=+\-@\t\r]/.test(x))x="'"+x;return '"'+x.replaceAll('"','""')+'"';}
 function exportCsv(){
@@ -194,6 +276,8 @@ root.addEventListener('submit',async e=>{
  if(e.target.id==='loginForm'){e.preventDefault();await logIn(e.target);}
  if(e.target.id==='scanForm'){e.preventDefault();await scan();}
  if(e.target.id==='studentForm'){e.preventDefault();await saveStudent(e.target);}
+ if(e.target.id==='classForm'){e.preventDefault();await createClass(e.target);}
+ if(e.target.id==='roleForm'){e.preventDefault();await assignRole(e.target);}
  if(e.target.id==='filterForm'){e.preventDefault();state.recordDate=e.target.elements.date.value||todayPH();state.query=e.target.elements.search.value.trim();await loadData();render();}
 });
 document.addEventListener('click',async e=>{
@@ -210,8 +294,10 @@ document.addEventListener('click',async e=>{
  if(act==='export')exportCsv();
  if(act==='addStudent')studentModal(null);
  if(act==='editStudent')studentModal(state.students.find(s=>s.id===b.dataset.id));
+ if(act==='revokeRole')await revokeRole(b.dataset.id);
  if(act==='closeModal')document.querySelector('.modal-backdrop')?.remove();
 });
+root.addEventListener('change',e=>{if(e.target.id==='roleSelect'){const wrap=document.getElementById('roleClassWrap');if(wrap){wrap.hidden=e.target.value==='official';document.getElementById('roleClassSelect').required=e.target.value==='class_mayor';}}});
 root.addEventListener('input',e=>{
  if(e.target.id==='studentSearch'){
   state.query=e.target.value;
