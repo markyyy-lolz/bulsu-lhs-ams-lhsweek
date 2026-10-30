@@ -13,7 +13,7 @@ const state={
  user:null,role:null,classId:null,page:'checkout',shows:[],selectedShow:'',
  student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',
  receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,
- ticketCode:'',ticketResult:null,shift:null,printLog:[],cameraStream:null,cameraTimer:null,html5Scanner:null,scanBusy:false,online:navigator.onLine,otpEmail:'',otpSent:false
+ ticketCode:'',ticketResult:null,shift:null,shiftHistory:[],printLog:[],cameraStream:null,cameraTimer:null,html5Scanner:null,scanBusy:false,online:navigator.onLine,otpEmail:'',otpSent:false
 };
 function movie(){
  return state.shows.find(x=>x.id===state.selectedShow)||null;
@@ -372,6 +372,10 @@ async function fetchShift(){
  .select('id,opened_at,opening_php,closed_at,closing_php,expected_php,variance_php')
  .eq('cashier_id',state.user.id).is('closed_at',null).maybeSingle();
  if(!error)state.shift=data;
+ const recent=await db.from('lsc_movie_cash_shifts')
+ .select('opened_at,closed_at,opening_php,closing_php,expected_php,variance_php')
+ .eq('cashier_id',state.user.id).not('closed_at','is',null).order('closed_at',{ascending:false}).limit(12);
+ if(!recent.error)state.shiftHistory=recent.data||[];
 }
 function shiftView(){
  const sh=state.shift;
@@ -383,7 +387,10 @@ function shiftView(){
  '<label>'+(sh?'Physical cash counted at close':'Opening cash float (PHP)')+
  '<input name="amount" type="number" min="0" max="1000000" step=".01" required placeholder="0.00"></label>'+
  '<label>Shift notes<input name="note" maxlength="400" placeholder="Cash drawer / operator notes (optional)"></label>'+
- '<button type="submit" class="movie-btn movie-primary"'+(!state.online?' disabled':'')+'>'+(sh?'Close Shift & Reconcile':'Open Cashier Shift')+'</button></form></section>';
+ '<button type="submit" class="movie-btn movie-primary"'+(!state.online?' disabled':'')+'>'+(sh?'Close Shift & Reconcile':'Open Cashier Shift')+'</button></form>'+
+ '<h3 style="margin-top:26px">Recent Cashier Reconciliations</h3><div class="movie-table-scroll"><table class="movie-table"><thead><tr><th>Closed (PHT)</th><th>Opening</th><th>Expected</th><th>Counted</th><th>Difference</th></tr></thead><tbody>'+
+ (state.shiftHistory||[]).map(x=>'<tr><td>'+esc(pht(x.closed_at))+'</td><td>'+money(x.opening_php)+'</td><td>'+money(x.expected_php)+'</td><td>'+money(x.closing_php)+'</td><td>'+money(x.variance_php)+'</td></tr>').join('')+
+ '</tbody></table></div></section>';
 }
 async function saveShift(form){
  if(!navigator.onLine){state.notice='Offline. Cash shifts cannot be changed without the server.';render();return}
