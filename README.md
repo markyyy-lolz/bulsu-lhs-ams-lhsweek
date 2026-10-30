@@ -15,6 +15,19 @@ Independent prototype for **Bulacan State University Laboratory High School LSC*
 
 The root URL redirects to the student terminal.
 
+## Uploaded masterlists (Grades 8–10, October 30, 2026)
+
+The user-supplied 16 image masterlists were transcribed and imported **privately into Supabase only**; no roster or list of names is stored in this public GitHub repository.
+
+- **Grade 8:** 159 students from 5 sections; temporary codes `2025000001`–`2025000159`.
+- **Grade 9:** 212 students from 6 sections; temporary codes `2024000001`–`2024000212`.
+- **Grade 10:** 169 students from 5 sections; temporary codes `2023000001`–`2023000169`. The previous active Grade 10–Mulawin test record is preserved.
+- **Grade 7:** prefix `2026` reserved, but no Grade 7 masterlist was uploaded.
+
+**IMPORTANT:** These numbers are generated **local placeholders**, not verified official university student IDs. The 540 imported students are `active=false`, `id_origin='generated_pending_verification'`; **live Time IN/OUT will reject these IDs** until an authorized LSC Official compares the image transcription against the approved school record, replaces the temporary number with the official ID, checks the verification acknowledgement, and activates the student.
+
+The database constraint `lsc_verified_before_active` prevents activation while `id_origin='generated_pending_verification'`. The class names and adviser fields were copied into private Supabase classes for staff reference. Since the source images are photographs, spellings should be rechecked before approving the roster.
+
 ## Access permissions
 
 **Class Mayor:** Can view and **record Time IN/Time OUT only for classmates in the one section assigned by an LSC Official**. Can activate the attendance terminal when signed in on the same browser/device. Cannot manage other classes, edit students, create classes, or assign roles. Both read access and server-side record calls enforce class scope.
