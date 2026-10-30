@@ -93,12 +93,12 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
    <div class="status-panel"><div class="label">Station status</div><div class="status-line"><span class="status-dot" id="stationDot"></span><span id="stationLabel">Checking session</span></div><p id="stationDetail">Please use a supervised school terminal.</p></div>
    <div class="steps">
     <div class="step"><span class="step-num">01</span><div><strong>Enter your Student ID</strong><p>Use your registered student number. Example format: 2023107337.</p></div></div>
-    <div class="step"><span class="step-num">02</span><div><strong>Automatic Time IN / OUT</strong><p>The next event is determined securely by the database. There is no manual toggle.</p></div></div>
-    <div class="step"><span class="step-num">03</span><div><strong>Instant confirmation</strong><p>Your recorded status and timestamp are displayed immediately.</p></div></div>
+    <div class="step"><span class="step-num">02</span><div><strong>Automatic Time IN / OUT</strong><p>Time IN/OUT is determined securely by the database. Class Mayor entries are limited to the assigned class.</p></div></div>
+    <div class="step"><span class="step-num">03</span><div><strong>Instant confirmation</strong><p>Your recorded status, timestamp, and the logged-in account that recorded it appear immediately.</p></div></div>
    </div>
    <a class="teacher-link" href="./login.html">Class Mayor / LSC Official Portal <span>↗</span></a>
    <button id="demoButton" type="button" class="btn btn-secondary" style="width:100%;margin-top:10px">Try Demo Mode</button>
-   <p style="font-size:11px;color:#8491a9;line-height:1.7;margin-top:13px">For data protection, an LSC Official must activate the kiosk on this same browser first. Demo entries are not saved.</p>
+   <p style="font-size:11px;color:#8491a9;line-height:1.7;margin-top:13px">For real attendance, a Class Mayor or LSC Official must sign in on this same browser. Class Mayors can record only their assigned classmates. Every new entry is audited to the signed-in account.</p>
   </aside>
  </div>
  <footer class="student-footer">LSC Attendance Monitor · Independent prototype · Powered by Azure&lt;3 · School approval required.<br>Student attendance information is handled through Supabase, never stored on GitHub Pages.</footer>
