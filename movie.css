@@ -93,3 +93,25 @@ body.movie-site{margin:0;min-height:100vh;font-family:"DM Sans",system-ui,sans-s
 @media(max-width:680px){.movie-header{padding:14px;width:calc(100% - 20px)}.movie-brand strong{font-size:17px}.movie-brand small{max-width:190px;font-size:9px}.movie-brand img{width:36px;height:47px}.movie-head-right{gap:8px}.movie-role{display:none}.movie-return{font-size:11px}.movie-main{width:calc(100% - 20px);margin-top:25px}.movie-title{display:block}.movie-title h1{font-size:32px}.movie-title .movie-operator{display:block;margin-top:13px}.movie-tabs{width:100%;display:grid;grid-template-columns:1fr 1fr}.movie-tabs button{padding:12px 8px}.movie-panel{border-radius:19px}.movie-student-row{display:block}.movie-student-row button{margin-top:9px;width:100%}.movie-two{grid-template-columns:1fr}.movie-toolbar button{flex:1}.movie-stats{grid-template-columns:1fr 1fr}.movie-stat{padding:14px}.movie-stat strong{font-size:19px}.movie-show-item{align-items:flex-start}}
 @media(prefers-reduced-motion:no-preference){.movie-panel{animation:mb-rise .44s ease-out both}.movie-summary{animation-delay:.08s}@keyframes mb-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* Printer-friendly sales report, separate from the 80mm admission-ticket popup. */
+@media print {
+ @page{size:A4 portrait;margin:12mm}
+ body.movie-site{background:white!important;color:black!important}
+ body.movie-site::before,body.movie-site::after,.movie-header,.movie-tabs,.movie-return,.movie-toolbar,.movie-footer,.movie-operator,
+ .movie-site .movie-table button,.movie-site .movie-panel .movie-btn{display:none!important}
+ .movie-main{width:100%;max-width:none;margin:0;padding:0}
+ .movie-title{margin-bottom:15px}
+ .movie-title h1{font-size:24px;color:black!important}
+ .movie-title em{color:black!important}
+ .movie-title p{color:#444!important}
+ .movie-panel{border:0;box-shadow:none;backdrop-filter:none;background:white!important;padding:0}
+ .movie-stats{grid-template-columns:repeat(4,1fr);gap:5px}
+ .movie-stat{border:1px solid #bbb;border-radius:0;padding:8px}
+ .movie-stat strong{font-size:17px;color:#111}
+ .movie-table-scroll{overflow:visible}
+ .movie-table{min-width:0;font-size:9px}
+ .movie-table th,.movie-table td{padding:5px 4px;border:1px solid #aaa}
+ .movie-status{padding:0;background:none!important;color:#111!important}
+ .movie-table tr{break-inside:avoid}
+}
