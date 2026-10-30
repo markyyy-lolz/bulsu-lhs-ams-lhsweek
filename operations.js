@@ -94,7 +94,7 @@ function recap(){
  '<button class="movie-btn movie-secondary" data-act="recap-csv">Download Summary CSV</button></div></section>';
 }
 function render(){
- if(!state.user){root.innerHTML='<div class="movie-signin"><h1>LSC Command Center</h1><p>Authorized account required.</p><a href="./login.html" class="movie-btn movie-primary">Sign in</a></div>';return;}
+ if(!state.user){root.innerHTML='<div class="movie-signin"><h1>LSC Command Center</h1><p>Authorized account required.</p><a href="./movie.html" class="movie-btn movie-primary">Sign in at Movie Booth</a></div>';return;}
  const visibleTabs=tabs.filter(x=>(x[0]!=='team'&&x[0]!=='audit')||state.role==='official');
  root.innerHTML=top()+'<main class="movie-main"><div class="movie-title"><div><span>LSC FOUNDATION WEEK · OPERATIONS</span>'+
  '<h1>Event Command <em>Center</em></h1><p>Safe, scoped operational monitoring and volunteer controls</p></div>'+
