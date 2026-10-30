@@ -357,3 +357,41 @@ body.student-site{
  .content.page-enter .stack,#confirmation .result,.toast,.status-dot.ok,body::before{animation:none!important}
  .card,.stat,.btn,.nav .nav-btn,.entry-card .key,.header-links a{transition:none!important;transform:none!important}
 }
+
+
+/* Foundation Week Passport • private participation studio */
+.fw-pulse{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 20px}
+.fw-metric{padding:24px;min-height:142px;display:flex;flex-direction:column;gap:7px}
+.fw-metric>span{font-size:12px;font-weight:750;color:#55709b}
+.fw-metric>strong{font-size:34px;line-height:1.25;color:#19385f;letter-spacing:-.04em}
+.fw-metric>small{color:#6b7e9b;font-size:12px}
+.fw-layout{margin-top:0;grid-template-columns:1fr 1fr;align-items:start}
+.fw-activities{display:flex;flex-direction:column;gap:9px}
+.fw-activity{
+ display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;width:100%;
+ border:1px solid rgba(151,178,214,.42);background:rgba(255,255,255,.55);
+ border-radius:15px;padding:16px;color:#19385f;cursor:pointer
+}
+.fw-activity:hover{border-color:rgba(59,107,188,.5);background:rgba(246,249,255,.95)}
+.fw-activity.chosen{border-color:rgba(61,103,190,.69);background:rgba(226,237,255,.72);box-shadow:0 0 0 3px rgba(88,137,216,.09)}
+.fw-activity>span:first-child{min-width:0;display:flex;flex-direction:column;gap:5px}
+.fw-activity strong{font-size:14px;font-weight:800;overflow-wrap:anywhere}
+.fw-activity small{color:#6c7e9d;font-size:12px}
+.fw-activity-count{font-size:11px;font-weight:800;white-space:nowrap;border-radius:100px;background:rgba(216,231,255,.8);color:#2e548f;padding:7px 11px}
+.fw-banner{display:flex;flex-direction:column;gap:6px;padding:17px 19px;border-radius:16px;
+ background:linear-gradient(114deg,rgba(26,57,115,.92),rgba(60,90,158,.84));color:white;margin-bottom:19px}
+.fw-banner strong{font-size:16px}
+.fw-banner span{font-size:12px;color:#d8e5ff}
+.fw-progress{margin-top:20px;display:flex;flex-direction:column;gap:7px}
+.fw-progress-track{height:10px;background:rgba(207,219,241,.78);border-radius:20px;overflow:hidden}
+.fw-progress-track>span{display:block;height:100%;min-width:0;background:linear-gradient(90deg,#355ac0,#78a5eb);border-radius:20px}
+.fw-manager{margin:19px 0}
+.fw-manager>.card{max-width:690px}
+.fw-manage{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:11px;margin:17px 0}
+.fw-manage span{font-size:12px;color:#456083}
+.fw-actions{display:flex;gap:7px;flex-wrap:wrap}
+.fw-log{margin-top:22px}
+.fw-log .table-wrap{overflow-x:auto}
+.fw-log .table{min-width:690px}
+@media(max-width:1030px){.fw-layout{grid-template-columns:1fr}.fw-pulse{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:680px){.fw-pulse{grid-template-columns:1fr}.fw-metric{min-height:110px;padding:18px}.fw-activity{flex-wrap:wrap}.fw-log .section-title{align-items:flex-start;gap:12px;flex-wrap:wrap}}
