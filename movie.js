@@ -13,7 +13,7 @@ const state={
  user:null,role:null,classId:null,page:'checkout',shows:[],selectedShow:'',
  student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',
  receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,
- ticketCode:'',ticketResult:null,shift:null,printLog:[],cameraStream:null,cameraTimer:null,scanBusy:false,online:navigator.onLine
+ ticketCode:'',ticketResult:null,shift:null,printLog:[],cameraStream:null,cameraTimer:null,html5Scanner:null,scanBusy:false,online:navigator.onLine
 };
 function movie(){
  return state.shows.find(x=>x.id===state.selectedShow)||null;
@@ -301,7 +301,7 @@ function validator(){
  '<button type="button" class="movie-btn movie-secondary" data-act="check-ticket">Check Ticket</button></div>'+
  '<div class="ops-actions"><button class="movie-btn movie-secondary" type="button" data-act="camera-start">Scan with Camera (supported browsers)</button>'+
  '<button class="movie-btn movie-secondary" type="button" data-act="camera-stop">Stop Camera</button></div>'+
- '<p class="movie-helper">USB/Bluetooth scanner keyboards work by typing into the ticket code field. Camera scanning requires browser support and HTTPS. For iPhone/Messenger, use manual ticket code or a compatible external scanner.</p>'+
+ '<p class="movie-helper">USB/Bluetooth scanner keyboards work by typing into the ticket code field. Camera scanning requires browser support and HTTPS. On iPhone/Messenger, camera permission may be blocked; manual code or a paired scanner remains available.</p>'+
  '<div id="movieCameraHolder" class="movie-camera-holder" hidden><video id="movieCamera" autoplay muted playsinline></video></div>'+
  (v?'<div class="movie-validator '+esc(v.result)+'"><strong>'+esc(v.result==='VALID'?'✓ VALID — Ready to admit':v.result==='REDEEMED'?'✓ ADMISSION RECORDED':v.result==='ALREADY_USED'?'✕ ALREADY USED':v.result==='VOID'?'✕ VOIDED':'✕ '+v.result)+'</strong>'+
  '<span>'+esc(v.movie||'Unknown movie')+' · '+esc(v.date||'')+' · '+esc(v.code||'')+'</span>'+
@@ -323,30 +323,42 @@ async function checkTicket(redeem=false){
 function stopCamera(){
  if(state.cameraTimer){clearInterval(state.cameraTimer);state.cameraTimer=null}
  if(state.cameraStream){state.cameraStream.getTracks().forEach(t=>t.stop());state.cameraStream=null}
+ if(state.html5Scanner){
+  const scanner=state.html5Scanner;state.html5Scanner=null;
+  scanner.stop().then(()=>scanner.clear()).catch(()=>{try{scanner.clear()}catch(e){}});
+ }
+}
+async function ensureScannerLibrary(){
+ if(window.Html5Qrcode)return;
+ if(!window.__lscQRLoad){
+  window.__lscQRLoad=new Promise((resolve,reject)=>{
+   const script=document.createElement('script');
+   script.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js';
+   script.async=true;script.onload=()=>resolve();script.onerror=()=>reject(Error('QR scanner library could not load'));
+   document.head.appendChild(script);
+  }).catch(e=>{window.__lscQRLoad=null;throw e});
+ }
+ await window.__lscQRLoad;
+ if(!window.Html5Qrcode)throw Error('QR scanner library unavailable');
 }
 async function startCamera(){
  stopCamera();
- if(!navigator.mediaDevices?.getUserMedia||!window.BarcodeDetector){
-  state.notice='Camera scanning is not supported by this browser. Manual code and external scanner entry remain available.';
-  render();return;
- }
+ if(!navigator.mediaDevices?.getUserMedia){state.notice='This browser cannot access the camera. Type the code or use an external scanner.';render();return}
  try{
- const formats=await BarcodeDetector.getSupportedFormats();
- if(!formats.includes('qr_code'))throw Error('QR-code camera recognition unavailable');
- const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'environment'}});
- state.cameraStream=stream;
- const holder=document.getElementById('movieCameraHolder'),video=document.getElementById('movieCamera');
- if(!holder||!video){stopCamera();return}
- holder.hidden=false;video.srcObject=stream;await video.play();
- const detector=new BarcodeDetector({formats:['qr_code']});
- state.cameraTimer=setInterval(async()=>{
-  if(!state.cameraStream||state.scanBusy||video.readyState<2)return;
-  try{const results=await detector.detect(video);
-   const value=results.find(x=>/^FW-[0-9A-F]{12}$/i.test(x.rawValue?.trim()||''))?.rawValue;
-   if(value){state.ticketCode=value.trim().toUpperCase();stopCamera();await checkTicket(false)}
-  }catch(e){console.warn('Barcode decode unavailable:',e.message)}
- },600);
- }catch(e){stopCamera();state.notice='Camera not available: '+e.message+'. You can type the code manually.';render()}
+  await ensureScannerLibrary();
+  const holder=document.getElementById('movieCameraHolder');
+  if(!holder)return;
+  holder.hidden=false;
+  holder.innerHTML='<div id="movieQrReader"></div>';
+  const scanner=new window.Html5Qrcode('movieQrReader',{formatsToSupport:[window.Html5QrcodeSupportedFormats.QR_CODE],verbose:false});
+  state.html5Scanner=scanner;
+  await scanner.start({facingMode:'environment'},{fps:8,qrbox:{width:210,height:210}},
+   async raw=>{
+    const code=String(raw||'').trim().toUpperCase();
+    if(!/^FW-[0-9A-F]{12}$/.test(code)||state.scanBusy)return;
+    state.ticketCode=code;stopCamera();await checkTicket(false);
+   },()=>{});
+ }catch(e){stopCamera();state.notice='Camera scanner unavailable: '+e.message+'. Manual entry still works.';render()}
 }
 async function fetchShift(){
  if(!['official','class_mayor','cashier'].includes(state.role))return;
