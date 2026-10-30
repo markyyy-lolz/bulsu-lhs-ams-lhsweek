@@ -87,7 +87,8 @@ function reports(){
  '<div class="movie-toolbar"><label>Sales date (Philippine Time)<input type="date" id="movieReportDate" value="'+esc(state.reportDate||'')+'"></label>'+
  '<button type="button" class="movie-btn movie-secondary" data-act="report-refresh">Refresh</button>'+
  '<button type="button" class="movie-btn movie-secondary" data-act="report-all">All dates</button>'+
- '<button type="button" class="movie-btn movie-secondary" data-act="report-export">Export CSV</button></div>'+
+ '<button type="button" class="movie-btn movie-secondary" data-act="report-export">Export CSV</button>'+ 
+ '<button type="button" class="movie-btn movie-secondary" data-act="report-print">Print Report</button></div>'+
  '<div class="movie-stats">'+
  [['Paid sales',sum.paid_sales],['Tickets sold',sum.paid_tickets],['Gross sales',money(sum.gross_php)],['Voided sales',sum.void_sales]].map(x=>
  '<div class="movie-stat"><small>'+x[0]+'</small><strong>'+x[1]+'</strong></div>').join('')+'</div>'+
@@ -309,6 +310,7 @@ document.addEventListener('click',async e=>{
  if(act==='report-refresh'){state.reportDate=document.getElementById('movieReportDate')?.value||'';try{await loadReport()}catch(e){state.notice=e.message}render()}
  if(act==='report-all'){state.reportDate='';try{await loadReport()}catch(e){state.notice=e.message}render()}
  if(act==='report-export'){state.reportDate=document.getElementById('movieReportDate')?.value||'';await exportReport()}
+ if(act==='report-print')window.print();
 });
 document.addEventListener('submit',async e=>{
  if(e.target.id==='movieSetupForm'){e.preventDefault();await createShow(e.target);}
