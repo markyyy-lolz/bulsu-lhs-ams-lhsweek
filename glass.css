@@ -288,3 +288,72 @@ body.student-site{
 .hamb .outline-icon{display:block;width:21px;height:21px}
 @media(max-width:760px){.hamb{display:inline-flex;min-height:41px;min-width:41px}}
 @media(prefers-reduced-motion:reduce){.nav .nav-ico{transition:none}.nav-btn:hover .nav-ico{transform:none}}
+
+
+/* LSC subtle motion system v1.2.3 — progressive enhancement, no impact on attendance logic */
+@keyframes lsc-rise-in {
+ from {opacity:0;transform:translate3d(0,16px,0)}
+ to {opacity:1;transform:translate3d(0,0,0)}
+}
+@keyframes lsc-card-in {
+ from {opacity:0;transform:translate3d(0,10px,0) scale(.987)}
+ to {opacity:1;transform:translate3d(0,0,0) scale(1)}
+}
+@keyframes lsc-confirm-in {
+ 0% {opacity:0;transform:translate3d(0,12px,0) scale(.97)}
+ 70% {opacity:1;transform:translate3d(0,-2px,0) scale(1.007)}
+ 100% {opacity:1;transform:translate3d(0,0,0) scale(1)}
+}
+@keyframes lsc-online-pulse {
+ 0%,100%{box-shadow:0 0 0 3px rgba(32,174,121,.13)}
+ 50%{box-shadow:0 0 0 7px rgba(32,174,121,.06)}
+}
+@keyframes lsc-soft-gear {
+ from{transform:rotate(-4deg)}
+ to{transform:rotate(8deg)}
+}
+@media (prefers-reduced-motion:no-preference){
+ /* Initial entrance: students see the input immediately; no blocking splash screen. */
+ .student-header{animation:lsc-rise-in .42s ease-out both}
+ .student-hero{animation:lsc-rise-in .48s .07s ease-out both}
+ .student-grid>.entry-card{animation:lsc-card-in .54s .12s cubic-bezier(.2,.85,.3,1) both}
+ .student-grid>.side-panel{animation:lsc-card-in .54s .21s cubic-bezier(.2,.85,.3,1) both}
+ .login-art{animation:lsc-rise-in .5s ease-out both}
+ .login-box{animation:lsc-card-in .49s .09s cubic-bezier(.2,.85,.3,1) both}
+ /* Page transitions only on route changes, never on every directory search keystroke. */
+ .content.page-enter .page-header{animation:lsc-rise-in .32s ease-out both}
+ .content.page-enter .stats>.stat{animation:lsc-card-in .37s cubic-bezier(.2,.85,.3,1) both}
+ .content.page-enter .stats>.stat:nth-child(1){animation-delay:.05s}
+ .content.page-enter .stats>.stat:nth-child(2){animation-delay:.09s}
+ .content.page-enter .stats>.stat:nth-child(3){animation-delay:.13s}
+ .content.page-enter .stats>.stat:nth-child(4){animation-delay:.17s}
+ .content.page-enter .two-col>.card,
+ .content.page-enter>.card,
+ .content.page-enter .two-col>.stack{animation:lsc-card-in .39s .09s ease-out both}
+ /* Feedback animation runs after the real, server-confirmed response appears. */
+ #confirmation .result{animation:lsc-confirm-in .35s cubic-bezier(.18,.86,.24,1.04) both}
+ .toast{animation:lsc-confirm-in .3s cubic-bezier(.18,.86,.24,1.04) both}
+ .status-dot.ok{animation:lsc-online-pulse 2.9s ease-in-out infinite}
+ /* Hover effects require a mouse/trackpad, so touch devices don't get stuck lifted. */
+ @media (hover:hover) and (pointer:fine){
+  .card,.stat{transition:transform .24s ease,box-shadow .25s ease,border-color .22s ease}
+  .card:hover,.stat:hover{transform:translate3d(0,-3px,0);box-shadow:0 19px 42px rgba(34,69,121,.13),inset 0 1px 0 rgba(255,255,255,.7)}
+  .nav .nav-btn{transition:transform .2s ease,background .2s ease,color .2s ease,border-color .2s ease}
+  .nav .nav-btn:hover{transform:translate3d(3px,0,0)}
+  .btn:not(:disabled):hover,.header-links a:hover{transform:translate3d(0,-2px,0)}
+  .entry-card .key:not(:disabled):hover{transform:translate3d(0,-2px,0)}
+  .entry-avatar.logo-avatar:hover img{transform:scale(1.045)}
+ }
+ .btn,.header-links a,.entry-card .key,.entry-avatar.logo-avatar img{transition:transform .18s ease,box-shadow .2s ease,background-color .2s ease,filter .2s ease}
+ .entry-card .key:active:not(:disabled){transform:scale(.945)}
+ .btn:active:not(:disabled){transform:scale(.985)}
+ @media (min-width:900px) and (hover:hover){
+  body::before{animation:lsc-soft-gear 26s ease-in-out infinite alternate}
+ }
+}
+@media (prefers-reduced-motion:reduce){
+ .student-header,.student-hero,.student-grid>.card,.login-art,.login-box,
+ .content.page-enter .page-header,.content.page-enter .stat,.content.page-enter .card,
+ .content.page-enter .stack,#confirmation .result,.toast,.status-dot.ok,body::before{animation:none!important}
+ .card,.stat,.btn,.nav .nav-btn,.entry-card .key,.header-links a{transition:none!important;transform:none!important}
+}
