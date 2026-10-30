@@ -13,7 +13,7 @@ const state={
  user:null,role:null,classId:null,page:'checkout',shows:[],selectedShow:'',
  student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',
  receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,
- ticketCode:'',ticketResult:null,shift:null,printLog:[],cameraStream:null,cameraTimer:null,html5Scanner:null,scanBusy:false,online:navigator.onLine
+ ticketCode:'',ticketResult:null,shift:null,printLog:[],cameraStream:null,cameraTimer:null,html5Scanner:null,scanBusy:false,online:navigator.onLine,otpEmail:'',otpSent:false
 };
 function movie(){
  return state.shows.find(x=>x.id===state.selectedShow)||null;
@@ -30,7 +30,7 @@ function header(){
  return '<header class="movie-header"><div class="movie-brand"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
  '<div><strong>Movie Booth POS</strong><small>BulSU Laboratory High School · Foundation Week</small></div></div>'+
  '<div class="movie-head-right"><span class="movie-role">'+esc(state.role.replaceAll('_',' ').toUpperCase())+'</span>'+
- '<a href="./operations.html" class="movie-return">Event Command Center</a> · <a href="./login.html#overview" class="movie-return">LSC Dashboard</a></div></header>';
+ '<a href="./operations.html" class="movie-return">Event Command Center</a> · <a href="./login.html#overview" class="movie-return">LSC Dashboard</a> · <button type="button" class="movie-mini" data-act="signout">Sign Out</button></div></header>';
 }
 function tabs(){
  const items=[];
@@ -132,8 +132,14 @@ function setup(){
 }
 function render(){
  if(!state.user){root.innerHTML='<section class="movie-signin"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest"><h1>Movie Booth POS</h1>'+
- '<p>Sign in as an authorized LSC Official or Class Mayor to access private student ticketing.</p>'+
- '<a class="movie-btn movie-primary" href="./login.html">Go to LSC Login</a></section>';return;}
+ '<p>Private checkout, ticket scanning and volunteer stations. Sign in with your approved existing LSC email or use the main LSC portal.</p>'+
+ (state.otpSent?'<form id="movieOtpVerify" class="movie-fields"><label>Six-digit email code<input name="token" inputmode="numeric" pattern="[0-9]{6}" required maxlength="6" autocomplete="one-time-code" placeholder="000000"></label>'+
+ '<button class="movie-btn movie-primary" type="submit">Verify Email & Open POS</button></form><p class="movie-helper">Check your email for the verification code or magic link.</p>'+
+ '<button class="movie-btn movie-secondary" data-act="otp-back">Use another email</button>':
+ '<form id="movieOtpEmail" class="movie-fields"><label>Approved email address<input name="email" type="email" required autocomplete="email" placeholder="volunteer@school.edu.ph"></label>'+
+ '<button class="movie-btn movie-primary" type="submit">Send Sign-In Email</button></form>')+
+ (state.notice?'<p role="alert" class="movie-alert">'+esc(state.notice)+'</p>':'')+
+ '<p><a href="./login.html">LSC Official / Class Mayor Login</a></p></section>';return;}
  root.innerHTML=header()+'<main class="movie-main">'+
  '<div class="movie-title"><div><span>FOUNDATION WEEK · SALES & TICKETING</span><h1>Movie Booth <em>Point of Sale</em></h1>'+
  '<p>Student ID checkout · Printable movie tickets · Audited sales</p></div><span class="movie-operator">Operator: '+esc(state.user.email||'Authorized LSC account')+'</span></div>'+
@@ -398,6 +404,23 @@ function recovery(){
  '<td>'+x.quantity+'</td><td>'+esc(x.status)+'</td><td><button class="movie-mini" data-print="'+esc(x.id)+'">Reprint Tickets</button></td></tr>').join('')+
  '</tbody></table></div></section>';
 }
+
+async function volunteerOtpEmail(form){
+ const email=String(form.elements.email.value||'').trim().toLowerCase();
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return;
+ const {error}=await db.auth.signInWithOtp({email,options:{shouldCreateUser:false,
+  emailRedirectTo:location.origin+location.pathname}});
+ if(error){state.notice='Could not send the sign-in email. Check your registered account and school email configuration.';}
+ else{state.otpEmail=email;state.otpSent=true;state.notice=''}
+ render();
+}
+async function volunteerOtpVerify(form){
+ const code=String(form.elements.token.value||'').trim();
+ if(!/^\d{6}$/.test(code))return;
+ const {error}=await db.auth.verifyOtp({email:state.otpEmail,token:code,type:'email'});
+ if(error){state.notice='Verification failed: '+error.message;render();return;}
+ state.otpSent=false;state.notice='';await start();
+}
 async function start(){
  try{
   const {data:{user},error}=await db.auth.getUser();
@@ -457,6 +480,12 @@ document.addEventListener('click',async e=>{
   await loadShows();render();return;
  }
  const act=target.dataset.act;
+ if(act==='signout'){
+   stopCamera();await db.auth.signOut();
+   state.user=null;state.role=null;state.receipt=null;state.sales=[];state.student=null;state.notice='';
+   state.otpSent=false;state.page='checkout';render();return;
+ }
+ if(act==='otp-back'){state.otpSent=false;state.otpEmail='';state.notice='';render()}
  if(act==='lookup')await lookupStudent();
  if(act==='check-ticket')await checkTicket(false);
  if(act==='redeem-ticket')await checkTicket(true);
@@ -473,6 +502,8 @@ document.addEventListener('click',async e=>{
 document.addEventListener('submit',async e=>{
  if(e.target.id==='movieSetupForm'){e.preventDefault();await createShow(e.target);}
  if(e.target.id==='movieShiftForm'){e.preventDefault();await saveShift(e.target);}
+ if(e.target.id==='movieOtpEmail'){e.preventDefault();await volunteerOtpEmail(e.target);}
+ if(e.target.id==='movieOtpVerify'){e.preventDefault();await volunteerOtpVerify(e.target);}
 });
 document.addEventListener('change',e=>{
  if(e.target.id==='movieShow'){
