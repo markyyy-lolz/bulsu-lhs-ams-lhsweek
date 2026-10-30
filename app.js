@@ -12,7 +12,7 @@ const state = {
 };
 let clearResultTimer = null;
 let lastAnimatedPage = null;
-const iconPaths=Object.freeze({"overview":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/>","students":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>","classes":"<path d=\"M4 22V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16\"/><path d=\"M2 22h20M9 22v-6h6v6M8 9h.01M16 9h.01M8 13h.01M16 13h.01\"/>","officials":"<circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2\"/><path d=\"m16 8 2 2 4-4\"/>","records":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M8 2v4M16 2v4M3 10h18m-13 6 2 2 5-5\"/>","security":"<rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/><circle cx=\"12\" cy=\"16\" r=\"1\"/><path d=\"M12 17v2\"/>","kiosk":"<path d=\"M7 3H5a2 2 0 0 0-2 2v2m14-4h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M3 17v2a2 2 0 0 0 2 2h2M4 12h16\"/>","logout":"<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"m16 17 5-5-5-5M21 12H9\"/>","external":"<path d=\"M13 5h6v6M19 5l-9 9\"/><path d=\"M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6\"/>","movie":"<rect x=\"2\" y=\"3\" width=\"20\" height=\"18\" rx=\"2\"/><path d=\"M7 3v18M17 3v18M2 8h5M2 16h5M17 8h5M17 16h5\"/>","passport":"<path d=\"M5 3h14v18l-7-4-7 4V3Z\"/><path d=\"M8 7h8M8 11h5\"/>","menu":"<path d=\"M4 6h16M4 12h16M4 18h16\"/>"});
+const iconPaths=Object.freeze({"overview":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/>","students":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>","classes":"<path d=\"M4 22V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16\"/><path d=\"M2 22h20M9 22v-6h6v6M8 9h.01M16 9h.01M8 13h.01M16 13h.01\"/>","officials":"<circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2\"/><path d=\"m16 8 2 2 4-4\"/>","records":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M8 2v4M16 2v4M3 10h18m-13 6 2 2 5-5\"/>","security":"<rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/><circle cx=\"12\" cy=\"16\" r=\"1\"/><path d=\"M12 17v2\"/>","kiosk":"<path d=\"M7 3H5a2 2 0 0 0-2 2v2m14-4h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M3 17v2a2 2 0 0 0 2 2h2M4 12h16\"/>","logout":"<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"m16 17 5-5-5-5M21 12H9\"/>","external":"<path d=\"M13 5h6v6M19 5l-9 9\"/><path d=\"M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6\"/>","movie":"<rect x=\"2\" y=\"3\" width=\"20\" height=\"18\" rx=\"2\"/><path d=\"M7 3v18M17 3v18M2 8h5M2 16h5M17 8h5M17 16h5\"/>","passport":"<path d=\"M5 3h14v18l-7-4-7 4V3Z\"/><path d=\"M8 7h8M8 11h5\"/>","close":"<path d=\"M18 6 6 18M6 6l12 12\"/>","menu":"<path d=\"M4 6h16M4 12h16M4 18h16\"/>"});
 function navIcon(name){return '<svg class="outline-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+(iconPaths[name]||iconPaths.overview)+'</svg>';}
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function todayPH(){
@@ -98,11 +98,11 @@ function loginHTML(){
 function sidebar(){
   let menu=[['overview','Dashboard'],['passport','Foundation Passport'],['records','Attendance Records'],['security','Account Security']];
   if(state.role==='official'){menu.splice(1,0,['students','Student Directory'],['classes','Classes'],['officials','Role Assignments']);}
-  return '<aside class="sidebar'+(state.mobileNav?' open':'')+'"><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+navIcon(v[0])+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">'+navIcon('kiosk')+'</span>Student Attendance<span class="nav-external">'+navIcon('external')+'</span></a>'+'<a class="nav-btn" href="./movie.html"><span class="nav-ico">'+navIcon('movie')+'</span>Movie Booth POS<span class="nav-external">'+navIcon('external')+'</span></a>'+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">'+navIcon('logout')+'<span>Sign out</span></button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
+  return '<aside id="lsc-sidebar" class="sidebar'+(state.mobileNav?' open':'')+'" aria-label="Workspace navigation"><button type="button" class="lsc-mobile-close" data-act="closeMenu" aria-label="Close navigation menu">'+navIcon('close')+'</button><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+navIcon(v[0])+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">'+navIcon('kiosk')+'</span>Student Attendance<span class="nav-external">'+navIcon('external')+'</span></a>'+'<a class="nav-btn" href="./movie.html"><span class="nav-ico">'+navIcon('movie')+'</span>Movie Booth POS<span class="nav-external">'+navIcon('external')+'</span></a>'+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">'+navIcon('logout')+'<span>Sign out</span></button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
 }
 function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security',passport:'Foundation Passport'})[state.page]||'Dashboard';}
 function appHTML(){
-  return '<div class="shell">'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open menu">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():state.page==='passport'?passportHTML():overviewHTML())+'</div></main></div>';
+  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():state.page==='passport'?passportHTML():overviewHTML())+'</div></main></div>';
 }
 function header(head,sub,extra=''){return '<div class="page-header"><div><div class="eyebrow" style="margin-bottom:8px">LSC ATTENDANCE MONITOR</div><h1>'+head+'</h1><p>'+sub+'</p></div>'+extra+'</div>';}
 function metrics(){
@@ -389,7 +389,8 @@ function fwExport(){
  link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1200);
 }
 function render(){
- if(!state.user){lastAnimatedPage=null;root.innerHTML=loginHTML();return;}
+ document.body.classList.toggle('lsc-menu-open',Boolean(state.user&&state.mobileNav));
+ if(!state.user){state.mobileNav=false;lastAnimatedPage=null;root.innerHTML=loginHTML();return;}
  if((['students','classes','officials'].includes(state.page)&&state.role!=='official')||state.page==='kiosk')state.page='overview';
  const newPage=lastAnimatedPage!==state.page;
  root.innerHTML=appHTML();
@@ -596,7 +597,19 @@ document.addEventListener('click',async e=>{
  if(act==='demo')demoStart();
  if(act==='demoMayor')demoStart(true);
  if(act==='logout')await logOut();
- if(act==='menu'){state.mobileNav=!state.mobileNav;document.querySelector('.sidebar')?.classList.toggle('open',state.mobileNav);}
+ if(act==='menu'){
+  state.mobileNav=!state.mobileNav;
+  document.querySelector('.sidebar')?.classList.toggle('open',state.mobileNav);
+  document.body.classList.toggle('lsc-menu-open',state.mobileNav);
+  const button=document.querySelector('.hamb');
+  if(button)button.setAttribute('aria-expanded',String(state.mobileNav));
+ }
+ if(act==='closeMenu'){
+  state.mobileNav=false;
+  document.querySelector('.sidebar')?.classList.remove('open');
+  document.body.classList.remove('lsc-menu-open');
+  document.querySelector('.hamb')?.setAttribute('aria-expanded','false');
+ }
  if(act==='refresh'){await loadData();render();toast('Attendance refreshed.');}
  if(act==='export')exportCsv();
  if(act==='fwRefresh'){await loadFoundationData();await loadPassportRecords();render();toast('Foundation Week pulse refreshed.');}
@@ -606,6 +619,15 @@ document.addEventListener('click',async e=>{
  if(act==='editStudent')studentModal(state.students.find(s=>s.id===b.dataset.id));
  if(act==='revokeRole')await revokeRole(b.dataset.id);
  if(act==='closeModal')document.querySelector('.modal-backdrop')?.remove();
+});
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape'&&state.mobileNav){
+  state.mobileNav=false;
+  document.querySelector('.sidebar')?.classList.remove('open');
+  document.body.classList.remove('lsc-menu-open');
+  document.querySelector('.hamb')?.setAttribute('aria-expanded','false');
+  document.querySelector('.hamb')?.focus();
+ }
 });
 root.addEventListener('change',e=>{if(e.target.id==='roleSelect'){const wrap=document.getElementById('roleClassWrap');if(wrap){wrap.hidden=e.target.value==='official';document.getElementById('roleClassSelect').required=e.target.value==='class_mayor';}}});
 root.addEventListener('input',e=>{
