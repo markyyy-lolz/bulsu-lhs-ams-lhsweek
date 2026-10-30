@@ -90,7 +90,7 @@ function checkout(){
 function reports(){
  const sum=state.summary||{paid_sales:0,paid_tickets:0,gross_php:0,void_sales:0,voided_php:0};
  const rows=state.sales||[];
- return '<section class="movie-panel"><div class="movie-panel-head"><h2>Movie Booth Sales Reports</h2><span>Server-calculated · '+(state.role==='official'?'Whole school':'Assigned class only')+'</span></div>'+
+ return '<section class="movie-panel"><div class="movie-panel-head"><h2>Movie Booth Sales Reports</h2><span>Server-calculated · '+(state.role==='official'?'Whole school':state.role==='class_mayor'?'Assigned class':state.role==='cashier'?'Your own sales':'Aggregate only')+'</span></div>'+
  '<div class="movie-toolbar"><label>Sales date (Philippine Time)<input type="date" id="movieReportDate" value="'+esc(state.reportDate||'')+'"></label>'+
  '<button type="button" class="movie-btn movie-secondary" data-act="report-refresh">Refresh</button>'+
  '<button type="button" class="movie-btn movie-secondary" data-act="report-all">All dates</button>'+
@@ -407,6 +407,7 @@ document.addEventListener('click',async e=>{
  if(target.dataset.page){
   state.page=target.dataset.page;state.notice='';
   stopCamera();
+  if(state.page==='recovery')state.reportDate='';
   if(state.page==='reports'||state.page==='recovery'){try{await loadReport()}catch(e){state.notice='Report error: '+e.message}}
   if(state.page==='shifts')await fetchShift();
   render();return;
@@ -481,4 +482,9 @@ document.addEventListener('input',e=>{
   if(btn)btn.disabled=!canSell()||!Number.isFinite(cash)||cash<t||cash>1000000;
  }
 });
+window.addEventListener('offline',()=>{
+ stopCamera();state.online=false;state.notice='Network disconnected. Checkout and ticket redemption are paused until Supabase can confirm them.';render();
+});
+window.addEventListener('online',()=>{state.online=true;state.notice='Network restored. Verify pending sales before retrying any payment.';render()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCamera()});
 start();
