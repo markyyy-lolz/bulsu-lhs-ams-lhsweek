@@ -15,7 +15,7 @@ body{
   radial-gradient(ellipse at 65% 97%,rgba(153,194,239,.35),transparent 42%),
   linear-gradient(135deg,#e6edf9 0%,#f7f8fd 48%,#e6edf8 100%) fixed;
 }
-body::before,body::after{content:"⚙";position:fixed;z-index:-1;pointer-events:none;line-height:1;font-family:system-ui;font-weight:400;color:#4e74b7;user-select:none}
+body::before,body::after{content:"";position:fixed;z-index:-1;pointer-events:none;line-height:1;font-family:system-ui;font-weight:400;color:#4e74b7;user-select:none}
 body::before{font-size:490px;opacity:.046;top:-230px;right:-150px;transform:rotate(-15deg)}
 body::after{font-size:410px;opacity:.038;bottom:-245px;left:-140px;transform:rotate(19deg)}
 h1,h2,h3,.brand-title{letter-spacing:-.035em}
@@ -70,7 +70,7 @@ button:active:not(:disabled){transform:scale(.98)}
   box-shadow:0 20px 44px rgba(22,48,90,.22),inset 0 1px 0 rgba(255,255,255,.12);
   -webkit-backdrop-filter:blur(25px);backdrop-filter:blur(25px)
 }
-.sidebar::after{content:"⚙";position:absolute;right:-76px;bottom:68px;color:rgba(255,255,255,.047);font-size:230px;line-height:1;pointer-events:none}
+.sidebar::after{content:"";position:absolute;right:-76px;bottom:68px;color:rgba(255,255,255,.047);font-size:230px;line-height:1;pointer-events:none}
 .sidebar .brand{padding:8px 9px 19px;border-bottom:1px solid rgba(255,255,255,.12)}
 .sidebar .brand-title{font-size:17px}
 .sidebar .brand-sub{color:#c1d3f2}
@@ -135,7 +135,7 @@ button:active:not(:disabled){transform:scale(.98)}
   -webkit-backdrop-filter:blur(26px);backdrop-filter:blur(26px);
   padding:clamp(28px,5vw,74px)
 }
-.login-art:before{content:"⚙";font-size:400px;position:absolute;right:-125px;top:20%;line-height:1;color:rgba(255,255,255,.065);pointer-events:none}
+.login-art:before{content:"";font-size:400px;position:absolute;right:-125px;top:20%;line-height:1;color:rgba(255,255,255,.065);pointer-events:none}
 .login-art:after{border-width:52px;border-color:rgba(255,255,255,.05);width:410px;height:410px}
 .login-art .lsc-logo{height:93px;width:72px;filter:drop-shadow(0 9px 12px rgba(0,0,0,.25))}
 .login-art .brand-sub{color:#c7dcfa}
@@ -180,7 +180,7 @@ body.student-site{
 .live-clock strong{color:#1a3761;font-size:20px}
 .student-grid{grid-template-columns:minmax(0,1.38fr) minmax(300px,.82fr);gap:23px;align-items:start}
 .entry-card{padding:clamp(26px,4.2vw,56px) clamp(20px,4.6vw,65px) 34px;border-radius:28px}
-.entry-card::after{content:"⚙";position:absolute;top:-142px;left:-124px;font-size:330px;line-height:1;color:rgba(38,80,157,.027);pointer-events:none}
+.entry-card::after{content:"";position:absolute;top:-142px;left:-124px;font-size:330px;line-height:1;color:rgba(38,80,157,.027);pointer-events:none}
 .entry-avatar.logo-avatar{
  width:90px;height:105px;border-radius:24px;
  background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.82);
@@ -430,3 +430,77 @@ body.student-site{
 .fw-stamp-list>div{display:flex;justify-content:space-between;gap:9px;border-radius:9px;background:rgba(255,255,255,.57);padding:9px 11px;font-size:12px}
 .fw-stamp-list>div small{color:#6c80a0}
 @media(max-width:650px){.fw-lookup button{width:100%}}
+
+
+/* iOS / Messenger WebView hotfix: never use emoji as large decorative artwork. */
+body::before,body::after{content:none!important;display:none!important;animation:none!important}
+.sidebar::after{
+ content:"";font-size:0;line-height:0;top:auto;bottom:55px;right:-65px;
+ width:170px;height:170px;border:22px solid rgba(255,255,255,.048);
+ border-radius:50%;box-sizing:border-box;color:transparent;background:transparent;
+ pointer-events:none;z-index:0
+}
+.login-art::before{
+ content:"";font-size:0;line-height:0;top:24%;right:-90px;
+ width:200px;height:200px;border:28px solid rgba(255,255,255,.047);
+ border-radius:50%;box-sizing:border-box;color:transparent;background:transparent;
+ pointer-events:none
+}
+.login-art>*{position:relative;z-index:1}
+.entry-card::after{
+ content:"";font-size:0;line-height:0;top:-75px;left:-75px;
+ width:150px;height:150px;border:22px solid rgba(38,80,157,.025);
+ border-radius:50%;box-sizing:border-box;color:transparent;pointer-events:none
+}
+.lsc-nav-backdrop,.lsc-mobile-close{display:none}
+@media(max-width:760px){
+ html,body{max-width:100%;overflow-x:hidden}
+ .sidebar{
+  width:min(300px,calc(100vw - 44px));min-width:0;max-width:calc(100vw - 44px);
+  top:8px;left:8px;right:auto;bottom:auto;z-index:31;
+  height:calc(100vh - 16px);height:calc(100dvh - 16px);
+  max-height:calc(100dvh - 16px);
+  padding:19px 13px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  visibility:hidden;pointer-events:none;
+  transform:translate3d(calc(-100% - 18px),0,0);
+  transition:transform .24s ease,visibility .24s
+ }
+ .sidebar.open{visibility:visible;pointer-events:auto;transform:translate3d(0,0,0)}
+ .lsc-nav-backdrop{
+  display:block;position:fixed;inset:0;z-index:30;
+  background:rgba(13,28,56,.48);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+  opacity:0;pointer-events:none;visibility:hidden;
+  transition:opacity .23s ease,visibility .23s
+ }
+ body.lsc-menu-open .lsc-nav-backdrop{opacity:1;pointer-events:auto;visibility:visible}
+ body.lsc-menu-open{overflow:hidden}
+ .lsc-mobile-close{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border:1px solid rgba(255,255,255,.22);
+  border-radius:11px;background:rgba(255,255,255,.12);color:white;
+  position:absolute;right:16px;top:16px;z-index:4;cursor:pointer
+ }
+ .lsc-mobile-close svg{width:18px;height:18px}
+ .sidebar .brand{padding-right:37px;gap:9px}
+ .sidebar .brand-title{font-size:15px;line-height:1.25}
+ .sidebar .brand-sub{font-size:9px;line-height:1.5;letter-spacing:.2px}
+ .sidebar .nav-btn{font-size:13px;line-height:1.4;min-height:50px;overflow-wrap:anywhere}
+ .sidebar .nav-ico{flex:0 0 34px}
+ .sidebar-foot{overflow-wrap:anywhere}
+ .sidebar::after,.login-art::before,.entry-card::after{display:none!important}
+ .login-art{isolation:isolate;overflow:hidden}
+ .login-art .brand,.login-art .big,.login-art p{position:relative;z-index:2}
+ .login-art .big{max-width:100%}
+ .login-art::after{opacity:.40;pointer-events:none}
+ .login-side,.login-box{min-width:0}
+}
+@media(max-width:400px){
+ .sidebar{width:min(292px,calc(100vw - 35px));max-width:calc(100vw - 35px)}
+ .login-art{padding:23px 20px}
+ .login-art .big{font-size:clamp(26px,7vw,31px)}
+ .login-box{padding:22px 18px}
+ .login-box .btn{white-space:normal;text-align:center}
+}
+@media(prefers-reduced-motion:reduce){.sidebar,.lsc-nav-backdrop{transition:none!important}}
