@@ -2,6 +2,21 @@
 
 Independent website prototype: **GitHub Pages** frontend; **BrewPOS Supabase** project `rfxzbuocxersgbshczbj` as database. Requires school approval for actual student records.
 
+
+## Separate websites (same GitHub Pages project)
+
+The student-facing Time IN/Time OUT and staff administration areas now have **separate pages and URLs**:
+
+- **Student attendance:** https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/student.html
+- **Staff login / admin dashboard:** https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/login.html
+- The main address `/` redirects to `student.html`.
+
+**Security model:** Student attendance page does not show a login form or any student directory/reporting UI. Actual attendance recording is **locked** unless a school-authorized staff user has logged in using `login.html` on the **same browser/device** and activated the session. Staff should then click **Student Attendance** in the administration sidebar to open the dedicated kiosk. This ensures that arbitrary visitors cannot create real records just by knowing a Student ID. The staff session should remain supervised and the device should be restricted/kiosk-mode for school use.
+
+If a student visits the public URL from their own phone with no school-approved station session, they can view the page and try **Demo Mode**, but cannot submit live records. Student self-check-in from arbitrary devices is **not yet enabled**, as it would need an approved verification/security model first.
+
+The real Time IN / OUT handler and student database are unchanged, and all BrewPOS features remain isolated.
+
 ## Functions
 - Student ID numeric 7–12 digits. Type, use touchscreen keypad, or compatible keyboard-wedge scanner.
 - The first valid entry each Philippine calendar day is **Time IN**, then **Time OUT**, then IN, etc.
@@ -23,8 +38,8 @@ on conflict (user_id) do update set role=excluded.role;
 
 For a regular supervised kiosk operator, use `'staff'` instead of `'admin'`. Never give students staff accounts.
 
-4. Sign in at the GitHub Pages website and use **Student Directory → Add Student** to register authorized roster entries. A nonregistered ID cannot log attendance.
-5. Open **Attendance Kiosk**. Staff must supervise: knowing a student ID alone does not prove student identity.
+4. Sign in at **login.html** and use **Student Directory → Add Student** to register authorized roster entries. A nonregistered ID cannot log attendance.
+5. Open the dedicated **Student Attendance** page using the admin sidebar link in that same browser. Staff must supervise: knowing a student ID alone does not prove student identity.
 
 ## Publishing
 Workflow `.github/workflows/pages.yml` tries to enable GitHub Pages on pushes to main. If needed, open the repository's **Settings → Pages**, choose **GitHub Actions** as publishing source, and rerun. Expected website URL:
