@@ -7,11 +7,12 @@ const root = document.getElementById('app');
 const state = {
   demo: false, user: null, role: null, page: 'overview', loading: false,
   students: [], logs: [], classes: [], assignments: [], classId: null, lastResult: null, query: '', recordDate: todayPH(),
-  busy: false, mobileNav: false, loginMode:'email', otpSent:false, otpEmail:'', showPasswordSetup:false
+  busy: false, mobileNav: false, loginMode:'email', otpSent:false, otpEmail:'', showPasswordSetup:false,
+  fwPulse:null, fwSelected:'', fwStamps:[], fwBusy:false, fwNotice:null
 };
 let clearResultTimer = null;
 let lastAnimatedPage = null;
-const iconPaths=Object.freeze({"overview":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/>","students":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>","classes":"<path d=\"M4 22V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16\"/><path d=\"M2 22h20M9 22v-6h6v6M8 9h.01M16 9h.01M8 13h.01M16 13h.01\"/>","officials":"<circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2\"/><path d=\"m16 8 2 2 4-4\"/>","records":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M8 2v4M16 2v4M3 10h18m-13 6 2 2 5-5\"/>","security":"<rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/><circle cx=\"12\" cy=\"16\" r=\"1\"/><path d=\"M12 17v2\"/>","kiosk":"<path d=\"M7 3H5a2 2 0 0 0-2 2v2m14-4h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M3 17v2a2 2 0 0 0 2 2h2M4 12h16\"/>","logout":"<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"m16 17 5-5-5-5M21 12H9\"/>","external":"<path d=\"M13 5h6v6M19 5l-9 9\"/><path d=\"M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6\"/>","menu":"<path d=\"M4 6h16M4 12h16M4 18h16\"/>"});
+const iconPaths=Object.freeze({"overview":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/>","students":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>","classes":"<path d=\"M4 22V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16\"/><path d=\"M2 22h20M9 22v-6h6v6M8 9h.01M16 9h.01M8 13h.01M16 13h.01\"/>","officials":"<circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2\"/><path d=\"m16 8 2 2 4-4\"/>","records":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M8 2v4M16 2v4M3 10h18m-13 6 2 2 5-5\"/>","security":"<rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/><circle cx=\"12\" cy=\"16\" r=\"1\"/><path d=\"M12 17v2\"/>","kiosk":"<path d=\"M7 3H5a2 2 0 0 0-2 2v2m14-4h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M3 17v2a2 2 0 0 0 2 2h2M4 12h16\"/>","logout":"<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"m16 17 5-5-5-5M21 12H9\"/>","external":"<path d=\"M13 5h6v6M19 5l-9 9\"/><path d=\"M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6\"/>","passport":"<path d=\"M5 3h14v18l-7-4-7 4V3Z\"/><path d=\"M8 7h8M8 11h5\"/>","menu":"<path d=\"M4 6h16M4 12h16M4 18h16\"/>"});
 function navIcon(name){return '<svg class="outline-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+(iconPaths[name]||iconPaths.overview)+'</svg>';}
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function todayPH(){
@@ -33,7 +34,7 @@ function demoStart(asMayor=false){
   state.students=[
     {id:'demo1',student_id:'2023107337',full_name:'Demo Student',grade_level:'10',section:'Sample Section',class_id:'demo-class',active:true},
     {id:'demo2',student_id:'2023999999',full_name:'Sample Learner',grade_level:'9',section:'Demo Section',class_id:'demo-class-2',active:true}
-  ]; if(asMayor){state.students=state.students.filter(x=>x.class_id==='demo-class');state.classes=state.classes.filter(x=>x.id==='demo-class');}state.logs=[]; state.page='overview'; state.lastResult=null; location.hash='overview'; render();
+  ]; if(asMayor){state.students=state.students.filter(x=>x.class_id==='demo-class');state.classes=state.classes.filter(x=>x.id==='demo-class');}state.logs=[];state.fwSelected='demo-fw';state.fwPulse={today:todayPH(),roster_total:state.students.length,scope:asMayor?'assigned_class':'whole_school',activities:[{activity_id:'demo-fw',title:'Demo Foundation Activity',session_date:todayPH(),venue:'Demo Station',active:true,stamps:0}]};state.fwStamps=[];state.page='overview'; state.lastResult=null; location.hash='overview'; render();
   toast('Demo mode: entries are not saved to Supabase.');
 }
 async function verifySession(){
@@ -41,7 +42,7 @@ async function verifySession(){
   if(error || !session){state.user=null;state.role=null;render();return;}
   const {data:role,error:roleError}=await sb.from('lsc_staff_roles').select('role,class_id').eq('user_id',session.user.id).maybeSingle();
   if(roleError || !role){await sb.auth.signOut();state.user=null;state.role=null;render();toast('Your account is not authorized for LSC Attendance.',true);return;}
-  state.user=session.user;state.role=role.role;state.classId=role.class_id; await loadData();render();
+  state.user=session.user;state.role=role.role;state.classId=role.class_id; await loadData();if(state.page==='passport')await loadPassportRecords();render();
 }
 async function loadData(){
   if(state.demo)return;
@@ -53,6 +54,7 @@ async function loadData(){
   ]);
   if(s.error || l.error || c.error || a.error){toast(s.error?.message || l.error?.message || c.error?.message || a.error?.message || 'Unable to load data.',true);return;}
   state.students=s.data || [];state.logs=l.data || [];state.classes=c.data||[];state.assignments=a.data||[];
+  await loadFoundationData();
 }
 function brand(){return '<img src="./assets/lsc-glass-logo.png?v=2" class="lsc-logo" alt="LSC official crest"><span><span class="brand-title" style="display:block">Attendance System</span><span class="brand-sub">BULSU LABORATORY HIGH SCHOOL</span></span>';}
 function loginHTML(){
@@ -93,13 +95,13 @@ function loginHTML(){
     '</div></section></div>';
 }
 function sidebar(){
-  let menu=[['overview','Dashboard'],['records','Attendance Records'],['security','Account Security']];
+  let menu=[['overview','Dashboard'],['passport','Foundation Passport'],['records','Attendance Records'],['security','Account Security']];
   if(state.role==='official'){menu.splice(1,0,['students','Student Directory'],['classes','Classes'],['officials','Role Assignments']);}
   return '<aside class="sidebar'+(state.mobileNav?' open':'')+'"><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+navIcon(v[0])+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">'+navIcon('kiosk')+'</span>Student Attendance<span class="nav-external">'+navIcon('external')+'</span></a>'+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">'+navIcon('logout')+'<span>Sign out</span></button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
 }
-function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security'})[state.page]||'Dashboard';}
+function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security',passport:'Foundation Passport'})[state.page]||'Dashboard';}
 function appHTML(){
-  return '<div class="shell">'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open menu">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():overviewHTML())+'</div></main></div>';
+  return '<div class="shell">'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open menu">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():state.page==='passport'?passportHTML():overviewHTML())+'</div></main></div>';
 }
 function header(head,sub,extra=''){return '<div class="page-header"><div><div class="eyebrow" style="margin-bottom:8px">LSC ATTENDANCE MONITOR</div><h1>'+head+'</h1><p>'+sub+'</p></div>'+extra+'</div>';}
 function metrics(){
@@ -230,6 +232,132 @@ async function updateBackupPassword(form){
     render();toast('Backup password saved. Email verification remains the primary sign-in method.');
   }catch(e){toast(e.message||'Password could not be saved.',true);}
   finally{btn.disabled=false;}
+}
+
+/* Foundation Week Passport: all real writes remain Supabase-authorized, non-public.
+   Activities are distinct from the existing IN/OUT attendance table. */
+async function loadFoundationData(){
+ if(state.demo)return;
+ const {data,error}=await sb.rpc('lsc_fw_pulse');
+ if(error){console.warn('Foundation Week pulse unavailable:',error.message);state.fwPulse=null;return;}
+ state.fwPulse=data;
+ const activities=data?.activities||[];
+ if(!activities.some(a=>a.activity_id===state.fwSelected)){
+  state.fwSelected=activities[0]?.activity_id||'';
+  state.fwStamps=[];
+ }
+}
+async function loadPassportRecords(){
+ if(state.demo){state.fwStamps=[];return;}
+ if(!state.fwSelected){state.fwStamps=[];return;}
+ const {data,error}=await sb.from('lsc_fw_passport_stamps')
+ .select('id,activity_id,recorded_at,recorded_by_email,recorded_by_role,station_label,lsc_students(student_id,full_name,grade_level,section)')
+ .eq('activity_id',state.fwSelected).order('recorded_at',{ascending:false}).limit(1000);
+ if(error){state.fwStamps=[];toast('Could not load event stamp records: '+error.message,true);return;}
+ state.fwStamps=data||[];
+}
+function passportHTML(){
+ const pulse=state.fwPulse||{roster_total:state.students.filter(s=>s.active).length,activities:[],today:todayPH()};
+ const activities=pulse.activities||[];
+ const selected=activities.find(a=>a.activity_id===state.fwSelected);
+ const total=Number(pulse.roster_total)||0;
+ const percentage=selected&&total?Math.min(100,Math.round(selected.stamps/total*100)):0;
+ const demo=state.demo;
+ const today=pulse.today||todayPH();
+ const canStamp=selected&&selected.active&&selected.session_date===today;
+ const progressCards='<div class="fw-pulse">'+
+  '<div class="card fw-metric"><span>Foundation activities</span><strong>'+activities.length+'</strong><small>Configured by LSC Officials</small></div>'+
+  '<div class="card fw-metric"><span>Students in your scope</span><strong>'+total+'</strong><small>'+(state.role==='official'?'Whole school':'Assigned section only')+'</small></div>'+
+  '<div class="card fw-metric"><span>Stamps at selected activity</span><strong>'+(selected?.stamps||0)+'</strong><small>'+percentage+'% participation coverage</small></div></div>';
+ const activitiesHTML=activities.length?activities.map(a=>
+  '<button type="button" class="fw-activity'+(a.activity_id===state.fwSelected?' chosen':'')+'" data-fw-select="'+esc(a.activity_id)+'">'+
+  '<span><strong>'+esc(a.title)+'</strong><small>'+esc(a.session_date)+(a.venue?' · '+esc(a.venue):'')+'</small></span>'+
+  '<span class="fw-activity-count">'+a.stamps+' stamps</span></button>').join(''):
+  '<div class="empty">No Foundation Week activities yet. An LSC Official can create the first event day or station below.</div>';
+ const manager=state.role==='official'&&!demo?
+  '<div class="card pad"><div class="section-title"><h3>Organizer Studio</h3></div>'+
+  '<form id="fwActivityForm" class="stack">'+
+  '<label class="field">Activity name<input name="title" maxlength="100" required minlength="3" placeholder="Example: Opening Program"></label>'+
+  '<label class="field">Foundation Week date (PHT)<input type="date" name="session_date" value="'+esc(today)+'" required></label>'+
+  '<label class="field">Venue / station (optional)<input name="venue" maxlength="120" placeholder="Main Hall"></label>'+
+  '<button type="submit" class="btn">Create Foundation Activity</button></form>'+
+  (selected?'<div class="fw-manage"><span>Selected: <strong>'+esc(selected.title)+'</strong></span><button class="btn btn-secondary" type="button" data-act="fwToggle">'+(selected.active?'Pause stamps':'Resume stamps')+'</button></div>':'')+
+  '<div class="notice">Only LSC Officials can create, pause or resume activities. Existing passport stamps are preserved.</div></div>':'';
+ const recorder='<div class="card pad">'+
+  '<div class="section-title"><h3>Passport Stamp Station</h3></div>'+
+  (selected?'<div class="fw-banner"><strong>'+esc(selected.title)+'</strong><span>'+esc(selected.session_date)+' · '+(canStamp?'Ready for supervised scanning':!selected.active?'Paused':'Available only on scheduled day')+'</span></div>':
+   '<div class="notice">Select a Foundation Week activity to begin.</div>')+
+  '<form id="fwStampForm" class="stack">'+
+  '<label class="field">Student attendance ID<input name="student_id" required pattern="[0-9]{7,12}" maxlength="12" inputmode="numeric" autocomplete="off" placeholder="2023000001"></label>'+
+  '<label class="field">Supervised station label<input name="station" maxlength="80" value="LSC Station" required placeholder="LSC Station A"></label>'+
+  '<button type="submit" class="btn"'+(!canStamp?' disabled':'')+'>Stamp Event Passport</button></form>'+
+  (state.fwNotice?'<div class="notice '+(state.fwNotice.type==='error'?'warn':'')+'" role="status" style="margin-top:14px"><strong>'+esc(state.fwNotice.title)+'</strong><div>'+esc(state.fwNotice.message)+'</div></div>':'')+
+  '<p class="muted small" style="margin-top:16px">One stamp per activity per student. Duplicates are blocked by the database. Every stamp records the operator and station. Verify the student is physically present.</p></div>';
+ const stampRows=state.fwStamps.map(p=>'<tr><td class="mono">'+esc(p.lsc_students?.student_id||'—')+'</td><td>'+esc(p.lsc_students?.full_name||'—')+'</td><td>'+esc(p.lsc_students?.section||'—')+'</td><td>'+esc(timePH(p.recorded_at))+'</td><td>'+esc(p.recorded_by_email||'—')+'</td></tr>').join('');
+ const table='<div class="card pad fw-log"><div class="section-title"><h3>Event Stamp Audit</h3><div class="fw-actions"><button class="btn btn-secondary" type="button" data-act="fwRefresh">Refresh Pulse</button><button class="btn btn-secondary" type="button" data-act="fwExport"'+(!state.fwStamps.length?' disabled':'')+'>Export CSV</button></div></div>'+
+ (state.fwStamps.length?'<div class="table-wrap"><table class="table"><thead><tr><th>Attendance ID</th><th>Student</th><th>Section</th><th>Time (PHT)</th><th>Recorded By</th></tr></thead><tbody>'+stampRows+'</tbody></table></div>':
+ '<div class="empty">No stamps recorded for this activity in your authorized scope.</div>')+
+ '<p class="muted small">This audit is separate from daily Time IN/OUT. Class Mayors can see only their assigned classmates.</p></div>';
+ return header('Foundation Week Passport','Unique activity stamps, supervised check-ins and a privacy-safe live participation pulse.')+
+  '<div class="notice" style="margin-bottom:18px">Foundation Week events only. Event stamps do not alter existing daily attendance or create automatic absences. This is an authorized LSC workspace, not a public student directory.</div>'+
+  progressCards+'<div class="two-col fw-layout"><div class="card pad"><div class="section-title"><h3>Activity Passport</h3><span class="muted small">'+esc(today)+' · PHT</span></div>'+
+  '<div class="fw-activities">'+activitiesHTML+'</div>'+
+  (selected?'<div class="fw-progress"><div class="fw-progress-track"><span style="width:'+percentage+'%"></span></div><div class="small muted">'+percentage+'% of your roster has a stamp for this activity</div></div>':'')+
+  '</div>'+recorder+'</div>'+(manager?'<div class="fw-manager">'+manager+'</div>':'')+table;
+}
+async function fwCreate(form){
+ if(state.role!=='official'||state.demo)return toast('Only real LSC Official accounts can create activities.',true);
+ const title=form.elements.title.value.trim();
+ const session_date=form.elements.session_date.value;
+ const venue=form.elements.venue.value.trim();
+ if(title.length<3||!session_date)return toast('Enter an activity name and date.',true);
+ const {data,error}=await sb.from('lsc_fw_activities').insert({title,session_date,venue:venue||null,created_by:state.user.id}).select('id').single();
+ if(error)return toast(error.message,true);
+ await loadFoundationData();
+ state.fwSelected=data.id;await loadFoundationData();await loadPassportRecords();state.fwNotice=null;render();
+ toast('Foundation Week activity created.');
+}
+async function fwStamp(form){
+ if(state.fwBusy)return;
+ if(!state.fwSelected)return toast('Select an activity.',true);
+ const student_id=form.elements.student_id.value.trim(),station=form.elements.station.value.trim();
+ if(!/^[0-9]{7,12}$/.test(student_id))return toast('Enter a valid attendance ID.',true);
+ if(state.demo){
+  state.fwNotice={type:'info',title:'Demo passport only',message:'No data has been saved to Supabase.'};render();return;
+ }
+ state.fwBusy=true;
+ try{
+  const {data,error}=await sb.rpc('lsc_fw_stamp',{p_activity_id:state.fwSelected,p_student_number:student_id,p_station:station||'LSC Station'});
+  if(error)throw error;
+  const duplicate=data?.status==='DUPLICATE';
+  state.fwNotice={type:duplicate?'warning':'success',title:duplicate?'Already stamped':'Stamp recorded',
+   message:(data?.full_name||'Student')+' · '+(data?.activity||'Foundation activity')+
+    (duplicate?' · Original recorded by '+(data.recorded_by||'authorized operator'):' · Recorded by '+(data.recorded_by||state.user?.email||'operator'))};
+  await loadFoundationData();await loadPassportRecords();render();
+  if(!duplicate)toast('Foundation Week passport stamped.');
+ }catch(e){state.fwNotice={type:'error',title:'Stamp not recorded',message:e.message||'Unable to verify station.'};render();}
+ finally{state.fwBusy=false;}
+}
+async function fwToggle(){
+ if(state.role!=='official'||state.demo)return;
+ const selected=state.fwPulse?.activities?.find(a=>a.activity_id===state.fwSelected);
+ if(!selected)return;
+ const {error}=await sb.from('lsc_fw_activities').update({active:!selected.active}).eq('id',selected.activity_id);
+ if(error)return toast(error.message,true);
+ await loadFoundationData();render();
+ toast(selected.active?'Activity paused.':'Activity resumed.');
+}
+function fwExport(){
+ if(!state.fwStamps.length)return toast('No passport stamps to export.',true);
+ const activity=state.fwPulse?.activities?.find(a=>a.activity_id===state.fwSelected);
+ const rows=[['Activity','Date','Attendance ID','Student','Grade','Section','Station','Recorded At (PHT)','Recorded By','Operator Role'],
+ ...state.fwStamps.map(p=>[activity?.title||'',activity?.session_date||'',p.lsc_students?.student_id||'',
+ p.lsc_students?.full_name||'',p.lsc_students?.grade_level||'',p.lsc_students?.section||'',p.station_label,
+ stampPH(new Date(p.recorded_at)),p.recorded_by_email,p.recorded_by_role])];
+ const csv='\uFEFF'+rows.map(r=>r.map(toCsvCell).join(',')).join('\r\n');
+ const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+ link.download='LSC-Foundation-Passport-'+(activity?.session_date||todayPH())+'.csv';
+ link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1200);
 }
 function render(){
  if(!state.user){lastAnimatedPage=null;root.innerHTML=loginHTML();return;}
@@ -417,11 +545,15 @@ root.addEventListener('submit',async e=>{
  if(e.target.id==='studentForm'){e.preventDefault();await saveStudent(e.target);}
  if(e.target.id==='classForm'){e.preventDefault();await createClass(e.target);}
  if(e.target.id==='roleForm'){e.preventDefault();await assignRole(e.target);}
+ if(e.target.id==='fwActivityForm'){e.preventDefault();await fwCreate(e.target);}
+ if(e.target.id==='fwStampForm'){e.preventDefault();await fwStamp(e.target);}
  if(e.target.id==='filterForm'){e.preventDefault();state.recordDate=e.target.elements.date.value||todayPH();state.query=e.target.elements.search.value.trim();await loadData();render();}
 });
 document.addEventListener('click',async e=>{
+ const fwSelect=e.target.closest('[data-fw-select]');
+ if(fwSelect){state.fwSelected=fwSelect.dataset.fwSelect;state.fwNotice=null;await loadPassportRecords();render();return;}
  const nav=e.target.closest('[data-nav]');
- if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if(state.page==='overview'&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
+ if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if(state.page==='passport'){await loadFoundationData();await loadPassportRecords();}if(state.page==='overview'&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
  const key=e.target.closest('[data-key]');
  if(key){const input=document.getElementById('studentID');if(!input)return;const value=key.dataset.key;if(value==='Clear')input.value='';else if(value==='⌫')input.value=input.value.slice(0,-1);else input.value=(input.value+value).slice(0,12);input.focus();return;}
  const b=e.target.closest('[data-act]');if(!b)return;
@@ -437,6 +569,9 @@ document.addEventListener('click',async e=>{
  if(act==='menu'){state.mobileNav=!state.mobileNav;document.querySelector('.sidebar')?.classList.toggle('open',state.mobileNav);}
  if(act==='refresh'){await loadData();render();toast('Attendance refreshed.');}
  if(act==='export')exportCsv();
+ if(act==='fwRefresh'){await loadFoundationData();await loadPassportRecords();render();toast('Foundation Week pulse refreshed.');}
+ if(act==='fwExport')fwExport();
+ if(act==='fwToggle')await fwToggle();
  if(act==='addStudent')studentModal(null);
  if(act==='editStudent')studentModal(state.students.find(s=>s.id===b.dataset.id));
  if(act==='revokeRole')await revokeRole(b.dataset.id);
@@ -451,10 +586,10 @@ root.addEventListener('input',e=>{
   const next=document.getElementById('studentSearch');next?.focus();next?.setSelectionRange(sel,sel);
  }
 });
-window.addEventListener('hashchange',()=>{
+window.addEventListener('hashchange',async()=>{
  const page=location.hash.slice(1);
- if(['overview','students','records','classes','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';render();}
+ if(['overview','passport','students','records','classes','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='passport'){await loadFoundationData();await loadPassportRecords();}render();}
 });
 setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=stampPH()+' PHT';},15000);
-state.page=['overview','students','records','classes','officials','security'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
+state.page=['overview','passport','students','records','classes','officials','security'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
 verifySession().catch(e=>{root.innerHTML=loginHTML();toast('Could not connect to the attendance service: '+e.message,true);});
