@@ -10,6 +10,7 @@ const state = {
   busy: false, mobileNav: false, loginMode:'email', otpSent:false, otpEmail:'', showPasswordSetup:false
 };
 let clearResultTimer = null;
+let lastAnimatedPage = null;
 const iconPaths=Object.freeze({"overview":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/>","students":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>","classes":"<path d=\"M4 22V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16\"/><path d=\"M2 22h20M9 22v-6h6v6M8 9h.01M16 9h.01M8 13h.01M16 13h.01\"/>","officials":"<circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2\"/><path d=\"m16 8 2 2 4-4\"/>","records":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M8 2v4M16 2v4M3 10h18m-13 6 2 2 5-5\"/>","security":"<rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/><circle cx=\"12\" cy=\"16\" r=\"1\"/><path d=\"M12 17v2\"/>","kiosk":"<path d=\"M7 3H5a2 2 0 0 0-2 2v2m14-4h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M3 17v2a2 2 0 0 0 2 2h2M4 12h16\"/>","logout":"<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"m16 17 5-5-5-5M21 12H9\"/>","external":"<path d=\"M13 5h6v6M19 5l-9 9\"/><path d=\"M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6\"/>","menu":"<path d=\"M4 6h16M4 12h16M4 18h16\"/>"});
 function navIcon(name){return '<svg class="outline-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+(iconPaths[name]||iconPaths.overview)+'</svg>';}
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -231,9 +232,14 @@ async function updateBackupPassword(form){
   finally{btn.disabled=false;}
 }
 function render(){
- if(!state.user){root.innerHTML=loginHTML();return;}
+ if(!state.user){lastAnimatedPage=null;root.innerHTML=loginHTML();return;}
  if((['students','classes','officials'].includes(state.page)&&state.role!=='official')||state.page==='kiosk')state.page='overview';
+ const newPage=lastAnimatedPage!==state.page;
  root.innerHTML=appHTML();
+ if(newPage){
+   root.querySelector('.content')?.classList.add('page-enter');
+   lastAnimatedPage=state.page;
+ }
  document.getElementById('studentID')?.focus();
 }
 async function logOut(){
