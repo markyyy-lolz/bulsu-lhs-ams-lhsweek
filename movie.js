@@ -237,7 +237,8 @@ function printTickets(receipt){
  const html='<!doctype html><html><head><meta charset="utf-8"><title>Movie Booth Tickets</title>'+
  '<style>@page{size:80mm auto;margin:2mm}*{box-sizing:border-box}body{font:13px Arial,sans-serif;color:#111;margin:0}.ticket{width:76mm;margin:0 auto 10mm;padding:5mm 3mm 7mm;border-bottom:2px dashed #000;break-after:page;page-break-after:always;text-align:center}.ticket-head{font-size:10px;font-weight:bold;letter-spacing:1px}h2{font-size:23px;margin:11px 0 4px}h3{font-size:17px;margin:5px 0 13px}.rule{border-top:1px dashed #444;margin:12px 0}p{font-size:13px;line-height:1.45;margin:12px 0}p b{font-size:10px;letter-spacing:1px}.code{font-size:18px;letter-spacing:1px;font-weight:bold;border:2px solid #000;padding:11px 3px;overflow-wrap:anywhere}.end{font-size:10px;line-height:1.6}.void{font-weight:bold;font-size:20px;margin-top:12px}@media screen{body{background:#e5e7eb;padding:20px}.ticket{background:white;box-shadow:0 4px 17px #aaa;padding:15px;margin-bottom:15px}}@media print{body{background:#fff}.ticket:last-child{break-after:auto;page-break-after:auto}}</style></head><body>'+body+'</body></html>';
  win.document.open();win.document.write(html);win.document.close();win.focus();
- win.addEventListener('load',()=>win.print(),{once:true});
+ // No external assets are required; print immediately from the operator's click to avoid popup blockers.
+ win.print();
 }
 function toCell(value){
  let s=String(value??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;
