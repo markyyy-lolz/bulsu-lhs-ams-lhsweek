@@ -5,7 +5,7 @@ const SB_KEY = 'sb_publishable_CR-CJKna_rcjQi7gg1CZGQ__DnXI6Lb';
 const sb = createClient(SB_URL, SB_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 const root = document.getElementById('app');
 const state = {
-  demo: false, user: null, role: null, page: 'kiosk', loading: false,
+  demo: false, user: null, role: null, page: 'overview', loading: false,
   students: [], logs: [], lastResult: null, query: '', recordDate: todayPH(),
   busy: false, mobileNav: false
 };
@@ -30,7 +30,7 @@ function demoStart(){
   state.students=[
     {id:'demo1',student_id:'2023107337',full_name:'Demo Student',grade_level:'10',section:'Sample Section',active:true},
     {id:'demo2',student_id:'2023999999',full_name:'Sample Learner',grade_level:'9',section:'Demo Section',active:true}
-  ]; state.logs=[]; state.page='kiosk'; state.lastResult=null; location.hash='kiosk'; render();
+  ]; state.logs=[]; state.page='overview'; state.lastResult=null; location.hash='overview'; render();
   toast('Demo mode: entries are not saved to Supabase.');
 }
 async function verifySession(){
@@ -52,11 +52,11 @@ async function loadData(){
 function brand(){return '<span class="mark">LSC</span><span><span class="brand-title" style="display:block">Attendance System</span><span class="brand-sub">BULSU LABORATORY HIGH SCHOOL</span></span>';}
 function loginHTML(){return '<div class="login"><section class="login-art"><div style="display:flex;align-items:center;gap:12px">'+brand()+'</div><div><span class="eyebrow" style="color:#a9c7ff">LABORATORY HIGH SCHOOL • LSC</span><h2 class="big">Every arrival.<br>Every departure.<br>Accounted for.</h2><p>A simpler, faster way to monitor student attendance with secure ID-based time logging.</p></div><div class="art-bottom small" style="color:#adc2e6">LSC Attendance Monitor · Powered by Supabase</div></section><section class="login-side"><div class="login-box"><div class="eyebrow">AUTHORIZED STAFF ACCESS</div><h1>Welcome back</h1><p>Sign in with an approved school staff account to activate the attendance terminal.</p><form id="loginForm"><label class="field">Email address<input type="email" name="email" required autocomplete="username" placeholder="staff@example.edu.ph"></label><label class="field">Password<input type="password" name="password" required autocomplete="current-password" placeholder="Enter password"></label><button class="btn" type="submit" id="loginBtn">Sign in to Attendance</button></form><div style="display:flex;align-items:center;gap:12px;margin:22px 0;color:#9aa6b9;font-size:12px"><div style="height:1px;background:#e2e8f0;flex:1"></div>OR TRY THE INTERFACE<div style="height:1px;background:#e2e8f0;flex:1"></div></div><button type="button" class="btn btn-secondary" style="width:100%" data-act="demo">Try Demo Mode</button><div class="login-footer">Demo data stays in your browser session only. School authorization and an approved staff account are required for real attendance records. This prototype is not an official school service.</div></div></section></div>';}
 function sidebar(){
-  let menu=[['overview','Dashboard'],['kiosk','Attendance Kiosk'],['records','Attendance Records']];
-  if(state.role==='admin')menu.splice(2,0,['students','Student Directory']);
-  return '<aside class="sidebar'+(state.mobileNav?' open':'')+'"><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+icons[v[0]]+'</span>'+v[1]+'</button>').join('')+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':esc(state.role?.toUpperCase()))+'</div><button class="side-signout" data-act="logout">↪ &nbsp;Sign out</button><div class="small" style="margin-top:25px">Independent prototype · School approval required</div></div></aside>';
+  let menu=[['overview','Dashboard'],['records','Attendance Records']];
+  if(state.role==='admin')menu.splice(1,0,['students','Student Directory']);
+  return '<aside class="sidebar'+(state.mobileNav?' open':'')+'"><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+icons[v[0]]+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">▣</span>Student Attendance ↗</a></nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':esc(state.role?.toUpperCase()))+'</div><button class="side-signout" data-act="logout">↪ &nbsp;Sign out</button><div class="small" style="margin-top:25px">Independent prototype · School approval required</div></div></aside>';
 }
-function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',records:'Attendance Records'})[state.page]||'Attendance Kiosk';}
+function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',records:'Attendance Records'})[state.page]||'Dashboard';}
 function appHTML(){
   return '<div class="shell">'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open menu">☰</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':'STAFF SESSION ACTIVE')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='records'?recordsHTML():kioskHTML())+'</div></main></div>';
 }
@@ -73,7 +73,7 @@ function overviewHTML(){
   const m=metrics();
   return header('Overview','Student attendance at a glance · '+esc(datePH(new Date())))+
   '<section class="stats">'+m.map(x=>'<div class="card stat"><div class="stat-ico">'+x[2]+'</div><div class="stat-label">'+x[0]+'</div><div class="stat-num mono">'+x[1]+'</div><div class="stat-foot">'+x[3]+'</div></div>').join('')+'</section>'+
-  '<div class="two-col"><div class="card pad"><div class="section-title"><h3>Recent Activity</h3><button class="btn btn-secondary" data-nav="records">View All</button></div>'+logTable(state.logs.filter(x=>x.event_date===todayPH()).slice(0,8),true)+'</div><div class="stack"><div class="log-ribbon"><div><h3>Ready for check-in?</h3><p>Record a Time IN or OUT with any registered student ID.</p></div><button class="btn btn-light" data-nav="kiosk">Open</button></div><div class="card pad"><div class="section-title"><h3>Quick Notes</h3></div><div class="info"><div class="bubble">✓</div><div><strong>Automatic alternation</strong><p>First entry of the Philippine school day is IN, then OUT, then IN.</p></div></div><div class="info"><div class="bubble">◷</div><div><strong>Reliable timestamps</strong><p>Real entries use the Supabase database clock, not the device clock.</p></div></div><div class="notice'+(state.demo?' warn':'')+'">'+(state.demo?'Demo mode only. No records are written to the school database.':'Access is limited to approved school staff accounts.')+'</div></div></div></div>';
+  '<div class="two-col"><div class="card pad"><div class="section-title"><h3>Recent Activity</h3><button class="btn btn-secondary" data-nav="records">View All</button></div>'+logTable(state.logs.filter(x=>x.event_date===todayPH()).slice(0,8),true)+'</div><div class="stack"><div class="log-ribbon"><div><h3>Ready for check-in?</h3><p>Open the dedicated Student Attendance page to record entries.</p></div><a class="btn btn-light" href="./student.html">Open</a></div><div class="card pad"><div class="section-title"><h3>Quick Notes</h3></div><div class="info"><div class="bubble">✓</div><div><strong>Automatic alternation</strong><p>First entry of the Philippine school day is IN, then OUT, then IN.</p></div></div><div class="info"><div class="bubble">◷</div><div><strong>Reliable timestamps</strong><p>Real entries use the Supabase database clock, not the device clock.</p></div></div><div class="notice'+(state.demo?' warn':'')+'">'+(state.demo?'Demo mode only. No records are written to the school database.':'Access is limited to approved school staff accounts.')+'</div></div></div></div>';
 }
 function kioskHTML(){
   let r=state.lastResult;
@@ -102,7 +102,7 @@ function studentsHTML(){
 }
 function render(){
  if(!state.user){root.innerHTML=loginHTML();return;}
- if(state.page==='students'&&state.role!=='admin')state.page='kiosk';
+ if((state.page==='students'&&state.role!=='admin')||state.page==='kiosk')state.page='overview';
  root.innerHTML=appHTML();
  document.getElementById('studentID')?.focus();
 }
@@ -117,7 +117,7 @@ async function logIn(form){
 }
 async function logOut(){
  if(!state.demo)await sb.auth.signOut();
- Object.assign(state,{demo:false,user:null,role:null,students:[],logs:[],lastResult:null,query:'',page:'kiosk',mobileNav:false});
+ Object.assign(state,{demo:false,user:null,role:null,students:[],logs:[],lastResult:null,query:'',page:'overview',mobileNav:false});
  render();
 }
 async function scan(){
@@ -195,7 +195,7 @@ root.addEventListener('submit',async e=>{
 });
 document.addEventListener('click',async e=>{
  const nav=e.target.closest('[data-nav]');
- if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if((state.page==='overview'||state.page==='kiosk')&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
+ if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if(state.page==='overview'&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
  const key=e.target.closest('[data-key]');
  if(key){const input=document.getElementById('studentID');if(!input)return;const value=key.dataset.key;if(value==='Clear')input.value='';else if(value==='⌫')input.value=input.value.slice(0,-1);else input.value=(input.value+value).slice(0,12);input.focus();return;}
  const b=e.target.closest('[data-act]');if(!b)return;
@@ -219,8 +219,8 @@ root.addEventListener('input',e=>{
 });
 window.addEventListener('hashchange',()=>{
  const page=location.hash.slice(1);
- if(['overview','kiosk','students','records'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';render();}
+ if(['overview','students','records'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';render();}
 });
 setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=stampPH()+' PHT';},15000);
-state.page=['overview','kiosk','students','records'].includes(location.hash.slice(1))?location.hash.slice(1):'kiosk';
+state.page=['overview','students','records'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
 verifySession().catch(e=>{root.innerHTML=loginHTML();toast('Could not connect to the attendance service: '+e.message,true);});
