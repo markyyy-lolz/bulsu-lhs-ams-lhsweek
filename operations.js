@@ -30,7 +30,7 @@ function hourlyChart(){
 }
 function showRows(){
  return (state.hub?.shows||[]).map(sh=>{
-  const remaining=sh.capacity===null?'Uncapped':Math.max(0,Number(sh.capacity)-Number(sh.sold))+' left (check full-school capacity)';
+  const remaining=sh.capacity===null?'Uncapped':state.role==='official'?Math.max(0,Number(sh.capacity)-Number(sh.sold))+' remaining':'Seat cap: '+sh.capacity+' (scope-limited sales shown)';
   const percent=sh.capacity?Math.min(100,Math.round(Number(sh.sold)/Number(sh.capacity)*100)):0;
   return '<article class="ops-show"><div><strong>'+esc(sh.title)+'</strong><p>'+esc(sh.show_date)+' · '+
   esc(sh.show_time||'Time not specified')+' · '+(sh.active?'On sale':'Paused')+'</p></div>'+
