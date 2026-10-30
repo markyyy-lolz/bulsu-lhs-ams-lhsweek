@@ -60,7 +60,7 @@ function updateStation() {
   recordButton.disabled=state.busy||(!state.demo&&!state.authorized);
   demoButton.textContent=state.demo?'Exit Demo Mode':'Try Demo Mode';
   activationNotice.hidden=state.demo||state.authorized;
-  activationNotice.innerHTML='<strong>Attendance terminal is locked.</strong> Ask an LSC Official to sign in from <a href="./login.html">Staff Login</a> on this same browser. Only supervised stations can record real attendance.';
+  activationNotice.innerHTML='<strong>Attendance terminal is locked.</strong> Ask an LSC Official to sign in from <a href="./login.html">LSC Official Login</a> on this same browser. Only supervised stations can record real attendance.';
 }
 async function checkAuthorization() {
   if(state.demo)return;
