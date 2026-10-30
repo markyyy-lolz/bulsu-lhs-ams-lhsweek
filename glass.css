@@ -1,0 +1,274 @@
+/* LSC Attendance • Glass Edition. Visual-only layer: no authentication or data logic changes. */
+:root{
+  --navy:#142b53;--navy2:#193a68;--blue:#315ec8;--blueLight:#e5edff;
+  --ink:#172a47;--muted:#62728f;--edge:rgba(255,255,255,.69);--surface:rgba(255,255,255,.64);
+  --bg:#e9f0fa;--green:#087f63;--greenLight:rgba(210,247,234,.83);
+  --orange:#a65e17;--orangeLight:rgba(255,238,214,.82);--radius:22px;
+  --glass-border:1px solid rgba(255,255,255,.77);
+  --glass-shadow:0 16px 46px rgba(36,66,117,.105), inset 0 1px 0 rgba(255,255,255,.7);
+}
+html{scroll-behavior:smooth}
+body{
+  min-height:100vh;isolation:isolate;color:var(--ink);
+  background:radial-gradient(ellipse at 5% 3%,rgba(160,190,250,.38),transparent 39%),
+  radial-gradient(ellipse at 97% 20%,rgba(246,171,183,.28),transparent 33%),
+  radial-gradient(ellipse at 65% 97%,rgba(153,194,239,.35),transparent 42%),
+  linear-gradient(135deg,#e6edf9 0%,#f7f8fd 48%,#e6edf8 100%) fixed;
+}
+body::before,body::after{content:"⚙";position:fixed;z-index:-1;pointer-events:none;line-height:1;font-family:system-ui;font-weight:400;color:#4e74b7;user-select:none}
+body::before{font-size:490px;opacity:.046;top:-230px;right:-150px;transform:rotate(-15deg)}
+body::after{font-size:410px;opacity:.038;bottom:-245px;left:-140px;transform:rotate(19deg)}
+h1,h2,h3,.brand-title{letter-spacing:-.035em}
+h1{font-weight:800} h3{font-weight:750}
+.eyebrow{color:#3f62ad;letter-spacing:2px;font-weight:850}
+a{color:#3159aa}
+button,input,select{transition:box-shadow .2s ease,border-color .2s ease,background-color .2s ease,transform .16s ease}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #b43a57;outline-offset:3px}
+button:active:not(:disabled){transform:scale(.98)}
+.card,.stat,.modal,.login-box,.live-clock{
+  border:var(--glass-border);background:var(--surface);
+  box-shadow:var(--glass-shadow);
+  -webkit-backdrop-filter:blur(24px) saturate(155%);
+  backdrop-filter:blur(24px) saturate(155%);
+}
+.card{position:relative;overflow:hidden;border-radius:var(--radius)}
+.card::before,.stat::before{
+  content:"";position:absolute;inset:0 0 auto;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.93),transparent);pointer-events:none
+}
+.stat:hover,.card:hover{border-color:rgba(255,255,255,.93)}
+.btn{border-radius:13px;background:linear-gradient(123deg,#214a9f,#406bd3);color:white;box-shadow:0 8px 19px rgba(42,83,171,.17);font-weight:800}
+.btn:hover{filter:brightness(1.045);box-shadow:0 10px 23px rgba(42,83,171,.22)}
+.btn-secondary,.btn-light,.btn-quiet{
+  background:rgba(245,249,255,.65);color:#294e8f;border:1px solid rgba(255,255,255,.85);
+  box-shadow:0 4px 16px rgba(45,76,124,.06)
+}
+.btn-danger{background:rgba(255,235,238,.85);color:#a92f4b}
+.field input,.field select,.id-input,.student-id-field{
+  color:#1c3355;background:rgba(255,255,255,.68)!important;
+  border:1px solid rgba(161,183,217,.55);
+  box-shadow:inset 0 1px 3px rgba(34,67,119,.04)
+}
+.field input:focus,.field select:focus,.student-id-field:focus,.id-input:focus{
+  background:#fff!important;border-color:#446ccb!important;
+  box-shadow:0 0 0 4px rgba(58,106,207,.12)!important
+}
+.notice{background:rgba(237,245,255,.74);border:1px solid rgba(174,199,236,.68);color:#355277;border-radius:14px}
+.notice.warn,.station-warning{background:rgba(255,246,229,.86);border:1px solid rgba(221,185,127,.55);color:#82561a}
+.badge{background:rgba(211,247,232,.82);color:#07694f}
+.badge.out{background:rgba(255,238,207,.88);color:#986015}
+.badge.off{background:rgba(230,233,242,.78);color:#657188}
+.tag{background:rgba(255,255,255,.59);border:1px solid rgba(255,255,255,.75);color:#35527b}
+.tag .dot{box-shadow:0 0 0 4px rgba(31,186,144,.12)}
+/* Main application shell */
+.shell{gap:14px;padding:12px;align-items:stretch}
+.sidebar{
+  width:260px;min-width:260px;height:calc(100vh - 24px);top:12px;border-radius:24px;
+  padding:25px 14px;overflow-y:auto;
+  background:linear-gradient(158deg,rgba(16,41,83,.92),rgba(25,56,106,.83) 65%,rgba(53,77,129,.81));
+  border:1px solid rgba(255,255,255,.24);
+  box-shadow:0 20px 44px rgba(22,48,90,.22),inset 0 1px 0 rgba(255,255,255,.12);
+  -webkit-backdrop-filter:blur(25px);backdrop-filter:blur(25px)
+}
+.sidebar::after{content:"⚙";position:absolute;right:-76px;bottom:68px;color:rgba(255,255,255,.047);font-size:230px;line-height:1;pointer-events:none}
+.sidebar .brand{padding:8px 9px 19px;border-bottom:1px solid rgba(255,255,255,.12)}
+.sidebar .brand-title{font-size:17px}
+.sidebar .brand-sub{color:#c1d3f2}
+.sidebar .lsc-logo{height:59px;width:45px;object-fit:contain;filter:drop-shadow(0 4px 9px rgba(2,16,44,.24))}
+.nav-section{color:#b0c8f4;padding-top:15px}
+.nav{gap:7px;position:relative;z-index:1}
+.nav-btn{color:rgba(228,237,255,.76);border:1px solid transparent;border-radius:13px;padding:13px 14px}
+.nav-btn:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.14);color:white}
+.nav-btn.active{background:linear-gradient(110deg,rgba(255,255,255,.25),rgba(255,255,255,.13));border-color:rgba(255,255,255,.25);box-shadow:0 5px 20px rgba(3,22,54,.15),inset 0 1px rgba(255,255,255,.12)}
+.nav-ico{color:#d4e5ff}
+.sidebar-foot{position:relative;z-index:1;border-color:rgba(255,255,255,.19)}
+.sidebar-foot .small{color:#d1def6}
+.side-signout{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:white}
+.main{border-radius:23px;min-width:0}
+.top{
+  height:74px;position:sticky;top:12px;z-index:9;margin-bottom:5px;
+  padding:0 clamp(17px,2.7vw,35px);
+  background:rgba(255,255,255,.66);border:1px solid rgba(255,255,255,.8);
+  border-radius:19px;box-shadow:0 6px 22px rgba(32,68,115,.07);
+  -webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px)
+}
+.top-title{font-size:15px;color:#182d4d}
+.top-time{color:#687d9c}
+.content{padding:31px clamp(16px,2.7vw,38px) 52px}
+.page-header{margin-bottom:25px}
+.page-header h1{font-size:clamp(26px,2.45vw,37px);color:#172d51}
+.page-header p{line-height:1.65;color:#637793}
+.stats{gap:16px}
+.stat{min-height:183px;padding:24px 24px 22px}
+.stat-ico{background:rgba(225,235,255,.77);border:1px solid rgba(255,255,255,.8);color:#355fba;border-radius:14px;margin-bottom:18px}
+.stat:nth-child(2) .stat-ico{background:rgba(250,228,233,.8);color:#b63d59}
+.stat:nth-child(3) .stat-ico{background:rgba(222,247,239,.8);color:#16856f}
+.stat:nth-child(4) .stat-ico{background:rgba(238,227,251,.8);color:#7c58aa}
+.stat-num{color:#183660;font-size:36px}
+.stat-label{color:#687c99}
+.stat-foot{color:#8190a5}
+.pad{padding:26px}
+.two-col{gap:18px}
+.section-title h3{font-size:18px;color:#1c365d}
+.table th{background:rgba(230,239,252,.56);color:#536b90}
+.table td{border-bottom-color:rgba(166,188,214,.22)}
+.table tbody tr:hover{background:rgba(255,255,255,.43)}
+.linkbtn{background:rgba(227,239,253,.85);color:#315b9c}
+.log-ribbon{
+ background:linear-gradient(115deg,rgba(17,48,97,.89),rgba(38,79,148,.85));
+ border:1px solid rgba(255,255,255,.34);box-shadow:var(--glass-shadow);
+ -webkit-backdrop-filter:blur(17px);backdrop-filter:blur(17px);border-radius:19px
+}
+.log-ribbon p{color:#d1def3}
+.toolbar{align-items:center}
+.modal-backdrop{background:rgba(12,28,59,.44);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.modal{background:rgba(248,251,255,.93);border:1px solid rgba(255,255,255,.9);box-shadow:0 25px 75px rgba(11,35,78,.29)}
+.modal-close{background:rgba(223,234,251,.8)}
+.toast{background:rgba(25,50,95,.95);border:1px solid rgba(255,255,255,.19);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+/* Email login / Class Mayor / LSC Official portal */
+.login{padding:clamp(12px,2vw,28px);gap:clamp(12px,1.4vw,21px);min-height:100vh;align-items:stretch;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.login-art{
+  min-height:calc(100vh - 2 * clamp(12px,2vw,28px));border-radius:28px;
+  background:radial-gradient(circle at 77% 15%,rgba(227,113,144,.29),transparent 35%),
+  linear-gradient(137deg,rgba(17,42,83,.96),rgba(36,65,116,.86) 62%,rgba(56,81,126,.76));
+  border:1px solid rgba(255,255,255,.28);box-shadow:0 23px 57px rgba(15,46,98,.18);
+  -webkit-backdrop-filter:blur(26px);backdrop-filter:blur(26px);
+  padding:clamp(28px,5vw,74px)
+}
+.login-art:before{content:"⚙";font-size:400px;position:absolute;right:-125px;top:20%;line-height:1;color:rgba(255,255,255,.065);pointer-events:none}
+.login-art:after{border-width:52px;border-color:rgba(255,255,255,.05);width:410px;height:410px}
+.login-art .lsc-logo{height:93px;width:72px;filter:drop-shadow(0 9px 12px rgba(0,0,0,.25))}
+.login-art .brand-sub{color:#c7dcfa}
+.login-art .big{font-size:clamp(40px,4.4vw,68px);letter-spacing:-2.6px;color:#f7fbff;text-shadow:0 3px 30px rgba(5,22,54,.12)}
+.login-art p{color:#d4e1f5;font-size:15px}
+.login-side{min-height:0;padding:clamp(16px,3vw,42px)}
+.login-box{width:min(100%,480px);padding:clamp(26px,3.3vw,47px);border-radius:27px;background:rgba(255,255,255,.55);box-shadow:0 21px 54px rgba(34,65,117,.12),inset 0 1px rgba(255,255,255,.88)}
+.login-box h1{font-size:clamp(29px,2.9vw,41px);color:#162c4c}
+.login-box>p{color:#637996}
+.login-box form{gap:18px}
+.login-box .field input{height:53px;border-radius:13px}
+.login-box .btn{height:52px;border-radius:13px}
+.login-footer{color:#617894}
+.login-box .eyebrow{color:#a03454}
+/* Attendance terminal */
+body.student-site{
+ background:radial-gradient(ellipse at 10% 8%,rgba(176,201,249,.39),transparent 42%),
+ radial-gradient(ellipse at 92% 85%,rgba(241,176,192,.34),transparent 43%),
+ linear-gradient(138deg,#e9eff9,#f8f9fd 55%,#e4ebf8) fixed
+}
+.student-header{
+  width:calc(100% - clamp(24px,4vw,60px));height:83px;
+  margin:clamp(12px,2vw,22px) auto 0;padding:0 clamp(17px,3.4vw,47px);
+  border-radius:22px;border:1px solid rgba(255,255,255,.88);
+  background:rgba(255,255,255,.64);box-shadow:var(--glass-shadow);
+  -webkit-backdrop-filter:blur(25px);backdrop-filter:blur(25px)
+}
+.student-header .brand-title{color:#183052}
+.student-header .brand-sub{color:#6e81a0}
+.student-header .lsc-logo{width:46px;height:62px;filter:drop-shadow(0 5px 8px rgba(37,54,96,.18))}
+.header-links a{
+ display:inline-flex;gap:7px;align-items:center;padding:12px 17px;border-radius:13px;
+ color:#284b86;border:1px solid rgba(255,255,255,.82);background:rgba(255,255,255,.47);
+ box-shadow:0 4px 14px rgba(43,65,109,.06)
+}
+.header-links a:hover{background:rgba(255,255,255,.85)}
+.student-wrap{width:min(1210px,calc(100% - 44px));margin:47px auto 70px}
+.student-hero{margin-bottom:28px}
+.student-hero h1{font-size:clamp(35px,4vw,51px);color:#15345e;letter-spacing:-1.9px}
+.student-hero p{color:#667d9a;font-size:15px}
+.live-clock{background:rgba(255,255,255,.59);padding:15px 21px;border-radius:17px}
+.live-clock strong{color:#1a3761;font-size:20px}
+.student-grid{grid-template-columns:minmax(0,1.38fr) minmax(300px,.82fr);gap:23px;align-items:start}
+.entry-card{padding:clamp(26px,4.2vw,56px) clamp(20px,4.6vw,65px) 34px;border-radius:28px}
+.entry-card::after{content:"⚙";position:absolute;top:-142px;left:-124px;font-size:330px;line-height:1;color:rgba(38,80,157,.027);pointer-events:none}
+.entry-avatar.logo-avatar{
+ width:90px;height:105px;border-radius:24px;
+ background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.82);
+ box-shadow:0 9px 24px rgba(48,76,128,.09)
+}
+.logo-avatar img{width:79px;height:99px;object-fit:contain}
+.entry-head{font-size:clamp(24px,2.8vw,31px);color:#19375f}
+.entry-desc{color:#7387a3;max-width:410px;margin:13px auto 26px}
+.student-id-field{height:76px!important;border-radius:16px;font-size:clamp(26px,3vw,35px);letter-spacing:3px}
+.entry-card .keypad{margin:20px auto;gap:10px}
+.entry-card .key{
+ height:53px;background:rgba(255,255,255,.58);border:1px solid rgba(255,255,255,.84);
+ color:#20426f;border-radius:13px;box-shadow:0 4px 14px rgba(50,82,134,.06)
+}
+.entry-card .key:hover{background:rgba(246,250,255,.96);box-shadow:0 7px 17px rgba(48,82,140,.11)}
+.entry-card .key.alt{background:rgba(215,228,248,.46)}
+.submit-record{width:min(100%,360px);height:57px;border-radius:15px;font-size:14px}
+.entry-note{color:#7587a1}
+.side-panel{padding:clamp(22px,2.8vw,34px);border-radius:27px}
+.side-panel h3{font-size:21px}
+.status-panel{background:rgba(234,241,254,.62);border:1px solid rgba(255,255,255,.82);border-radius:17px;padding:21px}
+.status-panel .label{color:#637ca3}
+.status-panel p{color:#647a97}
+.status-dot{box-shadow:0 0 0 4px rgba(225,167,71,.13)}
+.status-dot.ok{box-shadow:0 0 0 4px rgba(32,174,121,.13)}
+.step-num{background:rgba(223,233,253,.73);border:1px solid rgba(255,255,255,.78);color:#365fa8}
+.step p{color:#71849f}
+.teacher-link{border-radius:13px;border:1px solid rgba(255,255,255,.84);background:rgba(229,237,254,.63);color:#2d518f}
+.student-footer{color:#7183a0}
+.station-warning{border-radius:15px}
+.result{background:rgba(211,245,232,.82);border-color:rgba(119,194,158,.45)}
+.result.out{background:rgba(255,237,209,.84)}
+.result.err{background:rgba(255,229,233,.88)}
+/* Fallbacks and responsive behavior */
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+ .card,.stat,.login-box,.student-header,.live-clock,.top{background:#f5f8fe}
+ .sidebar,.login-art{background:#1e3b69}
+}
+@media(max-width:1100px){
+ .sidebar{width:228px;min-width:228px}
+ .student-grid{grid-template-columns:minmax(0,1fr) minmax(265px,.8fr)}
+}
+@media(max-width:850px){
+ .student-grid{grid-template-columns:1fr}
+ .side-panel{max-width:none}
+ .student-wrap{margin:28px auto}
+ .entry-card{padding:30px 23px}
+ .login{grid-template-columns:1fr}
+ .login-art{min-height:240px;padding:30px;border-radius:24px}
+ .login-art .big{font-size:36px}
+ .login-side{padding:15px 0;min-height:0}
+ .login-box{width:min(100%,620px);padding:26px}
+}
+@media(max-width:760px){
+ .shell{padding:8px;gap:0}
+ .sidebar{top:8px;left:8px;height:calc(100vh - 16px);border-radius:21px}
+ .top{top:8px;height:69px;padding:0 15px}
+ .content{padding:23px 7px 45px}
+ .hamb{background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.84);border-radius:12px}
+ .stats{gap:10px}
+ .stat{padding:18px;min-height:170px}
+ .stat-num{font-size:30px}
+ .page-header h1{font-size:28px}
+ .login{padding:9px;gap:11px}
+ .login-art{min-height:235px}
+ .login-art .big{font-size:32px;letter-spacing:-1.4px}
+}
+@media(max-width:540px){
+ body::before{font-size:250px;right:-115px;top:-95px}
+ body::after{font-size:270px;left:-140px}
+ .student-header{width:calc(100% - 20px);height:75px;padding:0 13px}
+ .student-header .lsc-logo{width:38px;height:51px}
+ .student-header .brand-sub{display:none}
+ .header-links a{padding:10px;font-size:11px}
+ .student-wrap{width:calc(100% - 20px)}
+ .student-hero{display:block}
+ .student-hero h1{font-size:36px}
+ .live-clock{margin-top:19px;max-width:max-content}
+ .entry-card{padding:29px 16px 28px}
+ .entry-head{font-size:26px}
+ .student-id-field{height:67px!important;font-size:25px;letter-spacing:2px}
+ .entry-card .key{height:50px}
+ .side-panel{padding:23px}
+ .login-art{padding:26px 21px}
+ .login-art .big{font-size:29px}
+ .login-side{padding:0}
+ .login-box{padding:25px 21px}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .stat-label{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}button,input,select{transition:none}*{animation:none!important}}
