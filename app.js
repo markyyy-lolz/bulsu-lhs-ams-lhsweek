@@ -8,7 +8,7 @@ const state = {
   demo: false, user: null, role: null, page: 'overview', loading: false,
   students: [], logs: [], classes: [], assignments: [], classId: null, lastResult: null, query: '', recordDate: todayPH(),
   busy: false, mobileNav: false, loginMode:'email', otpSent:false, otpEmail:'', showPasswordSetup:false,
-  fwPulse:null, fwSelected:'', fwStamps:[], fwBusy:false, fwNotice:null
+  fwPulse:null, fwSelected:'', fwStamps:[], fwBusy:false, fwNotice:null, fwProfile:null
 };
 let clearResultTimer = null;
 let lastAnimatedPage = null;
@@ -34,7 +34,7 @@ function demoStart(asMayor=false){
   state.students=[
     {id:'demo1',student_id:'2023107337',full_name:'Demo Student',grade_level:'10',section:'Sample Section',class_id:'demo-class',active:true},
     {id:'demo2',student_id:'2023999999',full_name:'Sample Learner',grade_level:'9',section:'Demo Section',class_id:'demo-class-2',active:true}
-  ]; if(asMayor){state.students=state.students.filter(x=>x.class_id==='demo-class');state.classes=state.classes.filter(x=>x.id==='demo-class');}state.logs=[];state.fwSelected='demo-fw';state.fwPulse={today:todayPH(),roster_total:state.students.length,scope:asMayor?'assigned_class':'whole_school',activities:[{activity_id:'demo-fw',title:'Demo Foundation Activity',session_date:todayPH(),venue:'Demo Station',active:true,stamps:0}]};state.fwStamps=[];state.page='overview'; state.lastResult=null; location.hash='overview'; render();
+  ]; if(asMayor){state.students=state.students.filter(x=>x.class_id==='demo-class');state.classes=state.classes.filter(x=>x.id==='demo-class');}state.logs=[];state.fwSelected='demo-fw';state.fwPulse={today:todayPH(),roster_total:state.students.length,scope:asMayor?'assigned_class':'whole_school',activities:[{activity_id:'demo-fw',title:'Demo Foundation Activity',session_date:todayPH(),venue:'Demo Station',active:true,stamps:0}]};state.fwStamps=[];state.fwProfile=null;state.page='overview'; state.lastResult=null; location.hash='overview'; render();
   toast('Demo mode: entries are not saved to Supabase.');
 }
 async function verifySession(){
@@ -299,7 +299,16 @@ function passportHTML(){
   '<label class="field">Supervised station label<input name="station" maxlength="80" value="LSC Station" required placeholder="LSC Station A"></label>'+
   '<button type="submit" class="btn"'+(!canStamp?' disabled':'')+'>Stamp Event Passport</button></form>'+
   (state.fwNotice?'<div class="notice '+(state.fwNotice.type==='error'?'warn':'')+'" role="status" style="margin-top:14px"><strong>'+esc(state.fwNotice.title)+'</strong><div>'+esc(state.fwNotice.message)+'</div></div>':'')+
-  '<p class="muted small" style="margin-top:16px">One stamp per activity per student. Duplicates are blocked by the database. Every stamp records the operator and station. Verify the student is physically present.</p></div>';
+  '<p class="muted small" style="margin-top:16px">One stamp per activity per student. Duplicates are blocked by the database. Every stamp records the operator and station. Verify the student is physically present.</p>'+
+  '<div class="fw-profile-tools"><h4>Personal Event Passport</h4><p class="muted small">Private view for an authorized student record. Positive milestones only; no class rankings.</p>'+
+  '<form id="fwLookupForm" class="fw-lookup"><label class="field">Student ID<input name="student_id" inputmode="numeric" autocomplete="off" pattern="[0-9]{7,12}" required placeholder="2023000001"></label><button type="submit" class="btn btn-secondary">View Stamps</button></form>'+
+  (state.fwProfile?'<div class="fw-profile-card"><strong>'+esc(state.fwProfile.student.full_name)+'</strong><span>'+esc(state.fwProfile.student.student_id)+' · '+esc(state.fwProfile.student.section||'')+'</span>'+
+   '<div class="fw-badges"><span class="'+(state.fwProfile.stamps.length>=1?'earned':'')+'">✦ First Stamp</span>'+
+   '<span class="'+(state.fwProfile.stamps.length>=3?'earned':'')+'">✦ Activity Adventurer</span>'+
+   '<span class="'+(state.fwProfile.stamps.length>=5?'earned':'')+'">✦ Foundation Trailblazer</span></div>'+
+   '<p class="muted small">'+state.fwProfile.stamps.length+' distinct activities stamped</p>'+
+   '<div class="fw-stamp-list">'+(state.fwProfile.stamps.map(p=>'<div><strong>'+esc(p.lsc_fw_activities?.title||'Foundation Activity')+'</strong><small>'+esc(p.lsc_fw_activities?.session_date||'')+'</small></div>').join('')||'<div>No stamps recorded yet.</div>')+'</div></div>':'')+
+  '</div></div>';
  const stampRows=state.fwStamps.map(p=>'<tr><td class="mono">'+esc(p.lsc_students?.student_id||'—')+'</td><td>'+esc(p.lsc_students?.full_name||'—')+'</td><td>'+esc(p.lsc_students?.section||'—')+'</td><td>'+esc(timePH(p.recorded_at))+'</td><td>'+esc(p.recorded_by_email||'—')+'</td></tr>').join('');
  const table='<div class="card pad fw-log"><div class="section-title"><h3>Event Stamp Audit</h3><div class="fw-actions"><button class="btn btn-secondary" type="button" data-act="fwRefresh">Refresh Pulse</button><button class="btn btn-secondary" type="button" data-act="fwExport"'+(!state.fwStamps.length?' disabled':'')+'>Export CSV</button></div></div>'+
  (state.fwStamps.length?'<div class="table-wrap"><table class="table"><thead><tr><th>Attendance ID</th><th>Student</th><th>Section</th><th>Time (PHT)</th><th>Recorded By</th></tr></thead><tbody>'+stampRows+'</tbody></table></div>':
@@ -311,6 +320,18 @@ function passportHTML(){
   '<div class="fw-activities">'+activitiesHTML+'</div>'+
   (selected?'<div class="fw-progress"><div class="fw-progress-track"><span style="width:'+percentage+'%"></span></div><div class="small muted">'+percentage+'% of your roster has a stamp for this activity</div></div>':'')+
   '</div>'+recorder+'</div>'+(manager?'<div class="fw-manager">'+manager+'</div>':'')+table;
+}
+
+async function fwLookup(form){
+ const number=form.elements.student_id.value.trim();
+ const student=state.students.find(x=>x.student_id===number&&x.active);
+ if(!student){state.fwProfile=null;toast('Student is unavailable in your authorized roster.',true);return;}
+ if(state.demo){state.fwProfile={student,stamps:[]};render();return;}
+ const {data,error}=await sb.from('lsc_fw_passport_stamps')
+  .select('activity_id,recorded_at,lsc_fw_activities(title,session_date)')
+  .eq('student_id',student.id).order('recorded_at',{ascending:false}).limit(200);
+ if(error){toast(error.message,true);return;}
+ state.fwProfile={student,stamps:data||[]};render();
 }
 async function fwCreate(form){
  if(state.role!=='official'||state.demo)return toast('Only real LSC Official accounts can create activities.',true);
@@ -554,6 +575,7 @@ root.addEventListener('submit',async e=>{
  if(e.target.id==='roleForm'){e.preventDefault();await assignRole(e.target);}
  if(e.target.id==='fwActivityForm'){e.preventDefault();await fwCreate(e.target);}
  if(e.target.id==='fwStampForm'){e.preventDefault();await fwStamp(e.target);}
+ if(e.target.id==='fwLookupForm'){e.preventDefault();await fwLookup(e.target);}
  if(e.target.id==='filterForm'){e.preventDefault();state.recordDate=e.target.elements.date.value||todayPH();state.query=e.target.elements.search.value.trim();await loadData();render();}
 });
 document.addEventListener('click',async e=>{
