@@ -38,6 +38,36 @@ The database constraint `lsc_verified_before_active` prevents activation while `
 
 **Demo mode:** Student page demos IDs `2023107337` and `2023999999` without database writes. Login page provides demo previews for both LSC Official and Class Mayor roles, also without writes.
 
+## Foundation Week v2.1: Operations Upgrade (2026)
+
+**Existing product name is unchanged**. This release adds an *authorized* event management workspace:
+- **[Foundation Week Command Center](https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/operations.html)**
+- **[Movie Booth POS](https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/movie.html)**
+
+### Features now implemented
+
+1. **Individual Movie Ticket QR codes & validation**: each issued ticket has a unique code. Print QR codes via a version-pinned QR library (text remains printable if the library cannot load). Ticket checker validates first, then taps **Admit & Redeem**. The database locks the ticket row and records single-use admission. Used, void and wrong-day tickets are rejected with audited results.
+2. **Capacity & showtime management**: LSC Official sets an optional 1–5,000 seat limit, showing date and optional time. Atomic checkout locks the show and refuses quantities beyond total paid ticket capacity, even on simultaneous cashiers. Voided sales free capacity. Show price remains immutable; sales retain original unit prices.
+3. **Cross-device ticket checker**: QR camera scanner lazily loads the pinned \`html5-qrcode@2.3.8\` library and attempts camera decoding. A manual code field and USB/Bluetooth keyboard scanners work as fallback; iOS in-app browsers may block camera permission.
+4. **Cashier shifts**: an authorized cashier opens with float, closes with physical cash counted, and receives the server-calculated expected cash and difference plus previous shift history. Assigned volunteer cashiers **must open a shift** to sell.
+5. **Print recovery & audit**: reprint previously saved ticket batches, including a VOID watermark for voided sales, without duplicating the sale. Print requests are audited but are not proof of physical successful printing. Supports browser printing on configured 80mm thermal printers.
+6. **Advanced analytics & Event Pulse**: private 30-second refresh of movie showings, sales, admission redemptions, hourly ticket sales, stamp totals and attendance-arrival totals, in authorized scope. No individual student names appear in the aggregated Command Center.
+7. **Volunteers & least-privilege roles**: an LSC Official assigns an existing authenticated email to Cashier, Ticket Checker, or Event Monitor, with optional showing restriction; may disable access. Volunteers can sign in with email OTP directly in Movie Booth POS. Do not grant unrelated BrewPOS accounts without school authorization.
+8. **Announcements**: LSC Officials publish/hide notices. Other authorized roles only see published notices.
+9. **Foundation Stamp Rally**: LSC Officials create school-approved rewards with a distinct activity stamp threshold. Claiming is audited, prevents duplicate claims and is not linked to grades or school disciplinary status.
+10. **Fraud & Audit Center**: LSC Officials can review recent ticket validation outcomes (including repeat/void attempts), browser print requests and existing sales void history.
+11. **Mobile event station**: responsive ticket checking and camera scan where compatible, plus manual barcode code entry on all browsers. The ticket redemption authority remains server-side.
+12. **Foundation Week Closing Report**: print an A4 overview or export an aggregated summary CSV. Sales Reports separately offer filtered detailed transactions, role-scoped CSV and A4 print.
+13. **Connection recovery**: clearly mark disconnected state and block offline checkout, redemption and staff-changing actions. Never issue unverified offline movie tickets; reuse the in-memory checkout request key when retrying an uncertain sale and inspect Reports to avoid charging twice.
+
+### Operation and launch checklist
+- School approval: set the correct movie screening details, 80mm paper size and cash policy.
+- Test a full **sale → ticket print → ticket validation → admission → repeated validation** workflow on real laptops/tablets and the physical VOZY G80 printer. Driver pairing and actual cutter behavior have **not** been hardware verified here.
+- Verify roles on separate real accounts (LSC Official, Class Mayor, Cashier, Ticket Checker, Event Monitor) before authorizing volunteers.
+- Configure announced activity dates, admission rules and rewards with school officials; no additional defaults or student-facing public lists are created.
+- A movie ticket is **not a BIR official sales invoice**; recorded cash refunds require separate real-world reconciliation.
+- Preserve attendance and sales history: all schema changes are additive; never publish raw student-level CSV reports in GitHub Pages.
+
 ## Movie Booth POS — Foundation Week cash ticketing
 
 **Private route:** [Movie Booth POS](https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/movie.html) (also linked from the authorized dashboard sidebar).
