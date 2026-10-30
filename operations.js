@@ -39,7 +39,7 @@ function rewardRows(){
  (state.role==='official'?'<button class="movie-mini" data-toggle-reward="'+esc(x.id)+'">'+(x.active?'Pause':'Resume')+'</button>':'')+'</div>').join('')||'<p class="movie-helper">No school-approved rewards set up yet. The Digital Passport badges still work independently.</p>';
 }
 function volunteerRows(){
- return (state.volunteers||[]).map(v=>'<div class="ops-row"><div><strong>'+esc(v.user_id)+'</strong><p>'+esc(v.role)+' · '+(v.enabled?'Enabled':'Disabled')+' · '+esc(v.show_id||'All showings')+'</p></div></div>').join('')||'<p class="movie-helper">No Movie Booth volunteers assigned yet.</p>';
+ return (state.volunteers||[]).map(v=>'<div class="ops-row"><div><strong>'+esc(v.email||v.user_id)+'</strong><p>'+esc(v.role)+' · '+(v.enabled?'Enabled':'Disabled')+' · '+esc(v.show_id||'All showings')+'</p></div></div>').join('')||'<p class="movie-helper">No Movie Booth volunteers assigned yet.</p>';
 }
 function pulse(){
  return '<section class="movie-panel"><div class="movie-panel-head"><h2>Event Pulse</h2><span>Auto-refresh every 30 seconds while online · Private aggregate data</span></div>'+
@@ -116,7 +116,7 @@ async function load(){
  state.hub=h.data;state.notices=n.data||[];state.rewards=r.data||[];
  if(state.role==='official'){
  const [v,s,p]=await Promise.all([
-  db.from('lsc_movie_volunteers').select('user_id,role,show_id,enabled').order('assigned_at',{ascending:false}).limit(150),
+  db.rpc('lsc_movie_list_volunteers'),
   db.from('lsc_movie_ticket_scans').select('result,code_attempt,performed_by,scanned_at').order('scanned_at',{ascending:false}).limit(75),
   db.from('lsc_movie_print_log').select('sale_id,note,requested_at').order('requested_at',{ascending:false}).limit(75)
  ]);
