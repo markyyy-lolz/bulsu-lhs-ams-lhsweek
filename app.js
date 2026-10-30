@@ -44,7 +44,7 @@ async function verifySession(){
 async function loadData(){
   if(state.demo)return;
   const [s,l,c,a]=await Promise.all([
-    sb.from('lsc_students').select('id,student_id,full_name,grade_level,section,class_id,active,created_at').order('full_name',{ascending:true}).limit(2000),
+    sb.from('lsc_students').select('id,student_id,full_name,grade_level,section,class_id,active,id_origin,created_at').order('full_name',{ascending:true}).limit(2000),
     sb.from('lsc_attendance_events').select('id,student_id,class_id,event_type,event_date,recorded_at,recorded_by,recorded_by_email,recorded_by_role,lsc_students(student_id,full_name,grade_level,section)').eq('event_date',state.recordDate).order('recorded_at',{ascending:false}).limit(1000),
     sb.from('lsc_classes').select('id,grade_level,section').order('grade_level').order('section'),
     state.role==='official'?sb.rpc('lsc_list_roles'):Promise.resolve({data:[],error:null})
@@ -106,7 +106,7 @@ function metrics(){
   const outs=todays.filter(x=>x.event_type==='OUT').length;
   const latest=new Map(); [...todays].sort((a,b)=>new Date(a.recorded_at)-new Date(b.recorded_at)).forEach(x=>latest.set(x.student_id,x.event_type));
   const inside=[...latest.values()].filter(v=>v==='IN').length;
-  return [['Registered Students',state.students.filter(s=>s.active).length,'♙','Active student roster'],['Time IN Today',ins,'↗','Recorded arrivals'],['Time OUT Today',outs,'↘','Recorded departures'],['Currently Inside',inside,'◉','Latest status is IN']];
+  return [['Students in Roster',state.students.length,'♙',state.students.filter(s=>!s.active).length+' pending/inactive'],['Time IN Today',ins,'↗','Recorded arrivals'],['Time OUT Today',outs,'↘','Recorded departures'],['Currently Inside',inside,'◉','Latest status is IN']];
 }
 function overviewHTML(){
   const m=metrics();
@@ -149,10 +149,17 @@ function studentsHTML(){
  if(state.role!=='official')return '<div class="notice">LSC Official access required.</div>';
  const q=state.query.toLowerCase().trim();
  const rows=state.students.filter(s=>!q||s.student_id.includes(q)||s.full_name.toLowerCase().includes(q)||(s.section||'').toLowerCase().includes(q));
- return header('Student Directory','Manage authorized Student IDs and enrollment status.','<button class="btn" data-act="addStudent">+ Add Student</button>')+
- '<div class="card pad"><div class="toolbar"><label class="field search">Find a student<input type="search" id="studentSearch" placeholder="Search by name, ID or section" value="'+esc(state.query)+'"></label><span class="muted small">'+rows.length+' students</span></div><div class="table-wrap"><table class="table"><thead><tr><th>Student ID</th><th>Full Name</th><th>Grade</th><th>Section</th><th>Status</th><th>Action</th></tr></thead><tbody>'+rows.map(s=>'<tr><td class="mono strong">'+esc(s.student_id)+'</td><td>'+esc(s.full_name)+'</td><td>'+esc(s.grade_level||'—')+'</td><td>'+esc(s.section||'—')+'</td><td><span class="badge '+(s.active?'':'off')+'">'+(s.active?'Active':'Inactive')+'</span></td><td><button class="linkbtn" data-act="editStudent" data-id="'+esc(s.id)+'">Edit</button></td></tr>').join('')+'</tbody></table></div>'+(rows.length?'':'<div class="empty">No students in this directory yet. Add one to start.</div>')+'</div>';
+ const pending=state.students.filter(x=>x.id_origin==='generated_pending_verification').length;
+ return header('Student Directory','Review imported masterlists, verify each Student ID, and manage enrollment status.','<button class="btn" data-act="addStudent">+ Add Student</button>')+
+ (pending?'<div class="notice warn" style="margin-bottom:16px"><strong>'+pending+' generated attendance IDs require verification.</strong> The imported numbers are not official university Student IDs. Imported students are inactive until an LSC Official verifies an ID and explicitly activates the record. Do not use unverified IDs for real attendance.</div>':'')+
+ '<div class="card pad"><div class="toolbar"><label class="field search">Find a student<input type="search" id="studentSearch" placeholder="Search by name, ID or section" value="'+esc(state.query)+'"></label><span class="muted small">'+rows.length+' students</span></div>'+
+ '<div class="table-wrap"><table class="table"><thead><tr><th>Attendance ID</th><th>Full Name</th><th>Grade</th><th>Section</th><th>ID Source</th><th>Status</th><th>Action</th></tr></thead><tbody>'+
+ rows.map(s=>'<tr><td class="mono strong">'+esc(s.student_id)+'</td><td>'+esc(s.full_name)+'</td><td>'+esc(s.grade_level||'—')+'</td><td>'+esc(s.section||'—')+'</td>'+
+ '<td><span class="badge '+(s.id_origin==='generated_pending_verification'?'out':'')+'">'+(s.id_origin==='generated_pending_verification'?'Temporary / Unverified':'Verified')+'</span></td>'+
+ '<td><span class="badge '+(s.active?'':'off')+'">'+(s.active?'Active':'Inactive')+'</span></td>'+
+ '<td><button class="linkbtn" data-act="editStudent" data-id="'+esc(s.id)+'">Review / Edit</button></td></tr>').join('')+'</tbody></table></div>'+
+ (rows.length?'':'<div class="empty">No matching students.</div>')+'</div>';
 }
-
 function passwordSetupReminder(){
   return '<div class="notice" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">'+
     '<span><strong>Email verified.</strong> You can now set a backup password to use when email verification is unavailable. This is optional, not two-factor authentication.</span>'+
@@ -298,12 +305,16 @@ function studentModal(student){
  if(!state.classes.length){toast('Create a class first under Classes.',true);return;}
  const editing=!!student;
  const options=state.classes.map(c=>'<option value="'+esc(c.id)+'"'+(student?.class_id===c.id?' selected':'')+'>'+esc(c.grade_level+' · '+c.section)+'</option>').join('');
+ const provisional=student?.id_origin==='generated_pending_verification';
  const modal=document.createElement('div');modal.className='modal-backdrop';
- modal.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-label="'+(editing?'Edit student':'Add student')+'"><div class="modal-header"><h2>'+(editing?'Edit Student':'Add Student')+'</h2><button class="modal-close" data-act="closeModal" aria-label="Close dialog">✕</button></div>'+
- '<form id="studentForm"><input type="hidden" name="rowid" value="'+esc(student?.id||'')+'"><div class="stack"><label class="field">Student ID<input name="student_id" type="text" pattern="[0-9]{7,12}" maxlength="12" inputmode="numeric" required value="'+esc(student?.student_id||'')+'"></label>'+
+ modal.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-label="'+(editing?'Review student':'Add student')+'"><div class="modal-header"><h2>'+(editing?'Review Student':'Add Student')+'</h2><button class="modal-close" data-act="closeModal" aria-label="Close dialog">✕</button></div>'+
+ (provisional?'<div class="notice warn" style="margin-bottom:18px">This student has a <strong>system-generated temporary number</strong>. It is NOT the student’s official university ID. Enter the correct ID after checking an authorized school record, then check the verification box to activate.</div>':'')+
+ '<form id="studentForm"><input type="hidden" name="rowid" value="'+esc(student?.id||'')+'"><div class="stack">'+
+ '<label class="field">Student ID<input name="student_id" type="text" pattern="[0-9]{7,12}" maxlength="12" inputmode="numeric" required value="'+esc(student?.student_id||'')+'"></label>'+
  '<label class="field">Full Name<input name="full_name" required minlength="2" maxlength="160" value="'+esc(student?.full_name||'')+'"></label>'+
  '<label class="field">Class / Section<select name="class_id" required><option value="">Select class…</option>'+options+'</select></label>'+
- '<label class="field">Enrollment status<select name="active"><option value="true"'+(!student||student.active?' selected':'')+'>Active</option><option value="false"'+(student&&!student.active?' selected':'')+'>Inactive</option></select></label></div>'+
+ '<label class="field">Enrollment status<select name="active"><option value="false"'+(!student||!student.active?' selected':'')+'>Inactive / Pending</option><option value="true"'+(student?.active?' selected':'')+'>Active — enable attendance</option></select></label>'+
+ '<label class="field" style="display:flex;align-items:flex-start;gap:10px;font-weight:600"><input type="checkbox" name="verified" style="width:18px;height:18px;margin:0;flex-shrink:0"'+(student?.id_origin==='official_verified'?' checked':'')+'><span>I have checked the student’s official ID against an authorized school record. The ID above is correct.</span></label></div>'+
  '<div class="form-actions"><button type="button" class="btn btn-secondary" data-act="closeModal">Cancel</button><button type="submit" class="btn" id="saveStudentBtn">Save Student</button></div></form></div>';
  root.appendChild(modal);
  modal.querySelector('input[name=student_id]')?.focus();
@@ -314,16 +325,24 @@ async function saveStudent(form){
  const classId=form.elements.class_id.value;
  const cls=state.classes.find(c=>c.id===classId);
  if(!cls)return toast('Select an existing class.',true);
+ const existing=state.students.find(s=>s.id===rowid);
+ const checked=form.elements.verified.checked;
  const value={
   student_id:form.elements.student_id.value.trim(),full_name:form.elements.full_name.value.trim(),
-  class_id:cls.id,grade_level:cls.grade_level,section:cls.section,active:form.elements.active.value==='true'
+  class_id:cls.id,grade_level:cls.grade_level,section:cls.section,
+  active:form.elements.active.value==='true',
+  id_origin:checked?'official_verified':(existing?.id_origin==='generated_pending_verification'?'generated_pending_verification':'official_verified')
  };
  const btn=document.getElementById('saveStudentBtn');btn.disabled=true;
  try {
   if(!/^[0-9]{7,12}$/.test(value.student_id))throw new Error('Student ID must contain 7–12 digits.');
+  if(value.active&&!checked)throw new Error('Confirm the Student ID is verified before activating attendance.');
+  if(existing?.id_origin==='generated_pending_verification'&&checked&&existing.student_id===value.student_id){
+    throw new Error('Replace the generated temporary ID with the verified official Student ID before confirmation.');
+  }
   if(state.demo){
    if(state.students.some(s=>s.student_id===value.student_id&&s.id!==rowid))throw new Error('Student ID is already registered.');
-   if(rowid)Object.assign(state.students.find(s=>s.id===rowid),value);
+   if(rowid)Object.assign(existing,value);
    else state.students.push({...value,id:'demo'+Date.now()});
   }else{
    const q=rowid?sb.from('lsc_students').update(value).eq('id',rowid):sb.from('lsc_students').insert(value);
