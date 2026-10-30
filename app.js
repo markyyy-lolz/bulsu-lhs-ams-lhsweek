@@ -39,9 +39,10 @@ function demoStart(asMayor=false){
 }
 async function verifySession(){
   const {data:{session},error}=await sb.auth.getSession();
-  if(error || !session){state.user=null;state.role=null;render();return;}
+  if(error || !session){state.user=null;state.role=null;state.fwProfile=null;state.fwStamps=[];state.fwPulse=null;state.fwSelected='';state.fwNotice=null;render();return;}
   const {data:role,error:roleError}=await sb.from('lsc_staff_roles').select('role,class_id').eq('user_id',session.user.id).maybeSingle();
   if(roleError || !role){await sb.auth.signOut();state.user=null;state.role=null;render();toast('Your account is not authorized for LSC Attendance.',true);return;}
+  if(state.user?.id!==session.user.id){state.fwProfile=null;state.fwStamps=[];state.fwPulse=null;state.fwSelected='';state.fwNotice=null;}
   state.user=session.user;state.role=role.role;state.classId=role.class_id; await loadData();if(state.page==='passport')await loadPassportRecords();render();
 }
 async function loadData(){
@@ -400,7 +401,7 @@ function render(){
 }
 async function logOut(){
  if(!state.demo)await sb.auth.signOut();
- Object.assign(state,{demo:false,user:null,role:null,students:[],logs:[],lastResult:null,query:'',page:'overview',mobileNav:false,classId:null,classes:[],assignments:[],loginMode:'email',otpSent:false,otpEmail:'',showPasswordSetup:false});
+ Object.assign(state,{demo:false,user:null,role:null,students:[],logs:[],lastResult:null,query:'',page:'overview',mobileNav:false,classId:null,classes:[],assignments:[],loginMode:'email',otpSent:false,otpEmail:'',showPasswordSetup:false,fwProfile:null,fwStamps:[],fwPulse:null,fwSelected:'',fwNotice:null,fwBusy:false});
  render();
 }
 async function scan(){
