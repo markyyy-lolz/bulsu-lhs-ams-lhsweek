@@ -395,3 +395,20 @@ body.student-site{
 .fw-log .table{min-width:690px}
 @media(max-width:1030px){.fw-layout{grid-template-columns:1fr}.fw-pulse{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:680px){.fw-pulse{grid-template-columns:1fr}.fw-metric{min-height:110px;padding:18px}.fw-activity{flex-wrap:wrap}.fw-log .section-title{align-items:flex-start;gap:12px;flex-wrap:wrap}}
+
+
+/* Foundation Week Passport launch banner */
+.fw-dash-callout{
+ display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
+ padding:22px 27px;margin:0 0 21px;border-radius:22px;color:#fff;
+ background:radial-gradient(circle at 94% 0%,rgba(216,116,143,.24),transparent 44%),
+ linear-gradient(125deg,rgba(22,52,108,.97),rgba(47,84,154,.90));
+ border:1px solid rgba(255,255,255,.29);box-shadow:0 15px 40px rgba(24,56,110,.17);
+}
+.fw-dash-copy{flex:1;min-width:220px}
+.fw-dash-copy .eyebrow{color:#aec5fa;font-size:11px;letter-spacing:1.6px}
+.fw-dash-copy h3{font-size:22px;margin:8px 0 6px;color:white}
+.fw-dash-copy p{color:#e2ecff;font-size:13px;line-height:1.5;margin:4px 0 6px}
+.fw-dash-copy small{color:#b5ccef;font-size:11px}
+.fw-dash-callout .btn{flex-shrink:0}
+@media(max-width:680px){.fw-dash-callout{padding:20px}.fw-dash-callout .btn{width:100%}}
