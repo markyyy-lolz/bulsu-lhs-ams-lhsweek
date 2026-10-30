@@ -1,6 +1,7 @@
 <!doctype html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#152645">
+<link rel="icon" type="image/webp" href="./assets/lsc-logo.webp">
 <meta name="description" content="Dedicated student ID attendance terminal for LSC Laboratory High School">
 <title>Student Time IN / OUT | LSC Attendance</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +20,7 @@ h1,h2,h3,p{margin:0}h1,h2,h3,.brand-title{font-family:Outfit,sans-serif}h1{font-
 
 
 body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transparent 35%),#f5f7fb}
-.student-header{height:88px;background:#fff;border-bottom:1px solid #e5ebf3;display:flex;justify-content:space-between;align-items:center;padding:0 clamp(18px,5vw,72px);gap:14px}
+.lsc-logo{height:53px;width:40px;object-fit:contain;display:block;flex:none}.entry-avatar.logo-avatar{width:82px;height:95px;background:#f8faff;border:1px solid #e1e9f7}.logo-avatar img{height:89px;width:67px;object-fit:contain}.student-header{height:88px;background:#fff;border-bottom:1px solid #e5ebf3;display:flex;justify-content:space-between;align-items:center;padding:0 clamp(18px,5vw,72px);gap:14px}
 .student-header .brand-title{color:#182d53}.student-header .brand-sub{color:#687995}
 .student-header .brand{padding:0}.student-header .mark{background:linear-gradient(145deg,#1b386b,#365caa);color:white}
 .header-links{display:flex;align-items:center;gap:12px}.header-links a{color:#4a6287;text-decoration:none;font-size:13px;font-weight:800;padding:10px 12px;border:1px solid #e3eaf5;border-radius:11px}
@@ -55,19 +56,19 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
 .station-warning a{font-weight:800}
 .result{max-width:440px}.result .result-title{font-size:23px}
 @media(max-width:850px){.student-grid{grid-template-columns:1fr}.student-wrap{margin:28px auto}.entry-card{min-height:0}.side-panel{padding:24px}.student-hero{align-items:start}.live-clock{padding:11px}}
-@media(max-width:540px){.student-wrap{width:calc(100% - 24px)}.student-header{height:76px;padding:0 14px}.student-header .brand-sub{display:none}.student-header .brand-title{font-size:15px}.student-header .mark{height:39px;width:39px;font-size:16px}.header-links a{font-size:11px;padding:9px}.student-hero{display:block}.live-clock{margin-top:17px;width:max-content}.entry-card{padding:31px 13px 25px}.entry-head{font-size:22px}.student-id-field{font-size:25px;height:66px}.student-hero h1{font-size:30px}}
+@media(max-width:540px){.student-wrap{width:calc(100% - 24px)}.student-header{height:76px;padding:0 14px}.student-header .brand-sub{display:none}.student-header .lsc-logo{height:43px;width:33px}.student-header .brand-title{font-size:15px}.student-header .mark{height:39px;width:39px;font-size:16px}.header-links a{font-size:11px;padding:9px}.student-hero{display:block}.live-clock{margin-top:17px;width:max-content}.entry-card{padding:31px 13px 25px}.entry-head{font-size:22px}.student-id-field{font-size:25px;height:66px}.student-hero h1{font-size:30px}}
 </style>
 </head>
 <body class="student-site">
 <header class="student-header">
- <div class="brand"><span class="mark">LSC</span><span><span class="brand-title">Attendance System</span><span class="brand-sub">BULSU LABORATORY HIGH SCHOOL</span></span></div>
- <div class="header-links"><a href="./login.html">Staff / Admin Login ↗</a></div>
+ <div class="brand"><img src="./assets/lsc-logo.webp" class="lsc-logo" alt="LSC crest"><span><span class="brand-title">Attendance System</span><span class="brand-sub">BULSU LABORATORY HIGH SCHOOL</span></span></div>
+ <div class="header-links"><a href="./login.html">Class Mayor / LSC Official Login ↗</a></div>
 </header>
 <main class="student-wrap">
  <div class="student-hero"><div><div class="eyebrow">STUDENT ATTENDANCE TERMINAL</div><h1>Welcome to LSC.</h1><p>Simply enter your Student ID to record your arrival or departure.</p></div><div class="live-clock"><span class="clock-icon">◷</span><div><strong id="clockTime">--:--:--</strong><span class="small muted" id="clockDate">Philippine Standard Time</span></div></div></div>
  <div class="student-grid">
   <section class="card entry-card">
-   <div class="entry-avatar">▣</div>
+   <div class="entry-avatar logo-avatar"><img src="./assets/lsc-logo.webp" alt="LSC logo"></div>
    <div class="eyebrow" style="margin-top:20px">QUICK ATTENDANCE</div>
    <h2 class="entry-head">Enter your Student ID</h2>
    <p class="entry-desc">Use the keypad below or type your ID, then press Record Attendance.</p>
@@ -94,12 +95,12 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
     <div class="step"><span class="step-num">02</span><div><strong>Automatic Time IN / OUT</strong><p>The next event is determined securely by the database. There is no manual toggle.</p></div></div>
     <div class="step"><span class="step-num">03</span><div><strong>Instant confirmation</strong><p>Your recorded status and timestamp are displayed immediately.</p></div></div>
    </div>
-   <a class="teacher-link" href="./login.html">Staff administration <span>↗</span></a>
+   <a class="teacher-link" href="./login.html">Class Mayor / LSC Official Portal <span>↗</span></a>
    <button id="demoButton" type="button" class="btn btn-secondary" style="width:100%;margin-top:10px">Try Demo Mode</button>
-   <p style="font-size:11px;color:#8491a9;line-height:1.7;margin-top:13px">For data protection, an authorized staff member must activate the kiosk on this same browser first. Demo entries are not saved.</p>
+   <p style="font-size:11px;color:#8491a9;line-height:1.7;margin-top:13px">For data protection, an LSC Official must activate the kiosk on this same browser first. Demo entries are not saved.</p>
   </aside>
  </div>
- <footer class="student-footer">LSC Attendance Monitor · Independent prototype, not an official school service without approval.<br>Student attendance information is handled through Supabase, never stored on GitHub Pages.</footer>
+ <footer class="student-footer">LSC Attendance Monitor · Independent prototype · Powered by Azure&lt;3 · School approval required.<br>Student attendance information is handled through Supabase, never stored on GitHub Pages.</footer>
 </main>
 <script type="module" src="./student.js"></script>
 </body></html>
