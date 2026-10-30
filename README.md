@@ -38,6 +38,28 @@ The database constraint `lsc_verified_before_active` prevents activation while `
 
 **Demo mode:** Student page demos IDs `2023107337` and `2023999999` without database writes. Login page provides demo previews for both LSC Official and Class Mayor roles, also without writes.
 
+## Movie Booth POS — Foundation Week cash ticketing
+
+**Private route:** [Movie Booth POS](https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/movie.html) (also linked from the authorized dashboard sidebar).
+
+### LSC Official first-time setup
+1. Sign in through \`login.html\`. Open **Movie Booth POS → Movie Setup**.
+2. Create a movie showing with the actual title, showing date (Philippine Time), optional venue and **school-approved PHP ticket price**. No guessed price or default paid show is seeded.
+3. Select **Ticket Checkout**. Enter an active student's assigned attendance ID, click **Find Student**, and confirm their identity physically.
+4. Enter the quantity (**1–20 tickets per sale**), cash received and verify the calculated total/change. Cash payment is accounted for by staff; **no actual online payment processing** takes place.
+5. Select **Confirm Payment & Issue Tickets**. The server atomically creates an audited sale and **one unique ticket code for each ticket**. Print individual admission slips through the browser print dialog (designed for approximately 80mm thermal paper, also printable to PDF or ordinary printer).
+6. Use **Sales Reports** to see the server-calculated total cash sales, ticket quantities, void counts and per-transaction cashier history. Filter a Philippine date or show all, download a scoped CSV, or print an A4 report.
+7. LSC Officials may **void** a sale with a reason. Ticket history is preserved and printed voided tickets are labeled invalid. Any cash refund must be processed and recorded separately by the operator.
+
+### Roles, permissions and safety
+- **LSC Official**: create, pause/resume showings, sell tickets school-wide, view full reports, reprint and void.
+- **Class Mayor**: sell tickets for students **within the assigned class only**, view that class's sales, reprint tickets sold to their classmates. No movie setup, price changes or sale voiding.
+- **No public checkout:** the site requires a preexisting LSC Auth session. The Supabase RLS policies prevent reading another class's transactions or direct client-side insertion/changes to sales and tickets. Sale issue and void use server-side, role-checked RPCs.
+- **Duplicate-sale protection:** a browser-generated checkout UUID is held during retries. The server uses a lock and unique \`request_id\`; an identical retry returns the original receipt, not a second sale.
+- **No accidental price changes:** sale rows copy the ticket price at checkout. Existing shows' titles/prices/dates are immutable; LSC Officials can pause/resume sales and create a new show to change offerings.
+- **Printed ticket is an event admission pass, not a BIR-registered invoice/official receipt**. Ticket codes are not automatically redeemed or scanned at entry in this release.
+- New tables \`lsc_movie_shows\`, \`lsc_movie_sales\`, \`lsc_movie_tickets\` are isolated from the main attendance tables and unrelated BrewPOS data. No automatic student attendance events are created from ticket sales.
+
 ## Foundation Week Experience — unique event features
 
 The **existing system name is unchanged**. A new, private **Foundation Passport** workspace has been added for Foundation Week operations; the original Student Time IN/OUT terminal and historical records remain separate and untouched.
