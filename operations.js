@@ -4,7 +4,7 @@ const root=document.getElementById('opsRoot');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const php=n=>'₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
 const ph=n=>new Date(n).toLocaleString('en-PH',{timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-const state={user:null,role:null,scope:null,hub:null,notices:[],rewards:[],volunteers:[],print:[],scans:[],tab:'pulse',busy:false,notice:'',lastRefresh:null,online:navigator.onLine};
+const state={user:null,role:null,scope:null,hub:null,hourly:[],notices:[],rewards:[],volunteers:[],print:[],scans:[],tab:'pulse',busy:false,notice:'',lastRefresh:null,online:navigator.onLine};
 const tabs=[['pulse','Event Pulse'],['announcements','Announcements'],['rally','Stamp Rally'],['team','Volunteer Team'],['audit','Audit Center'],['recap','Closing Report']];
 const allowed=()=>['official','class_mayor','event_monitor','cashier','ticket_checker'].includes(state.role);
 function top(){
@@ -18,6 +18,15 @@ function tiles(){
  return '<div class="ops-tiles">'+[['Attendance arrivals',h.today_checkins??'Role-limited'],['Passport stamps',h.passport_stamps??'Role-limited'],
  ['Movie tickets sold',sold],['Revenue in scope',php(income)],['Tickets redeemed',used],['Active screenings',shows.filter(x=>x.active).length]]
  .map(([title,val])=>'<div class="ops-tile"><small>'+esc(title)+'</small><strong>'+esc(val)+'</strong></div>').join('')+'</div>';
+}
+function hourlyChart(){
+ const rows=state.hourly||[];
+ if(!rows.length)return '';
+ const max=Math.max(1,...rows.map(x=>Number(x.tickets||0)));
+ return '<div class="ops-hourly"><h3>Movie Ticket Sales by Hour (PHT)</h3><div class="ops-bars">'+rows.map(x=>
+  '<div class="ops-hour" title="'+esc(x.hour)+':00 — '+esc(x.tickets)+' tickets · '+php(x.revenue)+'"><span class="ops-hour-count">'+(Number(x.tickets)?x.tickets:'')+'</span>'+
+  '<div class="ops-bar-track"><div class="ops-bar-fill" style="height:'+Math.max(1,Math.round(Number(x.tickets||0)/max*100))+'%"></div></div>'+
+  '<small>'+esc(x.hour)+'</small></div>').join('')+'</div><p class="movie-helper">Tickets sold per hour, excluding voided sales. Revenue and attendance data stay restricted by operator role.</p></div>';
 }
 function showRows(){
  return (state.hub?.shows||[]).map(sh=>{
@@ -43,7 +52,7 @@ function volunteerRows(){
 }
 function pulse(){
  return '<section class="movie-panel"><div class="movie-panel-head"><h2>Event Pulse</h2><span>Auto-refresh every 30 seconds while online · Private aggregate data</span></div>'+
- tiles()+'<h3>Movie screenings & capacity</h3>'+showRows()+
+ tiles()+hourlyChart()+'<h3>Movie screenings & capacity</h3>'+showRows()+
  '<div class="ops-inline-note">Attendance counts track IN records, not confirmed absences. Event totals are displayed only within your authorized scope; individual student details are never public.</div>'+
  '<h3>Latest official announcements</h3>'+announcementRows()+'</section>';
 }
@@ -107,13 +116,14 @@ function render(){
 }
 async function load(){
  if(!state.user)return;
- const [h,n,r]=await Promise.all([
+ const [h,n,r,hourly]=await Promise.all([
  db.rpc('lsc_fw_operations'),
  db.from('lsc_fw_announcements').select('id,title,message,active,created_at').order('created_at',{ascending:false}).limit(60),
- db.from('lsc_fw_rewards').select('id,title,required_stamps,active').order('required_stamps').limit(60)
+ db.from('lsc_fw_rewards').select('id,title,required_stamps,active').order('required_stamps').limit(60),
+ db.rpc('lsc_movie_hourly_sales',{p_day:null})
  ]);
  if(h.error)throw h.error;
- state.hub=h.data;state.notices=n.data||[];state.rewards=r.data||[];
+ state.hub=h.data;state.notices=n.data||[];state.rewards=r.data||[];state.hourly=hourly.error?[]:(hourly.data||[]);
  if(state.role==='official'){
  const [v,s,p]=await Promise.all([
   db.rpc('lsc_movie_list_volunteers'),
