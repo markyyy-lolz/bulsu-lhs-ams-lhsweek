@@ -17,11 +17,11 @@ The root URL redirects to the student terminal.
 
 ## Access permissions
 
-**Class Mayor:** Can see only the student roster and attendance history for the one class assigned by an LSC Official. Read-only; cannot create classes, edit students, assign roles, or activate a real attendance terminal. All restrictions enforced by PostgreSQL Row Level Security (RLS), not only by UI.
+**Class Mayor:** Can view and **record Time IN/Time OUT only for classmates in the one section assigned by an LSC Official**. Can activate the attendance terminal when signed in on the same browser/device. Cannot manage other classes, edit students, create classes, or assign roles. Both read access and server-side record calls enforce class scope.
 
 **LSC Official:** May see attendance for the whole school, register students, create grade/section classes, and assign or revoke Class Mayor/LSC Official roles using the **Role Assignments** page. The server checks Official privileges for each role-management action. The initial Official must be provisioned by a Supabase project administrator as described below.
 
-**Student terminal:** Public interface is a separate webpage without an administrator login form. A supervising **LSC Official** must log in at `login.html` on the **same browser/device** to activate real attendance logging. Entries will then alternate **IN / OUT / IN** for each registered Student ID and Philippine calendar day, with a **45-second duplicate guard** and a database timestamp in **Asia/Manila**. Class Mayors cannot activate the terminal. A student ID is a lookup identifier, not strong proof of identity; supervise the terminal.
+**Student terminal:** Public interface is a separate webpage without an administrator login form. A supervising **Class Mayor or LSC Official** must sign in at `login.html` on the **same browser/device** to activate real attendance logging. Class Mayors are limited to their assigned section; Officials may record school-wide. Entries alternate **IN / OUT / IN** per Student ID and Philippine calendar day, with a **45-second duplicate guard** and a database timestamp in **Asia/Manila**. A Student ID alone is not proof of identity; supervise the terminal.
 
 **Demo mode:** Student page demos IDs `2023107337` and `2023999999` without database writes. Login page provides demo previews for both LSC Official and Class Mayor roles, also without writes.
 
@@ -69,16 +69,16 @@ where role='official';
 
 4. Sign in through email verification at `login.html`. Under **Classes**, create each grade-level/section, then under **Student Directory**, register only authorized real Student IDs and assign each student to a class. No real student records or user accounts are seeded by the software.
 5. Under **Role Assignments**, enter an already-created Supabase Auth email, choose **Class Mayor**, select that person's assigned class, and save. You may also grant other trusted LSC Officials access. Role changes are audited in `lsc_role_audit`.
-6. On a designated, supervised attendance device, sign in as an LSC Official from `login.html`, then navigate to `student.html`. On a different browser/device without an Official session, the live terminal stays locked.
+6. On a designated, supervised attendance device, sign in as an LSC Official **or assigned Class Mayor** from `login.html`, then navigate to `student.html` in the same browser. Other browsers or devices without a logged-in, assigned role stay locked. The station displays the logged-in operator.
 
 ## Security model
 
 - `lsc_staff_roles`: server-enforced official/mayor access list, with exactly one assigned class per mayor.
 - `lsc_classes`: grade-level/section definitions; only Officials may edit.
 - `lsc_students`: students scoped by class; Class Mayors only read their own class; Officials may edit.
-- `lsc_attendance_events`: append-only attendance data, scoped by class in RLS; no direct browser INSERT grant.
+- `lsc_attendance_events`: append-only attendance data, scoped by class in RLS; no direct browser INSERT grant. Every new event stores `recorded_by` (Supabase Auth user UUID), `recorded_by_email` (snapshot), and `recorded_by_role` (snapshot). The **Recorded By** column appears in both dashboard views and attendance CSV exports. Existing events retain their timestamps and event types; their operator email is backfilled where possible, but historical roles remain blank rather than guessed.
 - `lsc_role_audit`: audit log readable only by Officials.
-- `lsc_record_attendance`: Official-only atomic check-in/out RPC using server timestamps, advisory lock, and 45-second duplicate protection.
+- `lsc_record_attendance`: Official or assigned Class Mayor atomic check-in/out RPC, with server-enforced section restriction for mayors. It uses server timestamps, advisory locks, and 45-second duplicate protection. The signed-in user ID is **never accepted from the browser**; it comes from the validated JWT.
 - `lsc_assign_role`, `lsc_revoke_role`, `lsc_list_roles`: separately authorized Official-only actions.
 - The public website contains only the **Supabase publishable key**; no service-role secret or student database dump is checked in.
 
