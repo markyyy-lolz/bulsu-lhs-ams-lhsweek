@@ -114,8 +114,15 @@ function metrics(){
 }
 function overviewHTML(){
   const m=metrics();
+  const fwLatest=state.fwPulse?.activities?.[0];
+  const fwActivityCount=state.fwPulse?.activities?.length||0;
+  const fwCallout='<div class="fw-dash-callout"><div class="fw-dash-copy"><div class="eyebrow">FOUNDATION WEEK HUB</div><h3>Digital Event Passport</h3><p>'+
+   (fwLatest?esc(fwLatest.title)+' · '+esc(fwLatest.session_date)+' · '+fwLatest.stamps+' activity stamps in your scope':
+    'Set up event activities, stamp student participation and review the private event pulse.')+
+   '</p><small>'+fwActivityCount+' activity'+(fwActivityCount===1?'':'ies')+' configured · Existing IN/OUT history stays separate</small></div>'+
+   '<button type="button" class="btn btn-light" data-nav="passport">Open Passport →</button></div>';
   return header(state.role==='class_mayor'?'Class Attendance Dashboard':'Whole-School Attendance',state.role==='class_mayor'?'Your assigned classmates only · '+esc(state.classes.map(c=>c.id===state.classId?c.grade_level+' · '+c.section:'').find(Boolean)||'Class assigned'):'Student attendance at a glance · '+esc(datePH(new Date())))+
-  '<section class="stats">'+m.map(x=>'<div class="card stat"><div class="stat-ico">'+x[2]+'</div><div class="stat-label">'+x[0]+'</div><div class="stat-num mono">'+x[1]+'</div><div class="stat-foot">'+x[3]+'</div></div>').join('')+'</section>'+
+  '<section class="stats">'+m.map(x=>'<div class="card stat"><div class="stat-ico">'+x[2]+'</div><div class="stat-label">'+x[0]+'</div><div class="stat-num mono">'+x[1]+'</div><div class="stat-foot">'+x[3]+'</div></div>').join('')+'</section>'+fwCallout+
   '<div class="two-col"><div class="card pad"><div class="section-title"><h3>Recent Activity</h3><button class="btn btn-secondary" data-nav="records">View All</button></div>'+logTable(state.logs.filter(x=>x.event_date===todayPH()).slice(0,8),true)+'</div><div class="stack"><div class="log-ribbon"><div><h3>'+ (state.role==='class_mayor'?'Class monitoring':'Student check-in') +'</h3><p>'+ (state.role==='class_mayor'?'Record your classmates’ Time IN/OUT; every entry is audited to your login.':'Open the separate student attendance terminal.') +'</p></div>'+ '<a class="btn btn-light" href="./student.html">Open</a>' +'</div><div class="card pad"><div class="section-title"><h3>Quick Notes</h3></div><div class="info"><div class="bubble">✓</div><div><strong>Automatic alternation</strong><p>First entry of the Philippine school day is IN, then OUT, then IN.</p></div></div><div class="info"><div class="bubble">◷</div><div><strong>Reliable timestamps</strong><p>Real entries use the Supabase database clock, not the device clock.</p></div></div><div class="notice'+(state.demo?' warn':'')+'">'+(state.demo?'Demo mode only. No records are written to the school database.':'Read access is restricted by role and class assignment.')+'</div></div></div></div>';
 }
 function kioskHTML(){
