@@ -25,6 +25,26 @@ The root URL redirects to the student terminal.
 
 **Demo mode:** Student page demos IDs `2023107337` and `2023999999` without database writes. Login page provides demo previews for both LSC Official and Class Mayor roles, also without writes.
 
+## Email verification login + optional backup password
+
+The Class Mayor / LSC Official portal uses **Supabase email verification first**:
+
+1. Enter an **existing, approved Supabase Auth email address** at `login.html`.
+2. Click **Send verification email**. The site calls `signInWithOtp` with `shouldCreateUser:false` (no public self-registration).
+3. Enter the emailed six-digit code at the prompt, **or** open the magic link in the email if the Supabase template is configured to send links. The portal calls `verifyOtp({ email, token, type:'email' })` for code entry. An authorized `lsc_staff_roles` role is still mandatory.
+4. After verification, select **Account Security** to set a new **backup password** (12+ characters). This is optional and uses `auth.updateUser({password})` from the already signed-in session.
+5. On subsequent visits, use verification emails as normal, or click **Have a backup password?** to use `signInWithPassword`. The backup password is an *alternative login method*, not a second authentication factor.
+
+**One-time Supabase configuration** (project `rfxzbuocxersgbshczbj`):
+
+- Ensure Email auth is enabled in **Authentication → Providers → Email**.
+- Add `https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/login.html` under **Authentication → URL Configuration → Redirect URLs**, then verify the correct Site URL.
+- In **Authentication → Email Templates → Magic Link**, include `{{ .Token }}` in the template to send a six-digit code. If the template uses `{{ .ConfirmationURL }}` instead, Supabase sends a magic link; clicking it will sign in to the same authorized portal. Configure the appropriate template and sender before requesting emails.
+- Existing accounts can sign in with emailed verification even if no password was set, subject to the project's email confirmation and authentication settings.
+- New accounts must first be provisioned by the school administrator in Supabase Authentication; the website **does not allow public registration**. An LSC Official then assigns an existing account to an LSC role.
+- Email delivery is subject to Supabase's configured email provider and rate limits. For real school deployment configure a school-managed SMTP sender and test delivery; this repository cannot change those settings.
+- Do **not** store verification codes, session tokens, or passwords in GitHub or student records.
+
 ## First-time setup before real student attendance (required)
 
 1. Obtain explicit school approval and a data-processing policy before adding student names or attendance records, consistent with the Philippines Data Privacy Act.
@@ -47,7 +67,7 @@ select count(*) from public.lsc_staff_roles
 where role='official';
 ```
 
-4. Sign in at `login.html`. Under **Classes**, create each grade-level/section, then under **Student Directory**, register only authorized real Student IDs and assign each student to a class. No real student records or user accounts are seeded by the software.
+4. Sign in through email verification at `login.html`. Under **Classes**, create each grade-level/section, then under **Student Directory**, register only authorized real Student IDs and assign each student to a class. No real student records or user accounts are seeded by the software.
 5. Under **Role Assignments**, enter an already-created Supabase Auth email, choose **Class Mayor**, select that person's assigned class, and save. You may also grant other trusted LSC Officials access. Role changes are audited in `lsc_role_audit`.
 6. On a designated, supervised attendance device, sign in as an LSC Official from `login.html`, then navigate to `student.html`. On a different browser/device without an Official session, the live terminal stays locked.
 
