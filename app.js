@@ -45,7 +45,7 @@ async function loadData(){
   if(state.demo)return;
   const [s,l,c,a]=await Promise.all([
     sb.from('lsc_students').select('id,student_id,full_name,grade_level,section,class_id,active,created_at').order('full_name',{ascending:true}).limit(2000),
-    sb.from('lsc_attendance_events').select('id,student_id,class_id,event_type,event_date,recorded_at,lsc_students(student_id,full_name,grade_level,section)').eq('event_date',state.recordDate).order('recorded_at',{ascending:false}).limit(1000),
+    sb.from('lsc_attendance_events').select('id,student_id,class_id,event_type,event_date,recorded_at,recorded_by,recorded_by_email,recorded_by_role,lsc_students(student_id,full_name,grade_level,section)').eq('event_date',state.recordDate).order('recorded_at',{ascending:false}).limit(1000),
     sb.from('lsc_classes').select('id,grade_level,section').order('grade_level').order('section'),
     state.role==='official'?sb.rpc('lsc_list_roles'):Promise.resolve({data:[],error:null})
   ]);
@@ -93,7 +93,7 @@ function loginHTML(){
 function sidebar(){
   let menu=[['overview','Dashboard'],['records','Attendance Records'],['security','Account Security']];
   if(state.role==='official'){menu.splice(1,0,['students','Student Directory'],['classes','Classes'],['officials','Role Assignments']);}
-  return '<aside class="sidebar'+(state.mobileNav?' open':'')+'"><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+icons[v[0]]+'</span>'+v[1]+'</button>').join('')+(state.role==='official'?'<a class="nav-btn" href="./student.html"><span class="nav-ico">▣</span>Student Attendance ↗</a>':'')+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">↪ &nbsp;Sign out</button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
+  return '<aside class="sidebar'+(state.mobileNav?' open':'')+'"><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+icons[v[0]]+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">▣</span>Student Attendance ↗</a>'+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">↪ &nbsp;Sign out</button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
 }
 function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security'})[state.page]||'Dashboard';}
 function appHTML(){
@@ -112,7 +112,7 @@ function overviewHTML(){
   const m=metrics();
   return header(state.role==='class_mayor'?'Class Attendance Dashboard':'Whole-School Attendance',state.role==='class_mayor'?'Your assigned classmates only · '+esc(state.classes.map(c=>c.id===state.classId?c.grade_level+' · '+c.section:'').find(Boolean)||'Class assigned'):'Student attendance at a glance · '+esc(datePH(new Date())))+
   '<section class="stats">'+m.map(x=>'<div class="card stat"><div class="stat-ico">'+x[2]+'</div><div class="stat-label">'+x[0]+'</div><div class="stat-num mono">'+x[1]+'</div><div class="stat-foot">'+x[3]+'</div></div>').join('')+'</section>'+
-  '<div class="two-col"><div class="card pad"><div class="section-title"><h3>Recent Activity</h3><button class="btn btn-secondary" data-nav="records">View All</button></div>'+logTable(state.logs.filter(x=>x.event_date===todayPH()).slice(0,8),true)+'</div><div class="stack"><div class="log-ribbon"><div><h3>'+ (state.role==='class_mayor'?'Class monitoring':'Student check-in') +'</h3><p>'+ (state.role==='class_mayor'?'Attendance view is read-only for Class Mayors.':'Open the separate student attendance terminal.') +'</p></div>'+ (state.role==='official'?'<a class="btn btn-light" href="./student.html">Open</a>':'') +'</div><div class="card pad"><div class="section-title"><h3>Quick Notes</h3></div><div class="info"><div class="bubble">✓</div><div><strong>Automatic alternation</strong><p>First entry of the Philippine school day is IN, then OUT, then IN.</p></div></div><div class="info"><div class="bubble">◷</div><div><strong>Reliable timestamps</strong><p>Real entries use the Supabase database clock, not the device clock.</p></div></div><div class="notice'+(state.demo?' warn':'')+'">'+(state.demo?'Demo mode only. No records are written to the school database.':'Read access is restricted by role and class assignment.')+'</div></div></div></div>';
+  '<div class="two-col"><div class="card pad"><div class="section-title"><h3>Recent Activity</h3><button class="btn btn-secondary" data-nav="records">View All</button></div>'+logTable(state.logs.filter(x=>x.event_date===todayPH()).slice(0,8),true)+'</div><div class="stack"><div class="log-ribbon"><div><h3>'+ (state.role==='class_mayor'?'Class monitoring':'Student check-in') +'</h3><p>'+ (state.role==='class_mayor'?'Record your classmates’ Time IN/OUT; every entry is audited to your login.':'Open the separate student attendance terminal.') +'</p></div>'+ '<a class="btn btn-light" href="./student.html">Open</a>' +'</div><div class="card pad"><div class="section-title"><h3>Quick Notes</h3></div><div class="info"><div class="bubble">✓</div><div><strong>Automatic alternation</strong><p>First entry of the Philippine school day is IN, then OUT, then IN.</p></div></div><div class="info"><div class="bubble">◷</div><div><strong>Reliable timestamps</strong><p>Real entries use the Supabase database clock, not the device clock.</p></div></div><div class="notice'+(state.demo?' warn':'')+'">'+(state.demo?'Demo mode only. No records are written to the school database.':'Read access is restricted by role and class assignment.')+'</div></div></div></div>';
 }
 function kioskHTML(){
   let r=state.lastResult;
@@ -122,9 +122,22 @@ function kioskHTML(){
   '<aside class="card kiosk-side"><h3>How it works</h3><div class="info"><div class="bubble">01</div><div><strong>Enter your Student ID</strong><p>Use the keyboard, touchscreen keypad, or a compatible scanner that types an ID.</p></div></div><div class="info"><div class="bubble">02</div><div><strong>Automatic detection</strong><p>The system finds your previous event for the current Philippine date and determines IN or OUT.</p></div></div><div class="info"><div class="bubble">03</div><div><strong>Instant confirmation</strong><p>Your event and database-recorded time appear here.</p></div></div><div class="notice warn">Attendance is recorded under the signed-in staff account. Keep this device supervised to prevent another student from entering someone else’s ID.</div></aside></div>';
 }
 function getStudent(log){return log.lsc_students||state.students.find(s=>s.id===log.student_id)||{};}
+function recorderLabel(log) {
+ const role=log.recorded_by_role==='class_mayor'?'Class Mayor':log.recorded_by_role==='official'?'LSC Official':'Role not captured';
+ return {email:log.recorded_by_email||log.recorded_by||'Not available',role};
+}
 function logTable(rows,compact=false){
  if(!rows.length)return '<div class="empty"><div class="empty-icon">◷</div>No attendance entries for this date.</div>';
- return '<div class="table-wrap"><table class="table"><thead><tr><th>Student ID</th><th>Student Name</th><th>Event</th>'+(compact?'':'<th>Grade / Section</th>')+'<th>Time (PHT)</th></tr></thead><tbody>'+rows.map(l=>{const s=getStudent(l);return '<tr><td class="mono strong">'+esc(s.student_id||'—')+'</td><td>'+esc(s.full_name||'—')+'</td><td><span class="badge '+(l.event_type==='OUT'?'out':'')+'">TIME '+esc(l.event_type)+'</span></td>'+(compact?'':'<td>'+esc(s.grade_level||'')+' · '+esc(s.section||'')+'</td>')+'<td class="mono">'+esc(timePH(l.recorded_at))+'</td></tr>';}).join('')+'</tbody></table></div>';
+ return '<div class="table-wrap"><table class="table"><thead><tr><th>Student ID</th><th>Student Name</th><th>Event</th>'+
+ (compact?'':'<th>Grade / Section</th>')+'<th>Time (PHT)</th><th>Recorded By</th></tr></thead><tbody>'+
+ rows.map(l=>{
+  const student=getStudent(l),actor=recorderLabel(l);
+  return '<tr><td class="mono strong">'+esc(student.student_id||'—')+'</td><td>'+esc(student.full_name||'—')+'</td>'+
+  '<td><span class="badge '+(l.event_type==='OUT'?'out':'')+'">TIME '+esc(l.event_type)+'</span></td>'+
+  (compact?'':'<td>'+esc(student.grade_level||'')+' · '+esc(student.section||'')+'</td>')+
+  '<td class="mono">'+esc(timePH(l.recorded_at))+'</td>'+
+  '<td><div class="strong" style="font-size:12px">'+esc(actor.email)+'</div><div class="muted tiny">'+esc(actor.role)+'</div></td></tr>';
+ }).join('')+'</tbody></table></div>';
 }
 function recordsHTML(){
  const q=state.query.trim().toLowerCase();
@@ -365,7 +378,7 @@ function toCsvCell(value){let x=String(value??'');if(/^[=+\-@\t\r]/.test(x))x="'
 function exportCsv(){
  if(!state.logs.length){toast('No attendance entries to export.');return;}
  const q=state.query.trim().toLowerCase(), rows=state.logs.filter(l=>{const s=getStudent(l);return !q||(s.student_id||'').includes(q)||(s.full_name||'').toLowerCase().includes(q);});
- const body=[['Student ID','Full Name','Grade Level','Section','Date','Event','Time PHT'],...rows.map(l=>{const s=getStudent(l);return [s.student_id,s.full_name,s.grade_level,s.section,l.event_date,l.event_type,timePH(l.recorded_at)];})];
+ const body=[['Student ID','Full Name','Grade Level','Section','Date','Event','Time PHT','Recorded By Email','Recorded By Role','Recorder User ID'],...rows.map(l=>{const s=getStudent(l);return [s.student_id,s.full_name,s.grade_level,s.section,l.event_date,l.event_type,timePH(l.recorded_at),l.recorded_by_email||'',l.recorded_by_role||'Legacy (not captured)',l.recorded_by||''];})];
  const csv='\uFEFF'+body.map(row=>row.map(toCsvCell).join(',')).join('\r\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='LSC-Attendance-'+state.recordDate+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
