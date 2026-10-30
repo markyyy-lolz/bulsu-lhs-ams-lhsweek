@@ -412,3 +412,21 @@ body.student-site{
 .fw-dash-copy small{color:#b5ccef;font-size:11px}
 .fw-dash-callout .btn{flex-shrink:0}
 @media(max-width:680px){.fw-dash-callout{padding:20px}.fw-dash-callout .btn{width:100%}}
+
+
+/* Private personal event passport and positive participation milestones */
+.fw-profile-tools{border-top:1px solid rgba(141,169,211,.28);margin-top:23px;padding-top:20px}
+.fw-profile-tools h4{font-size:16px;color:#1d385f;margin:0 0 5px}
+.fw-lookup{display:flex;gap:9px;align-items:end;margin-top:14px;flex-wrap:wrap}
+.fw-lookup .field{flex:1;min-width:170px}
+.fw-lookup button{height:45px;flex:none}
+.fw-profile-card{background:rgba(244,249,255,.78);border:1px solid rgba(156,185,224,.55);border-radius:17px;margin-top:16px;padding:19px}
+.fw-profile-card>strong{display:block;font-size:17px;color:#1a3967}
+.fw-profile-card>span{display:block;color:#607a9a;font-size:12px;margin:4px 0 14px}
+.fw-badges{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.fw-badges>span{border:1px solid rgba(156,172,201,.33);border-radius:100px;padding:7px 10px;font-size:11px;color:#8a95a6;background:rgba(232,234,241,.5)}
+.fw-badges>span.earned{color:#865019;background:rgba(255,228,173,.75);border-color:rgba(215,175,104,.52);font-weight:800}
+.fw-stamp-list{display:flex;flex-direction:column;gap:7px;margin-top:12px}
+.fw-stamp-list>div{display:flex;justify-content:space-between;gap:9px;border-radius:9px;background:rgba(255,255,255,.57);padding:9px 11px;font-size:12px}
+.fw-stamp-list>div small{color:#6c80a0}
+@media(max-width:650px){.fw-lookup button{width:100%}}
