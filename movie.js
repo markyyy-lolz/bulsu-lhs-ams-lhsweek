@@ -10,7 +10,7 @@ const today=()=>{const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Man
 const pht=value=>new Date(value).toLocaleString('en-PH',{timeZone:'Asia/Manila',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
 const id=()=>crypto.randomUUID();
 const state={
- user:null,role:null,classId:null,page:'checkout',shows:[],selectedShow:'',
+ user:null,role:null,classId:null,page:'checkout',shows:[],selectedShow:'',editingShowId:null,
  student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',reservation:null,reservationCode:'',
  receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,
  ticketCode:'',ticketResult:null,shift:null,shiftHistory:[],printLog:[],cameraStream:null,cameraTimer:null,html5Scanner:null,scanBusy:false,online:navigator.onLine,otpEmail:'',otpSent:false
@@ -118,24 +118,53 @@ function reports(){
  '</td></tr>').join(''):'<tr><td colspan="8" class="movie-empty">No sales for this period.</td></tr>')+
  '</tbody></table></div></section>';
 }
+function bookingEligibility(sh){
+ if(!sh?.active)return 'Resume ticket sales before opening online reservations.';
+ if(!sh.seat_capacity)return 'Enter a seat capacity between 1 and 5,000.';
+ if(!sh.show_time)return 'Enter an exact future showtime (PHT).';
+ const stamp=sh.show_date+'T'+String(sh.show_time).slice(0,5)+':00+08:00';
+ const when=Date.parse(stamp);
+ if(!Number.isFinite(when)||when<=Date.now()+15*60000)
+  return 'Use a future showing at least 15 minutes from now (Philippine Time).';
+ return '';
+}
+function scheduleEditor(sh){
+ if(!sh)return '';
+ return '<div class="movie-schedule-editor"><div class="movie-panel-head"><h3>Edit Date, Time & Seats</h3><span>PHILIPPINE TIME</span></div>'+
+ '<p class="movie-helper"><strong>'+esc(sh.title)+'</strong> · Choose the correct event schedule below. The system protects already-issued tickets: a date with sales cannot be changed. If the showtime was never set, it can be added without deleting existing sales.</p>'+
+ '<form id="movieEditScheduleForm" class="movie-fields"><input type="hidden" name="show_id" value="'+esc(sh.id)+'">'+
+ '<label>Showing date (PHT)<input name="show_date" type="date" required min="'+today()+'" value="'+esc(sh.show_date)+'"></label>'+
+ '<div class="movie-two"><label>Showtime (PHT)<input name="show_time" type="time" required value="'+esc(String(sh.show_time||'').slice(0,5))+'"></label>'+
+ '<label>Total seats (1–5000)<input name="seat_capacity" type="number" step="1" min="1" max="5000" required value="'+esc(sh.seat_capacity??'')+'" placeholder="e.g. 100"></label></div>'+
+ '<div class="movie-schedule-actions"><button type="submit" class="movie-btn movie-primary">Save Schedule</button>'+
+ '<button type="button" class="movie-btn movie-secondary" data-act="cancel-schedule">Cancel</button></div></form>'+
+ '<p class="movie-helper">Once saved, click <strong>Enable Online Booking</strong> for that showing. This never deletes previous sales or tickets.</p></div>';
+}
 function setup(){
  if(state.role!=='official')return '<div class="movie-alert">Only LSC Officials can configure movie showings.</div>';
+ const editing=state.shows.find(x=>x.id===state.editingShowId)||null;
+ const listings=state.shows.length?state.shows.map(x=>
+  '<div class="movie-show-item"><span><strong>'+esc(x.title)+'</strong>'+
+  '<small>'+esc(x.show_date)+(x.show_time?' · '+esc(String(x.show_time).slice(0,5))+' PHT':' · SHOWTIME MISSING')+
+  ' · '+money(x.price_php)+' · '+esc(x.venue||'Movie Booth')+'</small>'+
+  '<small>'+esc(x.reservations_enabled?'Online reservations enabled':bookingEligibility(x)||'Ready to enable online reservations')+'</small></span>'+
+  '<div class="movie-show-actions"><button type="button" class="movie-mini" data-edit-schedule="'+esc(x.id)+'">Edit Date / Time / Seats</button>'+
+  '<button type="button" class="movie-mini" data-capacity="'+esc(x.id)+'">Capacity '+(x.seat_capacity??'Uncapped')+'</button>'+
+  '<button type="button" class="movie-mini" data-reserve-toggle="'+esc(x.id)+'">'+(x.reservations_enabled?'Disable Online Booking':'Enable Online Booking')+'</button>'+
+  '<button type="button" class="movie-mini" data-toggle="'+esc(x.id)+'">'+(x.active?'Pause Sales':'Resume Sales')+'</button></div></div>'
+ ).join(''):'<p class="movie-helper">No showings configured yet. Create a screening before accepting sales.</p>';
  return '<div class="movie-layout"><section class="movie-panel"><h2>Add Movie Showing</h2>'+
- '<p class="movie-helper">Configure the approved movie title, date, showtime, price and capacity before selling. Online student booking is OFF by default; enable it per showing only after verification. Existing movie prices are locked for transaction consistency.</p>'+
+ '<p class="movie-helper">Configure the actual Foundation Week title, date, time and ticket price. Online reservations are OFF by default and require a future showtime plus seat capacity before you can enable them. You can leave capacity or time blank for walk-in-only operations.</p>'+
  '<form id="movieSetupForm" class="movie-fields">'+
  '<label>Movie title<input name="title" required minlength="3" maxlength="120" placeholder="Enter the movie booth title"></label>'+
  '<label>Showing date<input name="show_date" required type="date" min="'+today()+'" value="'+today()+'"></label>'+
  '<label>Ticket price (PHP)<input name="price_php" required type="number" step="0.01" min="0.01" max="10000" placeholder="Enter the approved price"></label>'+
- '<label>Venue (optional)<input name="venue" maxlength="120" placeholder="e.g., LHS Movie Booth"></label>'+ 
- '<label>Showtime (PHT)<input name="show_time" type="time"></label>'+ 
- '<label>Seat capacity (optional)<input name="seat_capacity" type="number" min="1" max="5000" placeholder="Leave blank for uncapped"></label>'+
+ '<label>Venue (optional)<input name="venue" maxlength="120" placeholder="e.g., LHS Movie Booth"></label>'+
+ '<label>Showtime (PHT)<input name="show_time" type="time"></label>'+
+ '<label>Seat capacity (optional for walk-ins)<input name="seat_capacity" type="number" min="1" max="5000" placeholder="Set for online reservations"></label>'+
  '<button type="submit" class="movie-btn movie-primary">Create Movie Showing</button></form></section>'+
  '<section class="movie-panel"><h2>Configured Showings</h2>'+
- (state.shows.length?state.shows.map(x=>'<div class="movie-show-item"><span><strong>'+esc(x.title)+'</strong><small>'+esc(x.show_date)+' · '+money(x.price_php)+' · '+esc(x.venue||'Movie Booth')+'</small></span>'+
- '<div><button type="button" class="movie-mini" data-capacity="'+esc(x.id)+'">Capacity '+(x.seat_capacity??'Uncapped')+'</button>'+
- '<button type="button" class="movie-mini" data-reserve-toggle="'+esc(x.id)+'">'+(x.reservations_enabled?'Disable Online Booking':'Enable Online Booking')+'</button>'+
- '<button type="button" class="movie-mini" data-toggle="'+esc(x.id)+'">'+(x.active?'Pause Sales':'Resume Sales')+'</button></div></div>').join(''):
- '<p class="movie-helper">No shows configured. New sales are disabled until setup is complete.</p>')+'</section></div>';
+ (editing?scheduleEditor(editing):'')+listings+'</section></div>';
 }
 function render(){
  if(!state.user){root.innerHTML='<section class="movie-signin"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest"><h1>Movie Booth POS</h1>'+
@@ -206,6 +235,31 @@ async function makeSale(){
   state.quantity=1;state.requestId=null;state.notice='Payment recorded; individual tickets issued. Print them below.';
  }catch(e){state.notice='Sale was not confirmed: '+(e.message||'Unknown error')+
   '. If the connection failed, retry using the same checkout without changing the student or amount.';}
+ finally{state.busy=false;render();}
+}
+async function saveShowingSchedule(form){
+ if(state.role!=='official')return;
+ if(!navigator.onLine){state.notice='Connect to the internet before changing a movie schedule.';render();return;}
+ if(state.busy)return;
+ const showId=form.elements.show_id.value;
+ const date=form.elements.show_date.value;
+ const time=form.elements.show_time.value;
+ const capacity=Number(form.elements.seat_capacity.value);
+ if(!date||!time||!Number.isInteger(capacity)||capacity<1||capacity>5000){
+  state.notice='Select a valid showing date, Philippine showtime and seat capacity of 1–5000.';render();return;
+ }
+ const stamp=Date.parse(date+'T'+time+':00+08:00');
+ if(!Number.isFinite(stamp)||stamp<=Date.now()+15*60000){
+  state.notice='The showing must start at least 15 minutes in the future (Philippine Time).';render();return;
+ }
+ state.busy=true;
+ try{
+  const {data,error}=await db.rpc('lsc_movie_update_showing_schedule',{
+   p_show_id:showId,p_show_date:date,p_show_time:time,p_seat_capacity:capacity});
+  if(error)throw error;
+  state.editingShowId=null;await loadShows();
+  state.notice='Schedule saved ('+date+' · '+time+' PHT · '+capacity+' seats). Click Enable Online Booking when ready.';
+ }catch(e){state.notice='Could not save showing: '+e.message}
  finally{state.busy=false;render();}
 }
 async function createShow(form){
@@ -467,7 +521,7 @@ async function start(){
  }catch(e){root.innerHTML='<div class="movie-signin"><h1>Movie Booth unavailable</h1><p>'+esc(e.message)+'</p><a href="./login.html">Return to LSC Login</a></div>';}
 }
 document.addEventListener('click',async e=>{
- const target=e.target.closest('[data-act],[data-page],[data-print],[data-void],[data-toggle],[data-capacity],[data-reserve-toggle]');
+ const target=e.target.closest('[data-act],[data-page],[data-print],[data-void],[data-toggle],[data-capacity],[data-reserve-toggle],[data-edit-schedule]');
  if(!target)return;
  if(target.dataset.page){
   state.page=target.dataset.page;state.notice='';
@@ -477,10 +531,23 @@ document.addEventListener('click',async e=>{
   if(state.page==='shifts')await fetchShift();
   render();return;
  }
+ if(target.dataset.editSchedule){
+  if(state.role!=='official')return;
+  state.editingShowId=target.dataset.editSchedule;state.page='setup';state.notice='';
+  render();return;
+ }
  if(target.dataset.reserveToggle){
   if(state.role!=='official')return;
   const sh=state.shows.find(x=>x.id===target.dataset.reserveToggle);if(!sh)return;
-  if(!sh.reservations_enabled&&!window.confirm('Enable public Student ID movie reservations for '+sh.title+'? Check the official showing date/time, capacity and approved price first.'))return;
+  if(!sh.reservations_enabled){
+   const missing=bookingEligibility(sh);
+   if(missing){
+    state.editingShowId=sh.id;state.page='setup';
+    state.notice='Before enabling online booking: '+missing+' Fill out Edit Date / Time / Seats, then save.';
+    render();return;
+   }
+   if(!window.confirm('Enable public Student ID movie reservations for '+sh.title+'? Verify the approved schedule, ticket price and capacity first.'))return;
+  }
   const {data,error}=await db.rpc('lsc_movie_reservation_switch',{p_show_id:sh.id,p_enabled:!sh.reservations_enabled});
   if(error){state.notice='Cannot change online booking: '+error.message;render();return}
   await loadShows();state.notice=data.enabled?'Online reservations enabled for this showing. Students may temporarily hold seats.':'Online reservations closed for new bookings; prior holds remain valid until expiry or conversion.';
@@ -525,6 +592,7 @@ document.addEventListener('click',async e=>{
    state.otpSent=false;state.page='checkout';render();return;
  }
  if(act==='otp-back'){state.otpSent=false;state.otpEmail='';state.notice='';render()}
+ if(act==='cancel-schedule'){state.editingShowId=null;state.notice='Schedule editing cancelled.';render()}
  if(act==='lookup')await lookupStudent();
  if(act==='find-reservation')await findReservation();
  if(act==='clear-reservation'){state.reservation=null;state.reservationCode='';state.student=null;state.studentSearch='';state.quantity=1;state.cash='';state.requestId=null;state.notice='Reservation cleared. Walk-in checkout is ready.';render()}
@@ -542,6 +610,7 @@ document.addEventListener('click',async e=>{
 });
 document.addEventListener('submit',async e=>{
  if(e.target.id==='movieSetupForm'){e.preventDefault();await createShow(e.target);}
+ if(e.target.id==='movieEditScheduleForm'){e.preventDefault();await saveShowingSchedule(e.target);}
  if(e.target.id==='movieShiftForm'){e.preventDefault();await saveShift(e.target);}
  if(e.target.id==='movieOtpEmail'){e.preventDefault();await volunteerOtpEmail(e.target);}
  if(e.target.id==='movieOtpVerify'){e.preventDefault();await volunteerOtpVerify(e.target);}
