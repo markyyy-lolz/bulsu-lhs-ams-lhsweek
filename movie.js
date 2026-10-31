@@ -143,7 +143,9 @@ function scheduleEditor(sh){
 function setup(){
  if(state.role!=='official')return '<div class="movie-alert">Only LSC Officials can configure movie showings.</div>';
  const editing=state.shows.find(x=>x.id===state.editingShowId)||null;
- const listings=state.shows.length?state.shows.map(x=>
+ const currentShows=state.shows.filter(x=>!x.archived_at);
+ const archivedShows=state.shows.filter(x=>Boolean(x.archived_at));
+ const listings=currentShows.length?currentShows.map(x=>
   '<div class="movie-show-item"><span><strong>'+esc(x.title)+'</strong>'+
   '<small>'+esc(x.show_date)+(x.show_time?' · '+esc(String(x.show_time).slice(0,5))+' PHT':' · SHOWTIME MISSING')+
   ' · '+money(x.price_php)+' · '+esc(x.venue||'Movie Booth')+'</small>'+
@@ -151,7 +153,8 @@ function setup(){
   '<div class="movie-show-actions"><button type="button" class="movie-mini" data-edit-schedule="'+esc(x.id)+'">Edit Date / Time / Seats</button>'+
   '<button type="button" class="movie-mini" data-capacity="'+esc(x.id)+'">Capacity '+(x.seat_capacity??'Uncapped')+'</button>'+
   '<button type="button" class="movie-mini" data-reserve-toggle="'+esc(x.id)+'">'+(x.reservations_enabled?'Disable Online Booking':'Enable Online Booking')+'</button>'+
-  '<button type="button" class="movie-mini" data-toggle="'+esc(x.id)+'">'+(x.active?'Pause Sales':'Resume Sales')+'</button></div></div>'
+  '<button type="button" class="movie-mini" data-toggle="'+esc(x.id)+'">'+(x.active?'Pause Sales':'Resume Sales')+'</button>'+
+    '<button type="button" class="movie-mini movie-delete-show" data-delete-show="'+esc(x.id)+'" aria-label="Delete showing '+esc(x.title)+'">Delete Showing</button></div></div>'
  ).join(''):'<p class="movie-helper">No showings configured yet. Create a screening before accepting sales.</p>';
  return '<div class="movie-layout"><section class="movie-panel"><h2>Add Movie Showing</h2>'+
  '<p class="movie-helper">Configure the actual Foundation Week title, date, time and ticket price. Online reservations are OFF by default and require a future showtime plus seat capacity before you can enable them. You can leave capacity or time blank for walk-in-only operations.</p>'+
@@ -164,7 +167,12 @@ function setup(){
  '<label>Seat capacity (optional for walk-ins)<input name="seat_capacity" type="number" min="1" max="5000" placeholder="Set for online reservations"></label>'+
  '<button type="submit" class="movie-btn movie-primary">Create Movie Showing</button></form></section>'+
  '<section class="movie-panel"><h2>Configured Showings</h2>'+
- (editing?scheduleEditor(editing):'')+listings+'</section></div>';
+ (editing?scheduleEditor(editing):'')+listings+
+ '<div class="movie-archive-heading"><h3>Archived Showings</h3><p class="movie-helper">Showings with sales or reservation history are retained here for audit. They will not appear in ticket checkout or public booking. Restoring leaves sales paused.</p></div>'+
+ (archivedShows.length?archivedShows.map(x=>'<div class="movie-show-item movie-archived-show"><span><strong>'+esc(x.title)+'</strong>'+
+ '<small>'+esc(x.show_date)+' · Archived '+esc(x.archived_at?pht(x.archived_at):'')+'</small></span>'+
+ '<button class="movie-mini" type="button" data-restore-show="'+esc(x.id)+'">Restore Showing</button></div>').join(''):
+ '<p class="movie-helper">No archived showings.</p>')+'</section></div>';
 }
 function render(){
  if(!state.user){root.innerHTML='<section class="movie-signin"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest"><h1>Movie Booth POS</h1>'+
@@ -184,12 +192,12 @@ function render(){
  '<footer class="movie-footer">Powered by Azure&lt;3 · Private event system · Tickets are not official tax invoices</footer></main>';
 }
 async function loadShows(){
- const {data,error}=await db.from('lsc_movie_shows').select('id,title,show_date,show_time,seat_capacity,reservations_enabled,price_php,venue,active,created_at')
+ const {data,error}=await db.from('lsc_movie_shows').select('id,title,show_date,show_time,seat_capacity,reservations_enabled,price_php,venue,active,archived_at,created_at')
  .order('show_date',{ascending:false}).order('created_at',{ascending:false}).limit(200);
  if(error)throw error;
  state.shows=data||[];
- if(!state.shows.some(x=>x.id===state.selectedShow&&x.active&&x.show_date>=today()))
- state.selectedShow=state.shows.find(x=>x.active&&x.show_date>=today())?.id||'';
+ if(!state.shows.some(x=>x.id===state.selectedShow&&!x.archived_at&&x.active&&x.show_date>=today()))
+ state.selectedShow=state.shows.find(x=>!x.archived_at&&x.active&&x.show_date>=today())?.id||'';
 }
 async function lookupStudent(){
  const val=document.getElementById('movieStudentId')?.value.trim()||'';
@@ -521,7 +529,7 @@ async function start(){
  }catch(e){root.innerHTML='<div class="movie-signin"><h1>Movie Booth unavailable</h1><p>'+esc(e.message)+'</p><a href="./login.html">Return to LSC Login</a></div>';}
 }
 document.addEventListener('click',async e=>{
- const target=e.target.closest('[data-act],[data-page],[data-print],[data-void],[data-toggle],[data-capacity],[data-reserve-toggle],[data-edit-schedule]');
+ const target=e.target.closest('[data-act],[data-page],[data-print],[data-void],[data-toggle],[data-capacity],[data-reserve-toggle],[data-edit-schedule],[data-delete-show],[data-restore-show]');
  if(!target)return;
  if(target.dataset.page){
   state.page=target.dataset.page;state.notice='';
@@ -530,6 +538,39 @@ document.addEventListener('click',async e=>{
   if(state.page==='reports'||state.page==='recovery'){try{await loadReport()}catch(e){state.notice='Report error: '+e.message}}
   if(state.page==='shifts')await fetchShift();
   render();return;
+ }
+ if(target.dataset.deleteShow||target.dataset.restoreShow){
+  if(state.role!=='official'||state.busy)return;
+  const restoring=Boolean(target.dataset.restoreShow);
+  const showId=target.dataset.deleteShow||target.dataset.restoreShow;
+  const sh=state.shows.find(x=>x.id===showId);
+  if(!sh)return;
+  if(restoring){
+   if(!window.confirm('Restore "'+sh.title+'"? It will remain PAUSED and online reservations will stay disabled until you approve them again.'))return;
+  }else{
+   const answer=window.prompt('Delete "'+sh.title+'"?\\n\\nUNUSED showings will be permanently deleted. Showings with paid sales or reservation history will be archived instead.\\n\\nActive unexpired student reservations must be cancelled or expire first.\\n\\nType DELETE to proceed:');
+   if(answer===null)return;
+   if(answer.trim()!=='DELETE'){state.notice='Deletion cancelled. Type exactly DELETE to confirm.';render();return;}
+  }
+  state.busy=true;
+  try{
+    const {data,error}=await db.rpc('lsc_movie_manage_showing',{
+      p_show_id:sh.id,p_action:restoring?'restore':'delete'
+    });
+    if(error)throw error;
+    if(state.editingShowId===sh.id)state.editingShowId=null;
+    if(state.selectedShow===sh.id){
+      state.student=null;state.reservation=null;state.reservationCode='';
+      state.receipt=null;state.requestId=null;
+    }
+    await loadShows();
+    state.notice=data.status==='DELETED'?'Showing permanently deleted. No sales or reservations existed.':
+      data.status==='ARCHIVED'?'Showing archived safely. Existing sales and reservation history are preserved.':
+      'Showing restored in PAUSED mode. Resume sales or enable online booking only when ready.';
+  }catch(error){
+    state.notice='Unable to '+(restoring?'restore':'delete')+' showing: '+error.message;
+  }finally{state.busy=false;render();}
+  return;
  }
  if(target.dataset.editSchedule){
   if(state.role!=='official')return;
