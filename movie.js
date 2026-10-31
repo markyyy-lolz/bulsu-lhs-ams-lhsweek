@@ -219,6 +219,7 @@ async function lookupStudent(){
 async function findReservation(scannedCode=null){
  if(state.busy||state.reservationLookupBusy)return;
  const code=String(scannedCode??document.getElementById('movieReservationCode')?.value??state.reservationCode??'').trim().toUpperCase();
+ if(state.reservationScanActive)stopCamera();
  state.reservationCode=code;
  if(!/^RSV-[0-9A-F]{16}$/.test(code)){
   state.notice='Scan the reservation QR or enter an RSV-XXXXXXXXXXXXXXXX reference.';render();return;
@@ -281,7 +282,8 @@ async function scanReservationQR(){
  }
 }
 async function makeSale(){
- if(state.busy)return;
+ if(state.busy||state.reservationLookupBusy)return;
+ if(state.reservationScanActive)stopCamera();
  if(!navigator.onLine){state.notice='Offline. No sale can be issued until your connection is restored.';render();return;}
  const sh=movie();
  if(!sh||!canSell())return;
