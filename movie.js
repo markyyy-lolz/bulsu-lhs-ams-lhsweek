@@ -12,7 +12,7 @@ const id=()=>crypto.randomUUID();
 const state={
  user:null,role:null,classId:null,accessDenied:false,page:'checkout',shows:[],selectedShow:'',editingShowId:null,
  student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',reservation:null,reservationCode:'',reservationScanActive:false,reservationLookupBusy:false,reservations:[],reservationFilter:'ALL',reservationsBusy:false,reservationsLoadedAt:null,
- receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,
+ receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,cardEnrolled:false,cardLocked:false,cardSince:Date.now(),cardWorking:false,cardNotice:'',voidSaleId:null,voidRequestId:null,voidWorking:false,
  ticketCode:'',ticketResult:null,shift:null,shiftHistory:[],printLog:[],cameraStream:null,cameraTimer:null,html5Scanner:null,scanBusy:false,online:navigator.onLine,otpEmail:'',otpSent:false
 };
 function movie(){
@@ -30,7 +30,7 @@ function header(){
  return '<header class="movie-header"><div class="movie-brand"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
  '<div><strong>Movie Booth POS</strong><small>BulSU Laboratory High School · Foundation Week</small></div></div>'+
  '<div class="movie-head-right"><span class="movie-role">'+esc(state.role.replaceAll('_',' ').toUpperCase())+'</span>'+
- '<a href="./reserve.html" class="movie-return">Student Reservations</a> · <a href="./operations.html" class="movie-return">Event Command Center</a> · <a href="./login.html#overview" class="movie-return">LSC Dashboard</a> · <button type="button" class="movie-mini" data-act="signout">Sign Out</button></div></header>';
+ '<button class="movie-mini" type="button" data-act="lock-station">Lock Station</button> · <a href="./reserve.html" class="movie-return">Student Reservations</a> · <a href="./operations.html" class="movie-return">Event Command Center</a> · <a href="./login.html#overview" class="movie-return">LSC Dashboard</a> · <button type="button" class="movie-mini" data-act="signout">Sign Out</button></div></header>';
 }
 function tabs(){
  const items=[];
@@ -40,6 +40,7 @@ function tabs(){
  if(['official','cashier','event_monitor'].includes(state.role))items.push(['reports','Sales Reports']);
  if(['official','cashier'].includes(state.role))items.push(['recovery','Print Recovery']);
  if(state.role==='official')items.push(['setup','Movie Setup']);
+ items.push(['staffcard','Staff Card / NFC']);
  return '<nav class="movie-tabs" aria-label="Movie POS navigation">'+items.map(x=>
  '<button type="button" data-page="'+x[0]+'" class="'+(state.page===x[0]?'selected':'')+'">'+esc(x[1])+'</button>').join('')+'</nav>';
 }
@@ -168,7 +169,7 @@ function reports(){
  '<td><span class="movie-status '+(x.status==='PAID'?'paid':'void')+'">'+esc(x.status)+'</span></td>'+
  '<td>'+esc(x.sold_by_email||'—')+'</td>'+
  '<td><button type="button" class="movie-mini" data-print="'+esc(x.id)+'">Reprint</button>'+
- (state.role==='official'&&x.status==='PAID'?'<button type="button" class="movie-mini danger" data-void="'+esc(x.id)+'">Void</button>':'')+
+ (['official','cashier'].includes(state.role)&&x.status==='PAID'?'<button type="button" class="movie-mini danger" data-void="'+esc(x.id)+'">Request Void</button>':'')+
  '</td></tr>').join(''):'<tr><td colspan="8" class="movie-empty">No sales for this period.</td></tr>')+
  '</tbody></table></div></section>';
 }
@@ -228,6 +229,119 @@ function setup(){
  '<button class="movie-mini" type="button" data-restore-show="'+esc(x.id)+'">Restore Showing</button></div>').join(''):
  '<p class="movie-helper">No archived showings.</p>')+'</section></div>';
 }
+
+const normCard=s=>String(s||'').trim().replace(/[:\s-]/g,'').toUpperCase();
+function staffCardPage(){
+ return '<div class="movie-layout"><section class="movie-panel"><h2>Staff RFID / NFC</h2>'+
+ '<p class="movie-helper">Your existing approved email login establishes account identity. Enrolling a card adds secure card + PIN quick-unlock at this station. No standalone UID-only login.</p>'+
+ '<div class="movie-staff-status">'+(state.cardEnrolled?'Card enrolled · Quick-unlock enabled':'No staff card enrolled · Email sign-in active')+'</div>'+
+ (state.cardNotice?'<p class="movie-alert">'+esc(state.cardNotice)+'</p>':'')+
+ '<form class="movie-fields" id="movieCardEnrollForm">'+
+ '<label>Card ID (Windows USB RFID keyboard reader or Android NFC)<input id="movieCardInput" name="card" maxlength="90" autocomplete="off" spellcheck="false" placeholder="Tap card or type UID" required></label>'+
+ '<button type="button" class="movie-btn movie-secondary" data-act="nfc-card" data-target="movieCardInput">Read Android NFC</button>'+
+ '<label>Choose a six-digit staff PIN<input name="pin" inputmode="numeric" type="password" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="new-password" required></label>'+
+ '<label>Repeat PIN<input name="confirm" inputmode="numeric" type="password" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="new-password" required></label>'+
+ '<button type="submit" class="movie-btn movie-primary"'+(state.cardWorking?' disabled':'')+'>Enroll / Replace My Card</button></form>'+
+ (state.cardEnrolled?'<button type="button" data-act="revoke-card" class="movie-btn movie-secondary">Revoke My Card</button>':'')+
+ '</section><aside class="movie-panel"><h2>Reader Instructions</h2>'+
+ '<p class="movie-helper">Windows: plug in a USB HID RFID reader, focus the Card ID field and tap the card. Android Chrome: choose Read Android NFC and tap a compatible NFC tag. If browser NFC is unsupported, use a keyboard-mode external reader.</p>'+
+ '<p class="movie-helper">Cards are linked to one approved staff account. Card IDs are stored as fingerprints; six-digit PINs are bcrypt-hashed, rate-limited and verified server-side.</p>'+
+ '<div class="movie-alert">A card + PIN unlocks your already authenticated browser station; a fresh device still requires email login. Physical reader and tag compatibility must be tested.</div>'+
+ '</aside></div>';
+}
+function stationLockView(){
+ return '<section class="movie-signin movie-station-lock"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
+ '<h1>Station Locked</h1><p>'+esc(state.user?.email||'Authorized Movie Booth staff')+
+ ' · Enter the enrolled card and staff PIN to resume your approved account session.</p>'+
+ (state.cardNotice?'<p class="movie-alert">'+esc(state.cardNotice)+'</p>':'')+
+ '<form id="movieCardUnlockForm" class="movie-fields">'+
+ '<label>Staff RFID / NFC card<input id="movieUnlockCard" name="card" autocomplete="off" maxlength="90" placeholder="Tap your card" required></label>'+
+ '<button class="movie-btn movie-secondary" type="button" data-act="nfc-card" data-target="movieUnlockCard">Read Android NFC</button>'+
+ '<label>Six-digit PIN<input name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label>'+
+ '<button class="movie-btn movie-primary" type="submit"'+(state.cardWorking?' disabled':'')+'>Unlock Station</button></form>'+
+ '<button class="movie-mini" type="button" data-act="signout">Sign Out / Another Staff Account</button>'+
+ '<p class="movie-helper">If your card was lost, sign out and ask an LSC Official to re-verify your account and enroll a replacement.</p></section>';
+}
+function voidApprovalView(){
+ const sale=state.sales.find(x=>x.id===state.voidSaleId);
+ if(!state.voidSaleId)return '';
+ return '<div class="movie-approval-shade"><div class="movie-approval-dialog" role="dialog" aria-modal="true" aria-label="Supervisor void approval">'+
+ '<div class="movie-panel-head"><h2>Supervisor Approval Required</h2><span>RFID + PIN</span></div>'+
+ '<p class="movie-helper">Sale: <strong>'+esc(state.voidSaleId.slice(0,8))+'</strong>'+
+ (sale?' · '+money(sale.total_php):'')+'. Both the requesting cashier and approving LSC Official will be recorded.</p>'+
+ (state.cardNotice?'<p class="movie-alert">'+esc(state.cardNotice)+'</p>':'')+
+ '<form id="movieVoidApproveForm" class="movie-fields">'+
+ '<label>Void reason (8–300 characters)<textarea name="reason" minlength="8" maxlength="300" rows="3" required placeholder="Explain why this transaction must be voided"></textarea></label>'+
+ '<label>LSC Official RFID/NFC card<input name="card" id="movieSupervisorCard" autocomplete="off" spellcheck="false" maxlength="90" placeholder="Supervisor taps their own card" required></label>'+
+ '<button type="button" class="movie-btn movie-secondary" data-act="nfc-card" data-target="movieSupervisorCard">Read Supervisor NFC</button>'+
+ '<label>Supervisor six-digit PIN<input name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label>'+
+ '<div class="movie-approval-actions"><button type="button" class="movie-btn movie-secondary" data-act="close-void">Cancel</button>'+
+ '<button type="submit" class="movie-btn movie-primary"'+(state.voidWorking?' disabled':'')+'>'+
+ (state.voidWorking?'Verifying Approval…':'Approve & Void Sale')+'</button></div></form>'+
+ '<p class="movie-helper">Requires a separately enrolled LSC Official, not the logged-in cashier. Cash refunds are handled separately.</p>'+
+ '</div></div>';
+}
+async function refreshStaffCard(){
+ try{
+  const {data,error}=await db.rpc('lsc_movie_staff_card',{p_action:'status',p_card:null,p_pin:null});
+  if(error)throw error;
+  state.cardEnrolled=Boolean(data?.enrolled);
+  state.cardLocked=state.cardEnrolled;state.cardSince=Date.now();state.cardNotice='';
+ }catch(e){state.cardEnrolled=false;state.cardLocked=false;state.cardNotice='Card status unavailable: '+e.message;}
+}
+async function runCardAction(action,card,pin){
+ if(state.cardWorking||!state.online)return;
+ state.cardWorking=true;state.cardNotice='';render();
+ try{
+  const {data,error}=await db.rpc('lsc_movie_staff_card',{p_action:action,p_card:card||null,p_pin:pin||null});
+  if(error)throw error;
+  if(action==='enroll'&&data.enrolled){state.cardEnrolled=true;state.cardLocked=false;state.cardSince=Date.now();state.cardNotice='Card enrolled successfully. Use Lock Station to test your card.';}
+  else if(action==='revoke'){state.cardEnrolled=false;state.cardLocked=false;state.cardNotice='Staff card revoked. Account remains protected by email sign-in.';}
+  else if(action==='verify'&&data.verified){state.cardLocked=false;state.cardSince=Date.now();state.cardNotice='';state.notice='Staff card verified. Station unlocked.';}
+  else{state.cardNotice=data?.message||'Card verification failed.';}
+ }catch(e){state.cardNotice=e.message||'Card operation failed';}
+ finally{state.cardWorking=false;render();}
+}
+async function readNfc(targetId){
+ const input=document.getElementById(targetId);
+ if(!input)return;
+ if(!window.NDEFReader){
+  state.cardNotice='Web NFC is unavailable on this browser/device. Use a USB HID card reader or enter the card identifier.';render();return;
+ }
+ try{
+  const reader=new window.NDEFReader();const ctrl=new AbortController();
+  await reader.scan({signal:ctrl.signal});
+  state.cardNotice='Hold a compatible NFC tag against your Android device.';render();
+  reader.onreading=event=>{
+   ctrl.abort();
+   const card=normCard(event.serialNumber);
+   if(!card){state.cardNotice='This tag does not expose a compatible card ID. Try another NFC tag/reader.';render();return;}
+   const current=document.getElementById(targetId);
+   if(current){current.value=card;current.focus();}
+   state.cardNotice='';
+  };
+  reader.onreadingerror=()=>{state.cardNotice='NFC reading failed. Try USB reader/manual entry.';render()};
+ }catch(e){state.cardNotice='NFC unavailable: '+(e.message||'Permission denied');render();}
+}
+async function approveVoid(form){
+ if(state.voidWorking||!state.voidSaleId||!state.online)return;
+ state.voidWorking=true;
+ const saleId=state.voidSaleId;
+ const reason=form.elements.reason.value.trim(),card=normCard(form.elements.card.value),pin=form.elements.pin.value;
+ const requestId=state.voidRequestId||(state.voidRequestId=id());
+ state.cardNotice='';render();
+ try{
+  const {data,error}=await db.rpc('lsc_movie_void_with_approval',{
+   p_sale_id:saleId,p_reason:reason,p_supervisor_card:card,p_supervisor_pin:pin,p_request_id:requestId
+  });
+  if(error)throw error;
+  if(data?.status!=='VOID'||!data?.approved){state.cardNotice=data?.message||'Approval denied';return;}
+  state.voidSaleId=null;state.voidRequestId=null;
+  state.notice='Sale voided with LSC Official approval. Refund any paid cash manually.';
+  await loadReport();
+ }catch(e){state.cardNotice='Approval failed: '+e.message;}
+ finally{state.voidWorking=false;render();}
+}
 function render(){
  if(state.accessDenied){
   root.innerHTML='<section class="movie-signin"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
@@ -247,12 +361,13 @@ function render(){
  '<button class="movie-btn movie-primary" type="submit">Send Sign-In Email</button></form>')+
  (state.notice?'<p role="alert" class="movie-alert">'+esc(state.notice)+'</p>':'')+
  '<p><a href="./login.html">LSC Attendance Login</a></p></section>';return;}
+ if(state.cardLocked){root.innerHTML=stationLockView();return;}
  root.innerHTML=header()+'<main class="movie-main">'+
  '<div class="movie-title"><div><span>FOUNDATION WEEK · SALES & TICKETING</span><h1>Movie Booth <em>Point of Sale</em></h1>'+
  '<p>Student ID checkout · Printable movie tickets · Audited sales</p></div><span class="movie-operator">Operator: '+esc(state.user.email||'Authorized LSC account')+'</span></div>'+
  tabs()+(state.notice?'<div class="movie-alert" role="status">'+esc(state.notice)+'</div>':'')+
- (state.page==='checkout'?checkout():state.page==='reservations'?reservationsView():state.page==='reports'?reports():state.page==='validator'?validator():state.page==='shifts'?shiftView():state.page==='recovery'?recovery():setup())+
- '<footer class="movie-footer">Powered by Azure&lt;3 · Private event system · Tickets are not official tax invoices</footer></main>';
+ (state.page==='staffcard'?staffCardPage():state.page==='checkout'?checkout():state.page==='reservations'?reservationsView():state.page==='reports'?reports():state.page==='validator'?validator():state.page==='shifts'?shiftView():state.page==='recovery'?recovery():setup())+
+ '<footer class="movie-footer">Powered by Azure&lt;3 · Private event system · Tickets are not official tax invoices</footer></main>'+voidApprovalView();
 }
 async function loadShows(){
  const {data,error}=await db.from('lsc_movie_shows').select('id,title,show_date,show_time,seat_capacity,reservations_enabled,price_php,venue,active,archived_at,created_at')
@@ -639,6 +754,7 @@ async function start(){
   if(['ticket_checker','event_monitor'].includes(state.role))state.page=state.role==='ticket_checker'?'validator':'reports';
   await loadShows();
   if(state.page==='shifts'||state.role==='cashier')await fetchShift();
+  await refreshStaffCard();
   if(state.role==='event_monitor'){try{const x=await db.rpc('lsc_movie_summary',{p_day:state.reportDate});state.summary=x.data}catch(e){}}
   render();
  }catch(e){root.innerHTML='<div class="movie-signin"><h1>Movie Booth unavailable</h1><p>'+esc(e.message)+'</p><a href="./login.html">Return to LSC Login</a></div>';}
@@ -646,6 +762,7 @@ async function start(){
 document.addEventListener('click',async e=>{
  const target=e.target.closest('[data-act],[data-page],[data-print],[data-void],[data-toggle],[data-capacity],[data-reserve-toggle],[data-edit-schedule],[data-delete-show],[data-restore-show],[data-reservation-open]');
  if(!target)return;
+ if(state.cardLocked&& !['signout','nfc-card'].includes(target.dataset.act||''))return;
  if(target.dataset.page){
   state.page=target.dataset.page;state.notice='';
   stopCamera();
@@ -732,13 +849,8 @@ document.addEventListener('click',async e=>{
   catch(e){printWindow.close();state.notice=e.message;render()}return;
  }
  if(target.dataset.void){
-  if(state.role!=='official')return;
-  const reason=window.prompt('Reason for voiding this paid sale (8–300 characters):');
-  if(reason===null)return;
-  const {error}=await db.rpc('lsc_movie_void',{p_sale_id:target.dataset.void,p_reason:reason});
-  if(error){state.notice=error.message;render();return;}
-  state.notice='Sale voided. If the buyer paid cash, process any applicable refund manually.';
-  await loadReport();render();return;
+  if(!['official','cashier'].includes(state.role)||state.cardLocked)return;
+  state.voidSaleId=target.dataset.void;state.voidRequestId=null;state.cardNotice='';render();return;
  }
  if(target.dataset.toggle){
   if(state.role!=='official')return;
@@ -751,10 +863,21 @@ document.addEventListener('click',async e=>{
  if(act==='switch-movie-account'){
   await db.auth.signOut();state.accessDenied=false;state.user=null;state.role=null;state.notice='';render();return;
  }
+ if(act==='lock-station'){
+  stopCamera();state.cardLocked=state.cardEnrolled;
+  state.cardNotice=state.cardEnrolled?'':'Please enroll a card in Staff Card / NFC first.';
+  render();return;
+ }
+ if(act==='revoke-card'){
+  if(window.confirm('Revoke this staff card? You can enroll a replacement after email login.'))await runCardAction('revoke',null,null);
+  return;
+ }
+ if(act==='nfc-card'){await readNfc(target.dataset.target);return;}
+ if(act==='close-void'){state.voidSaleId=null;state.voidRequestId=null;state.cardNotice='';render();return;}
  if(act==='signout'){
    stopCamera();await db.auth.signOut();
    state.user=null;state.role=null;state.receipt=null;state.sales=[];state.student=null;state.notice='';
-   state.otpSent=false;state.page='checkout';render();return;
+   state.otpSent=false;state.cardEnrolled=false;state.cardLocked=false;state.voidSaleId=null;state.page='checkout';render();return;
  }
  if(act==='otp-back'){state.otpSent=false;state.otpEmail='';state.notice='';render()}
  if(act==='cancel-schedule'){state.editingShowId=null;state.notice='Schedule editing cancelled.';render()}
@@ -782,6 +905,17 @@ document.addEventListener('keydown',e=>{
  }
 });
 document.addEventListener('submit',async e=>{
+ if(e.target.id==='movieCardEnrollForm'){
+  e.preventDefault();
+  const c=normCard(e.target.elements.card.value),pin=e.target.elements.pin.value;
+  if(pin!==e.target.elements.confirm.value){state.cardNotice='PIN confirmation does not match';render();return;}
+  await runCardAction('enroll',c,pin);return;
+ }
+ if(e.target.id==='movieCardUnlockForm'){
+  e.preventDefault();
+  await runCardAction('verify',normCard(e.target.elements.card.value),e.target.elements.pin.value);return;
+ }
+ if(e.target.id==='movieVoidApproveForm'){e.preventDefault();await approveVoid(e.target);return;}
  if(e.target.id==='movieSetupForm'){e.preventDefault();await createShow(e.target);}
  if(e.target.id==='movieEditScheduleForm'){e.preventDefault();await saveShowingSchedule(e.target);}
  if(e.target.id==='movieShiftForm'){e.preventDefault();await saveShift(e.target);}
