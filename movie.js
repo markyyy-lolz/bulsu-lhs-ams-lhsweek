@@ -10,7 +10,7 @@ const today=()=>{const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Man
 const pht=value=>new Date(value).toLocaleString('en-PH',{timeZone:'Asia/Manila',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
 const id=()=>crypto.randomUUID();
 const state={
- user:null,role:null,classId:null,page:'checkout',shows:[],selectedShow:'',editingShowId:null,
+ user:null,role:null,classId:null,accessDenied:false,page:'checkout',shows:[],selectedShow:'',editingShowId:null,
  student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',reservation:null,reservationCode:'',reservationScanActive:false,reservationLookupBusy:false,reservations:[],reservationFilter:'ALL',reservationsBusy:false,reservationsLoadedAt:null,
  receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,
  ticketCode:'',ticketResult:null,shift:null,shiftHistory:[],printLog:[],cameraStream:null,cameraTimer:null,html5Scanner:null,scanBusy:false,online:navigator.onLine,otpEmail:'',otpSent:false
@@ -34,11 +34,11 @@ function header(){
 }
 function tabs(){
  const items=[];
- if(['official','class_mayor','cashier'].includes(state.role)){items.push(['checkout','Ticket Checkout']);items.push(['reservations','Reservations']);}
- if(['official','class_mayor','ticket_checker'].includes(state.role))items.push(['validator','Ticket Check-In']);
- if(['official','class_mayor','cashier'].includes(state.role))items.push(['shifts','Cashier Shifts']);
- if(['official','class_mayor','cashier','event_monitor'].includes(state.role))items.push(['reports','Sales Reports']);
- if(['official','class_mayor','cashier'].includes(state.role))items.push(['recovery','Print Recovery']);
+ if(['official','cashier'].includes(state.role)){items.push(['checkout','Ticket Checkout']);items.push(['reservations','Reservations']);}
+ if(['official','ticket_checker'].includes(state.role))items.push(['validator','Ticket Check-In']);
+ if(['official','cashier'].includes(state.role))items.push(['shifts','Cashier Shifts']);
+ if(['official','cashier','event_monitor'].includes(state.role))items.push(['reports','Sales Reports']);
+ if(['official','cashier'].includes(state.role))items.push(['recovery','Print Recovery']);
  if(state.role==='official')items.push(['setup','Movie Setup']);
  return '<nav class="movie-tabs" aria-label="Movie POS navigation">'+items.map(x=>
  '<button type="button" data-page="'+x[0]+'" class="'+(state.page===x[0]?'selected':'')+'">'+esc(x[1])+'</button>').join('')+'</nav>';
@@ -90,7 +90,7 @@ function reservationsView(){
  '</section>';
 }
 async function loadReservations(){
- if(!['official','class_mayor','cashier'].includes(state.role)||state.reservationsBusy)return;
+ if(!['official','cashier'].includes(state.role)||state.reservationsBusy)return;
  if(!navigator.onLine){state.notice='You are offline. Reconnect before refreshing reservations.';render();return;}
  state.reservationsBusy=true;render();
  try{
@@ -149,7 +149,7 @@ function checkout(){
 function reports(){
  const sum=state.summary||{paid_sales:0,paid_tickets:0,gross_php:0,void_sales:0,voided_php:0};
  const rows=state.sales||[];
- return '<section class="movie-panel"><div class="movie-panel-head"><h2>Movie Booth Sales Reports</h2><span>Server-calculated · '+(state.role==='official'?'Whole school':state.role==='class_mayor'?'Assigned class':state.role==='cashier'?'Your own sales':'Aggregate only')+'</span></div>'+
+ return '<section class="movie-panel"><div class="movie-panel-head"><h2>Movie Booth Sales Reports</h2><span>Server-calculated · '+(state.role==='official'?'Whole school':state.role==='cashier'?'Your own sales':'Aggregate only')+'</span></div>'+
  '<div class="movie-toolbar"><label>Sales date (Philippine Time)<input type="date" id="movieReportDate" value="'+esc(state.reportDate||'')+'"></label>'+
  '<button type="button" class="movie-btn movie-secondary" data-act="report-refresh">Refresh</button>'+
  '<button type="button" class="movie-btn movie-secondary" data-act="report-all">All dates</button>'+
@@ -229,15 +229,24 @@ function setup(){
  '<p class="movie-helper">No archived showings.</p>')+'</section></div>';
 }
 function render(){
+ if(state.accessDenied){
+  root.innerHTML='<section class="movie-signin"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
+   '<h1>Movie Booth Access Restricted</h1>'+
+   '<p>Class Mayors cannot use Movie Booth POS. Only LSC Officials and separately approved Movie Booth volunteers may access ticket checkout, check-in, and reports.</p>'+
+   '<p>Your Class Mayor account remains available for the regular LSC Attendance System.</p>'+
+   '<a class="movie-btn movie-secondary" href="./login.html">Return to LSC Attendance</a>'+
+   '<button class="movie-btn movie-primary" type="button" data-act="switch-movie-account">Sign In With Another Account</button></section>';
+  return;
+ }
  if(!state.user){root.innerHTML='<section class="movie-signin"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest"><h1>Movie Booth POS</h1>'+
- '<p>Private checkout, ticket scanning and volunteer stations. Sign in with your approved existing LSC email or use the main LSC portal.</p>'+
+ '<p>Private checkout, ticket scanning and volunteer stations. Sign in as an LSC Official or specifically approved Movie Booth volunteer. Class Mayor accounts are not permitted.</p>'+
  (state.otpSent?'<form id="movieOtpVerify" class="movie-fields"><label>Six-digit email code<input name="token" inputmode="numeric" pattern="[0-9]{6}" required maxlength="6" autocomplete="one-time-code" placeholder="000000"></label>'+
  '<button class="movie-btn movie-primary" type="submit">Verify Email & Open POS</button></form><p class="movie-helper">Check your email for the verification code or magic link.</p>'+
  '<button class="movie-btn movie-secondary" data-act="otp-back">Use another email</button>':
  '<form id="movieOtpEmail" class="movie-fields"><label>Approved email address<input name="email" type="email" required autocomplete="email" placeholder="volunteer@school.edu.ph"></label>'+
  '<button class="movie-btn movie-primary" type="submit">Send Sign-In Email</button></form>')+
  (state.notice?'<p role="alert" class="movie-alert">'+esc(state.notice)+'</p>':'')+
- '<p><a href="./login.html">LSC Official / Class Mayor Login</a></p></section>';return;}
+ '<p><a href="./login.html">LSC Attendance Login</a></p></section>';return;}
  root.innerHTML=header()+'<main class="movie-main">'+
  '<div class="movie-title"><div><span>FOUNDATION WEEK · SALES & TICKETING</span><h1>Movie Booth <em>Point of Sale</em></h1>'+
  '<p>Student ID checkout · Printable movie tickets · Audited sales</p></div><span class="movie-operator">Operator: '+esc(state.user.email||'Authorized LSC account')+'</span></div>'+
@@ -298,7 +307,7 @@ async function findReservation(scannedCode=null){
  }finally{state.reservationLookupBusy=false;render();}
 }
 async function scanReservationQR(){
- if(!state.user||!['official','class_mayor','cashier'].includes(state.role)||state.busy||state.reservationLookupBusy||state.reservationScanActive)return;
+ if(!state.user||!['official','cashier'].includes(state.role)||state.busy||state.reservationLookupBusy||state.reservationScanActive)return;
  if(!navigator.onLine){state.notice='Internet connection required for reservation scanning.';render();return;}
  if(!navigator.mediaDevices?.getUserMedia){
   state.notice='Camera not supported by this browser. Use an external QR scanner or enter the reservation code.';render();return;
@@ -557,7 +566,7 @@ async function startCamera(){
  }catch(e){stopCamera();state.notice='Camera scanner unavailable: '+e.message+'. Manual entry still works.';render()}
 }
 async function fetchShift(){
- if(!['official','class_mayor','cashier'].includes(state.role))return;
+ if(!['official','cashier'].includes(state.role))return;
  const {data,error}=await db.from('lsc_movie_cash_shifts')
  .select('id,opened_at,opening_php,closed_at,closing_php,expected_php,variance_php')
  .eq('cashier_id',state.user.id).is('closed_at',null).maybeSingle();
@@ -623,9 +632,10 @@ async function start(){
   const {data:{user},error}=await db.auth.getUser();
   if(error||!user){render();return;}
   const {data:ctx,error:roleError}=await db.rpc('lsc_movie_context');
-  if(roleError||!ctx){render();return;}
+  if(roleError||!ctx){state.accessDenied=true;state.user=null;render();return;}
+  state.accessDenied=false;
   state.user=user;state.role=ctx.role;state.classId=ctx.scope_id;
-  if(state.role==='class_mayor'&&!state.classId){state.user=null;render();return;}
+  if(!['official','cashier','ticket_checker','event_monitor'].includes(state.role)){state.accessDenied=true;state.user=null;render();return;}
   if(['ticket_checker','event_monitor'].includes(state.role))state.page=state.role==='ticket_checker'?'validator':'reports';
   await loadShows();
   if(state.page==='shifts'||state.role==='cashier')await fetchShift();
@@ -738,6 +748,9 @@ document.addEventListener('click',async e=>{
   await loadShows();render();return;
  }
  const act=target.dataset.act;
+ if(act==='switch-movie-account'){
+  await db.auth.signOut();state.accessDenied=false;state.user=null;state.role=null;state.notice='';render();return;
+ }
  if(act==='signout'){
    stopCamera();await db.auth.signOut();
    state.user=null;state.role=null;state.receipt=null;state.sales=[];state.student=null;state.notice='';
