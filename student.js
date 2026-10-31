@@ -34,6 +34,145 @@ const demoRoster = [
   {student_id:'2023999999',full_name:'Sample Learner',grade_level:'9',section:'Demo Section'}
 ];
 
+const camera={
+  mode:'manual', scanner:null, generation:0, scanBusy:false, lastScans:new Map(),
+  stopTask:Promise.resolve()
+};
+let scannerLibraryPromise=null;
+const cameraStatus=$('#cameraStatus');
+const cameraRetry=$('#restartCameraButton');
+const scannerPlaceholder=$('#scannerPlaceholder');
+function scannerMessage(message,failed=false){
+  if(cameraStatus){cameraStatus.textContent=message;cameraStatus.classList.toggle('failed',failed);}
+}
+function stopCamera(){
+  camera.generation++;
+  camera.scanBusy=false;
+  const old=camera.scanner;
+  camera.scanner=null;
+  if(old){
+    camera.stopTask=Promise.resolve().then(()=>old.stop()).catch(()=>{}).then(()=>{
+      try{old.clear()}catch(e){}
+    });
+  }
+  if(scannerPlaceholder)scannerPlaceholder.hidden=false;
+  if(cameraRetry)cameraRetry.hidden=true;
+}
+async function ensureBarcodeLibrary(){
+  if(window.Html5Qrcode)return;
+  if(!scannerLibraryPromise){
+    scannerLibraryPromise=new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js';
+      script.async=true;
+      script.onload=resolve;
+      script.onerror=()=>reject(new Error('Camera scanning library failed to load'));
+      document.head.appendChild(script);
+    }).catch(error=>{scannerLibraryPromise=null;throw error;});
+  }
+  await scannerLibraryPromise;
+  if(!window.Html5Qrcode)throw new Error('Camera scanning is unavailable on this browser');
+}
+function studentIdFromScan(raw){
+  const value=String(raw||'').trim();
+  if(/^[0-9]{7,12}$/.test(value))return value;
+  const tagged=value.match(/^(?:STUDENT[_ -]?ID|ID)[:= ]\s*([0-9]{7,12})$/i);
+  return tagged?tagged[1]:null;
+}
+async function onCameraScan(raw){
+  if(camera.mode!=='camera'||camera.scanBusy||state.busy)return;
+  const studentId=studentIdFromScan(raw);
+  if(!studentId){
+    scannerMessage('Code read, but it does not contain a 7–12 digit Student ID. Use a school ID QR/barcode.',true);
+    return;
+  }
+  const time=Date.now();
+  for(const [id,stamp] of camera.lastScans){
+    if(time-stamp>120000)camera.lastScans.delete(id);
+  }
+  // A card held in front of the camera must not generate an accidental OUT.
+  if(camera.lastScans.has(studentId))return;
+  camera.scanBusy=true;
+  camera.lastScans.set(studentId,time);
+  scannerMessage('ID read. Checking attendance securely…');
+  try{
+    const ok=await recordAttendance(null,studentId);
+    if(ok){
+      scannerMessage('Attendance recorded. Scan the next student ID.');
+    }else{
+      camera.lastScans.set(studentId,Date.now()-116000);
+      scannerMessage('Attendance was not recorded. Verify the ID or class and scan again.',true);
+    }
+  }finally{camera.scanBusy=false;}
+}
+async function startCamera(){
+  stopCamera();
+  const generation=camera.generation;
+  if(camera.mode!=='camera')return;
+  if(!state.authorized&&!state.demo){
+    scannerMessage('The Class Mayor or an approved attendance operator must sign in on this device before camera scanning.',true);
+    return;
+  }
+  if(!navigator.mediaDevices?.getUserMedia){
+    scannerMessage('Camera access is unsupported. Switch to Enter Student ID to continue.',true);
+    if(cameraRetry)cameraRetry.hidden=false;
+    return;
+  }
+  scannerMessage('Opening device camera…');
+  if(cameraRetry)cameraRetry.hidden=true;
+  try{
+    await camera.stopTask;
+    await ensureBarcodeLibrary();
+    if(camera.mode!=='camera'||generation!==camera.generation)return;
+    const formats=window.Html5QrcodeSupportedFormats||{};
+    const supported=['QR_CODE','CODE_128','CODE_39','EAN_13','EAN_8','UPC_A']
+      .map(key=>formats[key]).filter(value=>value!==undefined);
+    const reader=new window.Html5Qrcode('attendanceReader',{
+      formatsToSupport:supported.length?supported:undefined,verbose:false
+    });
+    camera.scanner=reader;
+    if(scannerPlaceholder)scannerPlaceholder.hidden=true;
+    await reader.start({facingMode:'environment'},
+      {fps:10,qrbox:{width:210,height:180}},
+      raw=>{void onCameraScan(raw);},()=>{});
+    if(generation!==camera.generation||camera.mode!=='camera'){
+      try{await reader.stop()}catch(e){}
+      try{reader.clear()}catch(e){}
+      return;
+    }
+    scannerMessage('Camera ready. Scan a classmate’s Student ID QR code or barcode.');
+  }catch(error){
+    if(generation!==camera.generation)return;
+    stopCamera();
+    scannerMessage('Could not start camera: '+(error?.message||'Camera permission denied')+
+      '. Enter Student ID manually or retry.',true);
+    if(cameraRetry)cameraRetry.hidden=false;
+  }
+}
+function selectAttendanceMethod(method){
+  const next=method==='camera'?'camera':'manual';
+  if(camera.mode===next && next==='manual')return;
+  camera.mode=next;
+  const manual=next==='manual';
+  $('#manualAttendancePanel').hidden=!manual;
+  $('#cameraAttendancePanel').hidden=manual;
+  $('#manualMethodButton').classList.toggle('selected',manual);
+  $('#cameraMethodButton').classList.toggle('selected',!manual);
+  $('#manualMethodButton').setAttribute('aria-selected',String(manual));
+  $('#cameraMethodButton').setAttribute('aria-selected',String(!manual));
+  confirmation.replaceChildren();
+  if(manual){
+    stopCamera();
+    scannerMessage('Camera stopped. Manual entry is ready.');
+    studentInput.focus();
+  }else{
+    void startCamera();
+  }
+}
+$('#manualMethodButton').addEventListener('click',()=>selectAttendanceMethod('manual'));
+$('#cameraMethodButton').addEventListener('click',()=>selectAttendanceMethod('camera'));
+cameraRetry.addEventListener('click',()=>{if(camera.mode==='camera')void startCamera();});
+
 function formatTime(value) {
   return new Date(value).toLocaleTimeString('en-PH', {
     timeZone:'Asia/Manila', hour:'2-digit', minute:'2-digit', second:'2-digit'
@@ -90,6 +229,10 @@ async function checkAuthorization() {
     console.warn('LSC station authorization failed:',error?.message||'unknown error');
   }
   updateStation();
+  if(!state.authorized&&camera.mode==='camera'&&!state.demo&&camera.scanner){
+    stopCamera();
+    scannerMessage('Your attendance session is no longer authorized. Sign in again.',true);
+  }
 }
 function appendMessage(type,title,lines) {
   confirmation.replaceChildren();
@@ -112,7 +255,7 @@ function appendMessage(type,title,lines) {
   if(state.resetTimer)clearTimeout(state.resetTimer);
   if(type!=='ERROR')state.resetTimer=setTimeout(()=>{
     confirmation.replaceChildren();
-    studentInput.focus();
+    if(camera.mode==='manual')studentInput.focus();
   },8000);
 }
 function simulate(studentId) {
@@ -128,15 +271,15 @@ function simulate(studentId) {
   state.demoLogs.push({student_id:studentId,event_type,day:phDay(now),recorded_at});
   return {...student,status:'SUCCESS',event_type,recorded_at,recorded_by_email:'Demo Mode',recorded_by_role:'demo'};
 }
-async function recordAttendance(event) {
-  event.preventDefault();
-  if(state.busy)return;
-  const id=studentInput.value.trim();
+async function recordAttendance(event=null,scannedId=null) {
+  if(event)event.preventDefault();
+  if(state.busy)return false;
+  const id=String(scannedId??studentInput.value).trim();
   if(!/^[0-9]{7,12}$/.test(id)){
-    appendMessage('ERROR','Invalid Student ID',['Please enter a numeric ID containing 7–12 digits.']);return;
+    appendMessage('ERROR','Invalid Student ID',['Please enter a numeric ID containing 7–12 digits.']);return false;
   }
   if(!state.demo&&!state.authorized){
-    appendMessage('ERROR','Station not activated',['Sign in with your approved LSC or Volunteer Attendance account on this device.']);return;
+    appendMessage('ERROR','Station not activated',['Sign in with your approved LSC or Volunteer Attendance account on this device.']);return false;
   }
   state.busy=true;updateStation();
   recordButton.textContent='Saving attendance…';
@@ -162,11 +305,14 @@ async function recordAttendance(event) {
       ]
     );
     studentInput.value='';
+    return true;
   }catch(e){
     appendMessage('ERROR','Unable to record attendance',[e.message||'Please contact the station operator.']);
     if(e.code==='42501'&&!state.demo)await checkAuthorization();
+    return false;
   }finally{
-    state.busy=false;recordButton.textContent='Record Attendance →';updateStation();studentInput.focus();
+    state.busy=false;recordButton.textContent='Record Attendance →';updateStation();
+    if(camera.mode==='manual')studentInput.focus();
   }
 }
 $('#studentForm').addEventListener('submit',recordAttendance);
@@ -182,6 +328,7 @@ studentInput.addEventListener('input',()=>{
   studentInput.value=studentInput.value.replace(/\D/g,'').slice(0,12);
 });
 demoButton.addEventListener('click',async()=>{
+  if(camera.mode==='camera')selectAttendanceMethod('manual');
   if(state.demo){
     state.demo=false;state.demoLogs=[];confirmation.replaceChildren();
     await checkAuthorization();
@@ -192,6 +339,7 @@ demoButton.addEventListener('click',async()=>{
 });
 if(signOutButton)signOutButton.addEventListener('click',async()=>{
   if(!window.confirm('Sign out of this supervised attendance station?'))return;
+  selectAttendanceMethod('manual');
   if(state.resetTimer)clearTimeout(state.resetTimer);
   const {error}=await client.auth.signOut();
   if(error){appendMessage('ERROR','Sign-out unavailable',[error.message]);return}
@@ -200,8 +348,13 @@ if(signOutButton)signOutButton.addEventListener('click',async()=>{
   await checkAuthorization();
 });
 document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden&&!state.demo)checkAuthorization();
+  if(document.hidden&&camera.mode==='camera'){
+    stopCamera();
+    scannerMessage('Camera stopped while the page was in the background. Tap Restart Camera to continue.');
+    if(cameraRetry)cameraRetry.hidden=false;
+  }else if(!document.hidden&&!state.demo)checkAuthorization();
 });
+window.addEventListener('pagehide',stopCamera);
 updateClock();setInterval(updateClock,1000);
 // Expiring or revoked approval is always checked again by the database for every entry.
 setInterval(()=>{if(!document.hidden&&!state.demo&&!state.busy)checkAuthorization()},120000);
