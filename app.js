@@ -41,7 +41,18 @@ async function verifySession(){
   const {data:{session},error}=await sb.auth.getSession();
   if(error || !session){state.user=null;state.role=null;state.fwProfile=null;state.fwStamps=[];state.fwPulse=null;state.fwSelected='';state.fwNotice=null;render();return;}
   const {data:role,error:roleError}=await sb.from('lsc_staff_roles').select('role,class_id').eq('user_id',session.user.id).maybeSingle();
-  if(roleError || !role){await sb.auth.signOut();state.user=null;state.role=null;render();toast('Your account is not authorized for LSC Attendance.',true);return;}
+  if(roleError || !role){
+    // Volunteer is permitted to operate the supervised Student Attendance terminal,
+    // but never receives Class Mayor/LSC dashboard permissions.
+    const {data:volunteer,error:volunteerError}=await sb.rpc('lsc_attendance_access');
+    if(!volunteerError&&volunteer?.role==='attendance_volunteer'){
+      location.replace('./student.html');
+      return;
+    }
+    await sb.auth.signOut();state.user=null;state.role=null;render();
+    toast('Your account is not authorized for LSC Attendance. Ask an LSC Official for approval.',true);
+    return;
+  }
   if(state.user?.id!==session.user.id){state.fwProfile=null;state.fwStamps=[];state.fwPulse=null;state.fwSelected='';state.fwNotice=null;}
   state.user=session.user;state.role=role.role;state.classId=role.class_id; await loadData();if(state.page==='passport')await loadPassportRecords();render();
 }
@@ -81,9 +92,9 @@ function loginHTML(){
   return '<div class="login"><section class="login-art"><div style="display:flex;align-items:center;gap:12px">'+brand()+'</div>'+
     '<div><span class="eyebrow" style="color:#a9c7ff">LABORATORY HIGH SCHOOL • LSC</span>'+
     '<h2 class="big">Every arrival.<br>Every departure.<br>Accounted for.</h2>'+
-    '<p>Secure, email-verified access for Class Mayors and LSC Officials.</p></div>'+
+    '<p>Secure, email-verified access for Class Mayors, LSC Officials and authorized attendance volunteers.</p></div>'+
     '<div class="art-bottom small" style="color:#adc2e6">LSC Attendance Monitor · Powered by Azure&lt;3</div></section>'+
-    '<section class="login-side"><div class="login-box"><div class="eyebrow">CLASS MAYOR &amp; LSC OFFICIAL ACCESS</div>'+
+    '<section class="login-side"><div class="login-box"><div class="eyebrow">LSC OFFICIAL, CLASS MAYOR &amp; VOLUNTEER ACCESS</div>'+
     '<h1>'+(state.otpSent && state.loginMode==='email'?'Verify your email':'Welcome back')+'</h1>'+
     '<p>'+(state.loginMode==='password'?'Use a backup password previously set in your account.':
       state.otpSent?'Check your email to complete sign-in.':
@@ -92,13 +103,13 @@ function loginHTML(){
     '<div style="display:flex;align-items:center;gap:12px;margin:22px 0;color:#9aa6b9;font-size:12px"><div style="height:1px;background:#e2e8f0;flex:1"></div>OR TRY THE INTERFACE<div style="height:1px;background:#e2e8f0;flex:1"></div></div>'+
     '<button type="button" class="btn btn-secondary" style="width:100%" data-act="demo">Preview LSC Official</button>'+
     '<button type="button" class="btn btn-secondary" style="width:100%;margin-top:9px" data-act="demoMayor">Preview Class Mayor</button>'+
-    '<div class="login-footer">Email verification uses Supabase Auth. Only accounts already created and assigned a Class Mayor or LSC Official role can access attendance data. A backup password is an alternative sign-in method, not an additional mandatory factor. Demo Mode never saves attendance.</div>'+
+    '<div class="login-footer">Email verification uses Supabase Auth. Approved volunteers can access only the supervised Student Attendance terminal; administrative dashboards remain for Class Mayors and LSC Officials. A backup password is an alternative sign-in method, not an additional mandatory factor. Demo Mode never saves attendance.</div>'+
     '</div></section></div>';
 }
 function sidebar(){
   let menu=[['overview','Dashboard'],['passport','Foundation Passport'],['records','Attendance Records'],['security','Account Security']];
   if(state.role==='official'){menu.splice(1,0,['students','Student Directory'],['classes','Classes'],['officials','Role Assignments']);}
-  return '<aside id="lsc-sidebar" class="sidebar'+(state.mobileNav?' open':'')+'" aria-label="Workspace navigation"><button type="button" class="lsc-mobile-close" data-act="closeMenu" aria-label="Close navigation menu">'+navIcon('close')+'</button><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+navIcon(v[0])+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">'+navIcon('kiosk')+'</span>Student Attendance<span class="nav-external">'+navIcon('external')+'</span></a>'+'<a class="nav-btn" href="./movie.html"><span class="nav-ico">'+navIcon('movie')+'</span>Movie Booth POS<span class="nav-external">'+navIcon('external')+'</span></a>'+'<a class="nav-btn" href="./operations.html"><span class="nav-ico">'+navIcon('overview')+'</span>Event Command Center<span class="nav-external">'+navIcon('external')+'</span></a>'+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">'+navIcon('logout')+'<span>Sign out</span></button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
+  return '<aside id="lsc-sidebar" class="sidebar'+(state.mobileNav?' open':'')+'" aria-label="Workspace navigation"><button type="button" class="lsc-mobile-close" data-act="closeMenu" aria-label="Close navigation menu">'+navIcon('close')+'</button><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+navIcon(v[0])+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">'+navIcon('kiosk')+'</span>Student Attendance<span class="nav-external">'+navIcon('external')+'</span></a>'+'<a class="nav-btn" href="./movie.html"><span class="nav-ico">'+navIcon('movie')+'</span>Movie Booth POS<span class="nav-external">'+navIcon('external')+'</span></a>'+'<a class="nav-btn" href="./operations.html"><span class="nav-ico">'+navIcon('overview')+'</span>Event Command Center<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./operations.html#attendance"><span class="nav-ico">'+navIcon('officials')+'</span>Volunteer Manager<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">'+navIcon('logout')+'<span>Sign out</span></button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
 }
 function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security',passport:'Foundation Passport'})[state.page]||'Dashboard';}
 function appHTML(){
