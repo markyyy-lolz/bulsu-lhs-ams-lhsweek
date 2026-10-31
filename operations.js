@@ -101,7 +101,7 @@ function attendanceVolunteers(){
  '<option value="whole_school">Whole school — supervised station</option></select></label>'+
  '<label id="attendanceVolunteerClassWrap">Assigned section<select name="class_id" id="attendanceVolunteerClass" required>'+
  '<option value="">Select class...</option>'+options+'</select></label>'+
- '<label>Access expires on (PHT)<input type="date" name="expiry_date" min="'+esc(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()))+'"></label>'+
+ '<label>Access expires on (PHT)<input type="date" name="expiry_date"></label>'+
  '<div class="ops-inline-note">Leave the date empty for automatic expiry after 30 days. Re-authorize the same email to change section, renew expiry, or restore revoked access. The volunteer must already have a verified Supabase Auth account.</div>'+
  '<button class="movie-btn movie-primary" type="submit">Approve / Update Attendance Access</button></form>'+
  '<div class="ops-inline-note">Volunteer sign-in: <a href="./login.html">LSC Login</a>, then automatically opens <a href="./student.html">Student Attendance</a>. Every successful Time IN/OUT records the volunteer\'s account and role.</div></section>'+
