@@ -11,7 +11,7 @@ const pht=value=>new Date(value).toLocaleString('en-PH',{timeZone:'Asia/Manila',
 const id=()=>crypto.randomUUID();
 const state={
  user:null,role:null,classId:null,page:'checkout',shows:[],selectedShow:'',
- student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',
+ student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',reservation:null,reservationCode:'',
  receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,
  ticketCode:'',ticketResult:null,shift:null,shiftHistory:[],printLog:[],cameraStream:null,cameraTimer:null,html5Scanner:null,scanBusy:false,online:navigator.onLine,otpEmail:'',otpSent:false
 };
@@ -30,7 +30,7 @@ function header(){
  return '<header class="movie-header"><div class="movie-brand"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
  '<div><strong>Movie Booth POS</strong><small>BulSU Laboratory High School · Foundation Week</small></div></div>'+
  '<div class="movie-head-right"><span class="movie-role">'+esc(state.role.replaceAll('_',' ').toUpperCase())+'</span>'+
- '<a href="./operations.html" class="movie-return">Event Command Center</a> · <a href="./login.html#overview" class="movie-return">LSC Dashboard</a> · <button type="button" class="movie-mini" data-act="signout">Sign Out</button></div></header>';
+ '<a href="./reserve.html" class="movie-return">Student Reservations</a> · <a href="./operations.html" class="movie-return">Event Command Center</a> · <a href="./login.html#overview" class="movie-return">LSC Dashboard</a> · <button type="button" class="movie-mini" data-act="signout">Sign Out</button></div></header>';
 }
 function tabs(){
  const items=[];
@@ -67,12 +67,17 @@ function checkout(){
  '<div class="movie-fields"><label>Movie showing<select id="movieShow"'+(!options.length?' disabled':'')+'>'+
  (options.length?options.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===state.selectedShow?' selected':'')+'>'+esc(x.title)+' · '+esc(x.show_date)+' · '+money(x.price_php)+'</option>').join(''):'<option value="">No show available</option>')+
  '</select></label>'+
- '<div class="movie-student-row"><label>Student attendance ID<input id="movieStudentId" inputmode="numeric" autocomplete="off" pattern="[0-9]{7,12}" maxlength="12" placeholder="Example: 2023000001" value="'+esc(state.studentSearch)+'"></label>'+
- '<button class="movie-btn movie-secondary" type="button" data-act="lookup">Find Student</button></div>'+
+ '<div class="movie-student-row"><label>Existing reservation reference (optional)<input id="movieReservationCode" autocomplete="off" autocapitalize="characters" maxlength="20" placeholder="RSV-XXXXXXXXXXXXXXXX" value="'+esc(state.reservationCode)+'"></label>'+
+ (state.reservation?'<button type="button" class="movie-btn movie-secondary" data-act="clear-reservation">Clear Reservation</button>':
+ '<button type="button" class="movie-btn movie-secondary" data-act="find-reservation">Find Reservation</button>')+'</div>'+
+ (state.reservation?'<div class="movie-student"><span>ONLINE BOOKING · PAY AT BOOTH</span><strong>'+esc(state.reservation.code)+'</strong>'+
+ '<small>'+esc(state.reservation.title)+' · '+state.reservation.quantity+' tickets · Expires '+esc(pht(state.reservation.expires_at))+' PHT</small></div>':'')+
+ '<div class="movie-student-row"><label>Student attendance ID<input id="movieStudentId" inputmode="numeric" autocomplete="off" pattern="[0-9]{7,12}" maxlength="12" placeholder="Example: 2023000001" value="'+esc(state.studentSearch)+'"'+(state.reservation?' disabled':'')+'></label>'+
+ '<button class="movie-btn movie-secondary" type="button" data-act="lookup"'+(state.reservation?' disabled':'')+'>Find Student</button></div>'+
  (state.student?'<div class="movie-student"><span>Registered student</span><strong>'+esc(state.student.full_name)+'</strong>'+
  '<small>'+esc(state.student.student_id)+' · '+esc(state.student.grade_level)+' · '+esc(state.student.section)+'</small></div>':
  '<p class="movie-helper">Only registered, active students in your authorized scope can purchase.</p>')+
- '<div class="movie-two"><label>Number of tickets<input type="number" id="movieQty" inputmode="numeric" min="1" max="20" step="1" value="'+esc(state.quantity)+'" required></label>'+
+ '<div class="movie-two"><label>Number of tickets<input type="number" id="movieQty" inputmode="numeric" min="1" max="20" step="1" value="'+esc(state.quantity)+'"'+(state.reservation?' disabled':'')+' required></label>'+
  '<label>Cash received (PHP)<input type="number" id="movieCash" min="0" max="1000000" step="0.01" inputmode="decimal" placeholder="Enter cash amount" value="'+esc(state.cash)+'"></label></div>'+
  '</div></section>'+
  '<aside class="movie-panel movie-summary"><h2>Order Summary</h2>'+
