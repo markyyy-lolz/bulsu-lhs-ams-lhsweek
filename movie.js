@@ -20,7 +20,7 @@ function movie(){
 }
 function canSell(){
  const sh=movie();
- return state.online&&sh&&sh.active&&sh.show_date>=today()&&state.student&&state.quantity>=1&&state.quantity<=20;
+ return state.online&&!state.reservationScanActive&&!state.reservationLookupBusy&&sh&&!sh.archived_at&&sh.active&&sh.show_date>=today()&&state.student&&state.quantity>=1&&state.quantity<=20;
 }
 function total(){
  const sh=movie();
@@ -282,8 +282,7 @@ async function scanReservationQR(){
  }
 }
 async function makeSale(){
- if(state.busy||state.reservationLookupBusy)return;
- if(state.reservationScanActive)stopCamera();
+ if(state.busy||state.reservationLookupBusy||state.reservationScanActive)return;
  if(!navigator.onLine){state.notice='Offline. No sale can be issued until your connection is restored.';render();return;}
  const sh=movie();
  if(!sh||!canSell())return;
