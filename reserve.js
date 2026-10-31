@@ -45,6 +45,8 @@ function receiptView(){
  const r=state.receipt;return '<section class="reserve-panel"><div class="reserve-confirm">'+
  '<div class="state">✓ TEMPORARY SEAT RESERVATION</div><h2>Reservation Created!</h2>'+
  '<p>Save or screenshot this reference. It is required at the Movie Booth; it is NOT an admission ticket.</p>'+
+ '<div class="reserve-qr-wrap"><div id="reservationQr" data-code="'+esc(r.code)+'" role="img" aria-label="QR code for reservation '+esc(r.code)+'"></div>'+
+ '<small>Scan this QR with an authorized volunteer scanner to view the reservation. Pay at the booth before receiving admission tickets.</small></div>'+
  '<div class="code" id="reserveCode">'+esc(r.code)+'</div>'+
  '<p><strong>'+esc(r.title)+'</strong><br>'+esc(r.show_date)+(r.show_time?' · '+esc(r.show_time.slice(0,5))+' PHT':'')+
  '<br>'+r.quantity+' ticket(s) · Pay '+money(r.total_due_php)+' at the booth</p>'+
@@ -68,6 +70,41 @@ function statusPage(){
  '</div>':'')+
  '<div class="reserve-tabs"><button type="button" class="reserve-button reserve-secondary" data-view="book">Back to Booking</button></div></section>';
 }
+let qrLoader=null;
+function loadQRLibrary(){
+ if(window.QRCode)return Promise.resolve();
+ if(!qrLoader){
+  qrLoader=new Promise((resolve,reject)=>{
+   const script=document.createElement('script');
+   script.src='https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+   script.async=true;
+   script.onload=()=>window.QRCode?resolve():reject(Error('QR generator unavailable'));
+   script.onerror=()=>reject(Error('Cannot load QR generator'));
+   document.head.appendChild(script);
+  }).catch(e=>{qrLoader=null;throw e});
+ }
+ return qrLoader;
+}
+function drawReservationQR(){
+ const node=document.getElementById('reservationQr');
+ if(!node||!state.receipt)return;
+ const code=state.receipt.code;
+ if(node.dataset.rendered===code)return;
+ node.textContent='Generating reservation QR…';
+ loadQRLibrary().then(()=>{
+  // A slow QR library response must not render into a new, unrelated booking.
+  const current=document.getElementById('reservationQr');
+  if(current!==node||state.receipt?.code!==code)return;
+  node.replaceChildren();
+  new window.QRCode(node,{text:code,width:182,height:182,
+   correctLevel:window.QRCode.CorrectLevel.M,colorDark:'#173b71',colorLight:'#ffffff'});
+  node.dataset.rendered=code;
+ }).catch(()=>{
+  if(document.getElementById('reservationQr')===node){
+   node.textContent='QR unavailable — use the reservation reference below';
+  }
+ });
+}
 function render(){
  root.innerHTML=nav()+'<main class="reserve-page"><div class="reserve-hero"><div><span class="reserve-eyebrow">BULSU LHS · FOUNDATION WEEK</span>'+
  '<h1>Reserve your <span>movie seats.</span></h1><p>Pick a showing, enter your Student ID and get your booking reference. No online payment required.</p></div>'+
@@ -76,8 +113,9 @@ function render(){
  (state.message?'<div class="reserve-alert '+(state.message.startsWith('✓')?'success':'')+'" role="status">'+esc(state.message)+'</div>':'')+
  '<div class="reserve-layout">'+(state.activeView==='receipt'&&state.receipt?receiptView():state.activeView==='status'?statusPage():booking())+
  summary()+'</div>'+
- '<footer class="reserve-footer">LSC Movie Booth · Powered by Azure&lt;3 · School approval required<br>'+
+ '<footer class="reserve-footer"LSC Movie Booth · Powered by Azure&lt;3 · School approval required<br>'+
  'Reservation requests are held temporarily. Student names and roster data are never published on this page.</footer></main>';
+ if(state.activeView==='receipt'&&state.receipt)drawReservationQR();
 }
 async function loadShows(){
  if(!navigator.onLine){state.online=false;state.message='You are offline. Reconnect before booking.';render();return;}
