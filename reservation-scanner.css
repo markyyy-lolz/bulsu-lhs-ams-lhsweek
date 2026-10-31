@@ -1,0 +1,30 @@
+
+.scanner-page{max-width:1140px}
+.scanner-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.9fr);gap:20px;align-items:start}
+.scanner-links,.scanner-camera-controls{display:flex;flex-wrap:wrap;gap:11px;margin:15px 0 22px}
+.scanner-links a,.scanner-camera-controls button{flex:1;min-width:170px;text-decoration:none}
+.scanner-operator{background:#ebf3ff;border:1px solid #d6e3fa;border-radius:13px;padding:12px 16px;display:grid;gap:3px;margin-bottom:20px}
+.scanner-operator small{font-size:9px;letter-spacing:1.3px;color:#527bb2;font-weight:900}
+.scanner-operator strong{font-size:15px;text-transform:capitalize;color:#274f89}
+.scanner-operator span{font-size:11px;color:#6f83a3;overflow-wrap:anywhere}
+.scanner-camera{padding:12px;border-radius:14px;background:#14223b;margin:14px 0;overflow:hidden}
+.scanner-camera[hidden]{display:none!important}
+.scanner-camera #qrScannerReader{width:100%;min-height:235px;border:0!important;color:#fff}
+.scanner-camera #qrScannerReader video{border-radius:12px}
+.scanner-result{border:1px solid #bbd0e8;border-radius:17px;padding:18px;background:#edf5ff;overflow-wrap:anywhere}
+.scanner-status{font:800 17px "Outfit",sans-serif;letter-spacing:.3px;margin:0 0 15px}
+.scanner-result.RESERVED{background:#e4f7ee;border-color:#9bdbc1}
+.scanner-result.RESERVED .scanner-status{color:#0d7652}
+.scanner-result.CONVERTED{background:#dff4eb;border-color:#96cdbb}
+.scanner-result.CONVERTED .scanner-status{color:#116949}
+.scanner-result.EXPIRED,.scanner-result.CANCELLED,.scanner-result.NOT_FOUND{background:#fff0ed;border-color:#f0bbba}
+.scanner-result.EXPIRED .scanner-status,.scanner-result.CANCELLED .scanner-status,.scanner-result.NOT_FOUND .scanner-status{color:#a23b49}
+.scanner-result-body{display:grid;gap:11px;font-size:12px;color:#577397}
+.scanner-result-body>strong{font:800 19px "Outfit",sans-serif;color:#1e436f}
+.scanner-result-body .scanner-code{border-radius:9px;border:1px dashed #a9bddc;padding:10px;background:rgba(255,255,255,.7);font-weight:900;letter-spacing:1px;color:#234d82;text-align:center;font-size:14px;word-break:break-all}
+.scanner-empty{text-align:center;padding:35px 18px}
+.scanner-empty strong{display:block;color:#2d528b;font-size:16px}
+.scanner-reset{border:0;background:none;color:#3d6cb2;font-weight:800;font-size:13px;text-decoration:underline;margin-top:18px;padding:7px 0}
+.scanner-page .reserve-panel h2{font-size:23px}
+@media(max-width:860px){.scanner-layout{grid-template-columns:1fr}}
+@media(max-width:500px){.scanner-camera-controls{display:grid;grid-template-columns:1fr}.scanner-camera-controls button{width:100%}.scanner-links{display:grid;grid-template-columns:1fr}.scanner-links a{min-width:0}}
