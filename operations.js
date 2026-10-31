@@ -10,7 +10,7 @@ const allowed=()=>['official','class_mayor','event_monitor','cashier','ticket_ch
 function top(){
  return '<header class="movie-header"><div class="movie-brand"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
  '<div><strong>Foundation Week Command Center</strong><small>BulSU Laboratory High School · LSC</small></div></div>'+
- '<div class="movie-head-right"><span class="movie-role">'+esc(state.role?.replaceAll('_',' ').toUpperCase())+'</span><a class="movie-return" href="./movie.html">Movie Booth POS</a> · <a class="movie-return" href="./reservation-scanner.html">Reservation QR Scanner</a> · <a class="movie-return" href="./login.html">LSC Login</a></div></header>';
+ '<div class="movie-head-right"><span class="movie-role">'+esc(state.role?.replaceAll('_',' ').toUpperCase())+'</span><a class="movie-return" href="./movie.html">Movie Booth POS</a> · <a class="movie-return" href="./login.html">LSC Login</a></div></header>';
 }
 function tiles(){
  const h=state.hub||{},shows=h.shows||[];
