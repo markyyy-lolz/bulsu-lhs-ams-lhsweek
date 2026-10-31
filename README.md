@@ -38,6 +38,19 @@ The database constraint `lsc_verified_before_active` prevents activation while `
 
 **Demo mode:** Student page demos IDs `2023107337` and `2023999999` without database writes. Login page provides demo previews for both LSC Official and Class Mayor roles, also without writes.
 
+## Showing Deletion and Student Reservation QR
+
+**Movie Setup → Delete Showing** is restricted to authenticated LSC Officials and requires typing \`DELETE\`:
+- If no sales, reservation records, or volunteer assignments exist, the showing is permanently deleted.
+- If it has any historical records or volunteer assignments, it is **archived**, leaving all sales, reservation codes, tickets and audits intact. While a student has a current unexpired reservation, deletion is blocked until the hold expires or is cancelled.
+- **Archived Showings → Restore Showing** restores the showing in paused mode with online booking disabled. Showing management is audited through a protected database function.
+
+**Student reservation QR:** [Online Booking](https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/reserve.html) displays a QR containing only the random \`RSV-\` reference; it is printable and can be retrieved on the **Check Reservation** screen using the original reference plus Student ID. The QR contains no Student ID/name and does not constitute a paid ticket.
+
+**Volunteer scanner:** [Reservation QR Scanner](https://markyyy-lolz.github.io/bulsu-lhs-ams-lhsweek/reservation-scanner.html) supports mobile/laptop camera scanning using \`html5-qrcode@2.3.8\`, an external barcode/QR keyboard scanner, or manual code entry. The authenticated server authorizes LSC Officials, Class Mayors, approved attendance volunteers, and Movie Booth volunteers, enforcing assigned class/showing restrictions. Volunteers see booking status, movie, quantity, amount, expiry and masked Student ID; lookups are audited. The scanner does **not** accept payment or redeem a paid admission ticket.
+
+Once paid, the cashier converts the reservation into a sale and generates separate \`FW-\` admission ticket QR(s). Physical QR camera access and 80mm printer compatibility still require real-device testing. The implementation preserves existing student, attendance, sales and ticket records.
+
 ## Foundation Week v2.1: Operations Upgrade (2026)
 
 **Existing product name is unchanged**. This release adds an *authorized* event management workspace:
