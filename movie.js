@@ -259,7 +259,7 @@ function stationLockView(){
  '<button class="movie-btn movie-secondary" type="button" data-act="nfc-card" data-target="movieUnlockCard">Read Android NFC</button>'+
  '<label>Six-digit PIN<input name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label>'+
  '<button class="movie-btn movie-primary" type="submit"'+(state.cardWorking?' disabled':'')+'>Unlock Station</button></form>'+
- '<button class="movie-mini" type="button" data-act="signout">Sign Out / Another Staff Account</button>'+
+ '<button class="movie-mini" type="button" data-act="refresh-card-status">Retry Card Status</button>'+ '<button class="movie-mini" type="button" data-act="signout">Sign Out / Another Staff Account</button>'+
  '<p class="movie-helper">If your card was lost, sign out and ask an LSC Official to re-verify your account and enroll a replacement.</p></section>';
 }
 function voidApprovalView(){
@@ -287,7 +287,7 @@ async function refreshStaffCard(){
   if(error)throw error;
   state.cardEnrolled=Boolean(data?.enrolled);
   state.cardLocked=state.cardEnrolled;state.cardSince=Date.now();state.cardNotice='';
- }catch(e){state.cardEnrolled=false;state.cardLocked=false;state.cardNotice='Card status unavailable: '+e.message;}
+ }catch(e){state.cardEnrolled=true;state.cardLocked=true;state.cardNotice='Cannot verify card status: '+e.message+'. Retry verification or sign out.';}
 }
 async function runCardAction(action,card,pin){
  if(state.cardWorking||!state.online)return;
@@ -763,7 +763,7 @@ async function start(){
 document.addEventListener('click',async e=>{
  const target=e.target.closest('[data-act],[data-page],[data-print],[data-void],[data-toggle],[data-capacity],[data-reserve-toggle],[data-edit-schedule],[data-delete-show],[data-restore-show],[data-reservation-open]');
  if(!target)return;
- if(state.cardLocked&& !['signout','nfc-card'].includes(target.dataset.act||''))return;
+ if(state.cardLocked&& !['signout','nfc-card','refresh-card-status'].includes(target.dataset.act||''))return;
  if(target.dataset.page){
   state.page=target.dataset.page;state.notice='';
   stopCamera();
@@ -864,6 +864,7 @@ document.addEventListener('click',async e=>{
  if(act==='switch-movie-account'){
   await db.auth.signOut();state.accessDenied=false;state.user=null;state.role=null;state.notice='';render();return;
  }
+ if(act==='refresh-card-status'){await refreshStaffCard();render();return;}
  if(act==='lock-station'){
   stopCamera();state.cardLocked=state.cardEnrolled;
   state.cardNotice=state.cardEnrolled?'':'Please enroll a card in Staff Card / NFC first.';
