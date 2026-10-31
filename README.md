@@ -51,6 +51,16 @@ The database constraint `lsc_verified_before_active` prevents activation while `
 
 Once paid, the cashier converts the reservation into a sale and generates separate \`FW-\` admission ticket QR(s). Physical QR camera access and 80mm printer compatibility still require real-device testing. The implementation preserves existing student, attendance, sales and ticket records.
 
+## Movie Booth POS role isolation (Class Mayor access disabled)
+
+**Movie Booth POS is restricted to LSC Officials and explicitly approved Movie Booth volunteers only** (Cashier, Ticket Checker, and Event Monitor). The **Class Mayor role does not grant any Movie Booth access**, even for check-in, reservations, sales, shifts, reports, or scans. A user with a Class Mayor role cannot be assigned a separate Movie Booth volunteer role.
+
+The restriction is enforced in the \`lsc_movie_context()\` server-side authorization function, the reservation scan and volunteer-approval functions, and Movie Booth data-table RLS policies; hiding buttons alone is not relied on. The Movie Booth website shows an access-restricted message for unauthorized users. The LSC school dashboard hides its Movie Booth staff shortcut from Class Mayors.
+
+**Unaffected:** Class Mayors can still use the regular Student Attendance terminal, their own classroom attendance permissions, and class-scoped Foundation Week activities/announcements. The Foundation Week Command Center no longer returns Movie Booth show information to Class Mayor accounts. Students can still use the public movie-reservation page; the public booking is not a staff permission.
+
+**RFID/NFC and six-digit PIN staff login are planned, not installed or activated**. The current Movie Booth login remains email OTP for approved users, with existing Supabase session support. Do not assume a RFID card UID alone can authenticate or approve a void.
+
 ## Foundation Week v2.1: Operations Upgrade (2026)
 
 **Existing product name is unchanged**. This release adds an *authorized* event management workspace:
