@@ -59,6 +59,26 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
 @media(max-width:540px){.student-wrap{width:calc(100% - 24px)}.student-header{height:76px;padding:0 14px}.student-header .brand-sub{display:none}.student-header .lsc-logo{height:43px;width:33px}.student-header .brand-title{font-size:15px}.student-header .mark{height:39px;width:39px;font-size:16px}.header-links a{font-size:11px;padding:9px}.student-hero{display:block}.live-clock{margin-top:17px;width:max-content}.entry-card{padding:31px 13px 25px}.entry-head{font-size:22px}.student-id-field{font-size:25px;height:66px}.student-hero h1{font-size:30px}}
 [hidden]{display:none!important}
 #stationSignOut[hidden]{display:none!important}
+
+/* Two-option student attendance entry: preserve existing keypad while adding camera. */
+.attendance-methods{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:470px;margin:2px auto 22px}
+.attendance-method{min-height:52px;display:flex;align-items:center;justify-content:center;padding:11px 12px;border-radius:12px;border:1px solid #dce5f6;background:#f2f5fb;color:#455f8e;font-size:13px;font-weight:800;transition:background .15s,border-color .15s,box-shadow .15s}
+.attendance-method.selected{background:#eaf0ff;border-color:#8da7ec;color:#234eac;box-shadow:0 3px 11px #3461c21a}
+.attendance-method:focus-visible{outline:3px solid #456edb;outline-offset:2px}
+.attendance-scanner{max-width:470px;margin:0 auto 6px}
+.scanner-frame{position:relative;overflow:hidden;min-height:248px;background:#132b50;border:2px solid #dce7fc;border-radius:17px;display:grid;place-items:center}
+.scanner-frame #attendanceReader{width:100%;min-height:246px}
+.scanner-frame video{max-width:100%;object-fit:cover;border-radius:12px}
+.scanner-frame #attendanceReader__scan_region{min-height:0!important}
+.scanner-frame #attendanceReader__dashboard{display:none!important}
+.scanner-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#172e55;color:#c7d9fa;font-size:50px;pointer-events:none}
+.scanner-placeholder span{font-size:13px;font-weight:700;padding:0 15px;line-height:1.5}
+.scanner-status{margin:12px auto;color:#49658b;font-size:13px;font-weight:800;line-height:1.55;min-height:22px}
+.scanner-status.failed{color:#b24949}
+.scanner-instructions{margin:13px 0 16px;color:#7989a5;font-size:12px;line-height:1.7}
+.scanner-retry{margin:3px auto;min-height:43px}
+#cameraAttendancePanel[hidden],#manualAttendancePanel[hidden]{display:none!important}
+@media(max-width:540px){.attendance-methods{gap:7px}.attendance-method{font-size:12px;padding:10px 7px}.scanner-frame{min-height:210px}.scanner-frame #attendanceReader{min-height:208px}}
 </style>
 <link rel="stylesheet" href="./glass.css?v=ios-gearfix-1">
 </head>
@@ -68,13 +88,18 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
  <div class="header-links"><a href="./reserve.html">🎬 Reserve Movie Tickets</a> <a href="./login.html">LSC Staff Login ↗</a></div>
 </header>
 <main class="student-wrap">
- <div class="student-hero"><div><div class="eyebrow">STUDENT ATTENDANCE TERMINAL</div><h1>Welcome to LSC.</h1><p>Simply enter your Student ID to record your arrival or departure.</p></div><div class="live-clock"><span class="clock-icon">◷</span><div><strong id="clockTime">--:--:--</strong><span class="small muted" id="clockDate">Philippine Standard Time</span></div></div></div>
+ <div class="student-hero"><div><div class="eyebrow">STUDENT ATTENDANCE TERMINAL</div><h1>Welcome to LSC.</h1><p>Class Mayor: enter or scan a classmate's Student ID to record attendance automatically.</p></div><div class="live-clock"><span class="clock-icon">◷</span><div><strong id="clockTime">--:--:--</strong><span class="small muted" id="clockDate">Philippine Standard Time</span></div></div></div>
  <div class="student-grid">
   <section class="card entry-card">
    <div class="entry-avatar logo-avatar"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC logo"></div>
    <div class="eyebrow" style="margin-top:20px">QUICK ATTENDANCE</div>
-   <h2 class="entry-head">Enter your Student ID</h2>
-   <p class="entry-desc">Use the keypad below or type your ID, then press Record Attendance.</p>
+   <h2 class="entry-head">Student ID Attendance</h2>
+   <p class="entry-desc">Choose how to record attendance. Time IN or Time OUT is selected automatically.</p>
+   <div class="attendance-methods" role="tablist" aria-label="Student ID input method">
+    <button type="button" id="manualMethodButton" class="attendance-method selected" role="tab" aria-selected="true" aria-controls="manualAttendancePanel">⌨ &nbsp;Enter Student ID</button>
+    <button type="button" id="cameraMethodButton" class="attendance-method" role="tab" aria-selected="false" aria-controls="cameraAttendancePanel">▣ &nbsp;Scan with Camera</button>
+   </div>
+   <div id="manualAttendancePanel" role="tabpanel" aria-labelledby="manualMethodButton">
    <form id="studentForm" autocomplete="off">
     <label class="hidden" for="studentID">Student ID</label>
     <input class="student-id-field" id="studentID" name="studentID" type="text" inputmode="numeric" pattern="[0-9]{7,12}" minlength="7" maxlength="12" placeholder="2023••••••" aria-label="Student ID" required>
@@ -86,6 +111,15 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
     </div>
     <button class="btn submit-record" id="recordButton" type="submit" disabled>Record Attendance →</button>
    </form>
+   </div>
+   <div id="cameraAttendancePanel" role="tabpanel" aria-labelledby="cameraMethodButton" hidden>
+    <div class="attendance-scanner">
+     <div class="scanner-frame" id="attendanceScannerHolder"><div id="attendanceReader"></div><div id="scannerPlaceholder" class="scanner-placeholder">▣<span>Camera opens after you select this option</span></div></div>
+     <p id="cameraStatus" class="scanner-status" role="status" aria-live="polite">Camera is not active.</p>
+     <button type="button" id="restartCameraButton" class="btn btn-secondary scanner-retry" hidden>Restart Camera</button>
+     <p class="scanner-instructions">Class Mayor: point the camera at your classmate's ID QR code or barcode. The code must contain the registered 7–12 digit Student ID. A successful scan records attendance immediately—no additional button needed.</p>
+    </div>
+   </div>
    <div id="confirmation" role="status" aria-live="polite"></div>
    <div id="activationNotice" class="station-warning">Checking authorized station session…</div>
    <p class="entry-note">Each valid entry alternates Time IN and Time OUT for the current Philippine school day. Duplicate entries within 45 seconds are ignored.</p>
@@ -94,8 +128,8 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
    <h3>Attendance Terminal</h3>
    <div class="status-panel"><div class="label">Station status</div><div class="status-line"><span class="status-dot" id="stationDot"></span><span id="stationLabel">Checking session</span></div><p id="stationDetail">Please use a supervised school terminal.</p></div>
    <div class="steps">
-    <div class="step"><span class="step-num">01</span><div><strong>Enter your Student ID</strong><p>Use your registered student number. Example format: 2023107337.</p></div></div>
-    <div class="step"><span class="step-num">02</span><div><strong>Automatic Time IN / OUT</strong><p>Time IN/OUT is determined securely by the database. Class Mayor entries are limited to the assigned class.</p></div></div>
+    <div class="step"><span class="step-num">01</span><div><strong>Enter ID or scan with camera</strong><p>The authorized Class Mayor can type a classmate's Student ID or scan the ID's QR/barcode.</p></div></div>
+    <div class="step"><span class="step-num">02</span><div><strong>Automatic Time IN / OUT</strong><p>Both methods use the same secure attendance rules. Class Mayors are limited to their assigned class.</p></div></div>
     <div class="step"><span class="step-num">03</span><div><strong>Instant confirmation</strong><p>Your recorded status, timestamp, and the logged-in account that recorded it appear immediately.</p></div></div>
    </div>
    <a class="teacher-link" href="./reserve.html">🎬 Movie Booth — Reserve Your Tickets <span>↗</span></a>
@@ -107,5 +141,5 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
  </div>
  <footer class="student-footer">LSC Attendance Monitor · Independent prototype · Powered by Azure&lt;3 · School approval required.<br>Student attendance information is handled through Supabase, never stored on GitHub Pages.</footer>
 </main>
-<script type="module" src="./student.js?v=attendance-volunteer-v2"></script>
+<script type="module" src="./student.js?v=class-mayor-camera-v1"></script>
 </body></html>
