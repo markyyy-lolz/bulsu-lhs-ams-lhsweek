@@ -58,6 +58,7 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
 @media(max-width:850px){.student-grid{grid-template-columns:1fr}.student-wrap{margin:28px auto}.entry-card{min-height:0}.side-panel{padding:24px}.student-hero{align-items:start}.live-clock{padding:11px}}
 @media(max-width:540px){.student-wrap{width:calc(100% - 24px)}.student-header{height:76px;padding:0 14px}.student-header .brand-sub{display:none}.student-header .lsc-logo{height:43px;width:33px}.student-header .brand-title{font-size:15px}.student-header .mark{height:39px;width:39px;font-size:16px}.header-links a{font-size:11px;padding:9px}.student-hero{display:block}.live-clock{margin-top:17px;width:max-content}.entry-card{padding:31px 13px 25px}.entry-head{font-size:22px}.student-id-field{font-size:25px;height:66px}.student-hero h1{font-size:30px}}
 [hidden]{display:none!important}
+#stationSignOut[hidden]{display:none!important}
 </style>
 <link rel="stylesheet" href="./glass.css?v=ios-gearfix-1">
 </head>
@@ -98,11 +99,12 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
     <div class="step"><span class="step-num">03</span><div><strong>Instant confirmation</strong><p>Your recorded status, timestamp, and the logged-in account that recorded it appear immediately.</p></div></div>
    </div>
    <a class="teacher-link" href="./login.html">LSC Official / Class Mayor / Volunteer Login <span>↗</span></a>
+   <button id="stationSignOut" type="button" class="btn btn-secondary" style="width:100%;margin-top:10px" hidden>Sign out attendance station</button>
    <button id="demoButton" type="button" class="btn btn-secondary" style="width:100%;margin-top:10px">Try Demo Mode</button>
    <p style="font-size:11px;color:#8491a9;line-height:1.7;margin-top:13px">For real attendance, an LSC Official, Class Mayor, or approved Attendance Volunteer must sign in on this browser. Volunteers can record only within the scope authorized by an LSC Official. Every entry is audited to the signed-in account.</p>
   </aside>
  </div>
  <footer class="student-footer">LSC Attendance Monitor · Independent prototype · Powered by Azure&lt;3 · School approval required.<br>Student attendance information is handled through Supabase, never stored on GitHub Pages.</footer>
 </main>
-<script type="module" src="./student.js?v=attendance-volunteer-v1"></script>
+<script type="module" src="./student.js?v=attendance-volunteer-v2"></script>
 </body></html>
