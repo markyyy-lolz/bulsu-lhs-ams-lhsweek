@@ -268,7 +268,7 @@ function voidApprovalView(){
  return '<div class="movie-approval-shade"><div class="movie-approval-dialog" role="dialog" aria-modal="true" aria-label="Supervisor void approval">'+
  '<div class="movie-panel-head"><h2>Supervisor Approval Required</h2><span>RFID + PIN</span></div>'+
  '<p class="movie-helper">Sale: <strong>'+esc(state.voidSaleId.slice(0,8))+'</strong>'+
- (sale?' · '+money(sale.total_php):'')+'. Both the requesting cashier and approving LSC Official will be recorded.</p>'+
+ (sale?' · '+money(sale.total_php):'')+'. LSC Official card + PIN required. Cashier volunteers need a different Official; Officials may authorize their own administrative void.</p>'+
  (state.cardNotice?'<p class="movie-alert">'+esc(state.cardNotice)+'</p>':'')+
  '<form id="movieVoidApproveForm" class="movie-fields">'+
  '<label>Void reason (8–300 characters)<textarea name="reason" minlength="8" maxlength="300" rows="3" required placeholder="Explain why this transaction must be voided">'+esc(state.voidReason)+'</textarea></label>'+
@@ -278,7 +278,7 @@ function voidApprovalView(){
  '<div class="movie-approval-actions"><button type="button" class="movie-btn movie-secondary" data-act="close-void">Cancel</button>'+
  '<button type="submit" class="movie-btn movie-primary"'+(state.voidWorking?' disabled':'')+'>'+
  (state.voidWorking?'Verifying Approval…':'Approve & Void Sale')+'</button></div></form>'+
- '<p class="movie-helper">Requires a separately enrolled LSC Official, not the logged-in cashier. Cash refunds are handled separately.</p>'+
+ '<p class="movie-helper">Requires an enrolled LSC Official. Cashiers cannot self-approve; an Official may approve their own action. Cash refunds are handled separately.</p>'+
  '</div></div>';
 }
 async function refreshStaffCard(){
