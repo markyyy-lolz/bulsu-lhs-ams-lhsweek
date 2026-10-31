@@ -91,14 +91,20 @@ async function onCameraScan(raw){
     if(time-stamp>120000)camera.lastScans.delete(id);
   }
   // A card held in front of the camera must not generate an accidental OUT.
-  if(camera.lastScans.has(studentId))return;
+  if(camera.lastScans.has(studentId)){
+    // Refresh the timestamp while the same QR is still in view; do not turn IN into OUT.
+    camera.lastScans.set(studentId,time);
+    return;
+  }
   camera.scanBusy=true;
   camera.lastScans.set(studentId,time);
   scannerMessage('ID read. Checking attendance securely…');
   try{
-    const ok=await recordAttendance(null,studentId);
-    if(ok){
+    const status=await recordAttendance(null,studentId);
+    if(status==='SUCCESS'){
       scannerMessage('Attendance recorded. Scan the next student ID.');
+    }else if(status==='DUPLICATE'){
+      scannerMessage('This ID was already recorded recently. No duplicate attendance was added.');
     }else{
       camera.lastScans.set(studentId,Date.now()-116000);
       scannerMessage('Attendance was not recorded. Verify the ID or class and scan again.',true);
@@ -214,7 +220,14 @@ async function checkAuthorization() {
   state.authorized=false;state.operatorEmail='';state.operatorRole='';state.operatorClass='';state.operatorScope='';state.operatorExpires='';updateStation();
   try {
     const {data:{user},error}=await client.auth.getUser();
-    if(error||!user){updateStation();return;}
+    if(error||!user){
+      updateStation();
+      if(camera.mode==='camera'){
+        stopCamera();
+        scannerMessage('Session expired or missing. Sign in as an authorized attendance operator.',true);
+      }
+      return;
+    }
     const {data:access,error:accessError}=await client.rpc('lsc_attendance_access');
     state.authorized=!accessError&&access?.authorized===true &&
       ['official','class_mayor','attendance_volunteer'].includes(access.role);
@@ -305,7 +318,7 @@ async function recordAttendance(event=null,scannedId=null) {
       ]
     );
     studentInput.value='';
-    return true;
+    return status;
   }catch(e){
     appendMessage('ERROR','Unable to record attendance',[e.message||'Please contact the station operator.']);
     if(e.code==='42501'&&!state.demo)await checkAuthorization();
