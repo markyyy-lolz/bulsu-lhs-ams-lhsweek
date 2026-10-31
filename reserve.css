@@ -60,3 +60,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{ou
 @media(prefers-reduced-motion:no-preference){.reserve-panel{animation:reserve-enter .4s ease both}@keyframes reserve-enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media print{.reserve-nav,.reserve-form,.reserve-tabs,.reserve-actions,.reserve-footer{display:none!important}.reserve-layout{display:block}.reserve-panel{box-shadow:none;border:0;padding:0}.reserve-highlight{color:black;background:white;border:1px solid black}.reserve-highlight :is(small,p){color:black}.reserve-confirm{background:white;border:1px solid black}}
+
+
+/* Reservation reference QR: does not contain a Student ID or payment credential */
+.reserve-qr-wrap{display:grid;justify-items:center;gap:8px;background:rgba(255,255,255,.86);border:1px solid rgba(129,182,155,.42);border-radius:16px;padding:16px 14px;margin:16px 0}
+#reservationQr{width:182px;min-height:182px;display:flex;justify-content:center;align-items:center;text-align:center;font-size:12px;line-height:1.5;color:#6b83a0}
+#reservationQr img,#reservationQr canvas{display:block;width:182px!important;height:182px!important;max-width:100%;image-rendering:pixelated}
+.reserve-qr-wrap small{max-width:300px;text-align:center;line-height:1.55;font-size:11px;color:#587b6d}
+@media print{.reserve-qr-wrap{border:1px solid #b5b5b5;page-break-inside:avoid}#reservationQr{print-color-adjust:exact;-webkit-print-color-adjust:exact}.reserve-confirm .code{letter-spacing:.5px}}
