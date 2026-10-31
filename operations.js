@@ -10,13 +10,16 @@ const allowed=()=>['official','class_mayor','event_monitor','cashier','ticket_ch
 function top(){
  return '<header class="movie-header"><div class="movie-brand"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
  '<div><strong>Foundation Week Command Center</strong><small>BulSU Laboratory High School · LSC</small></div></div>'+
- '<div class="movie-head-right"><span class="movie-role">'+esc(state.role?.replaceAll('_',' ').toUpperCase())+'</span><a class="movie-return" href="./movie.html">Movie Booth POS</a> · <a class="movie-return" href="./login.html">LSC Login</a></div></header>';
+ '<div class="movie-head-right"><span class="movie-role">'+esc(state.role?.replaceAll('_',' ').toUpperCase())+'</span>'+
+ (state.role==='class_mayor'?'':'<a class="movie-return" href="./movie.html">Movie Booth POS</a> · ')+
+ '<a class="movie-return" href="./login.html">LSC Login</a></div></header>';
 }
 function tiles(){
  const h=state.hub||{},shows=h.shows||[];
  const sold=shows.reduce((a,b)=>a+Number(b.sold||0),0),income=shows.reduce((a,b)=>a+Number(b.revenue||0),0),used=shows.reduce((a,b)=>a+Number(b.redeemed||0),0);
  return '<div class="ops-tiles">'+[['Attendance arrivals',h.today_checkins??'Role-limited'],['Passport stamps',h.passport_stamps??'Role-limited'],
- ['Movie tickets sold',sold],['Revenue in scope',php(income)],['Tickets redeemed',used],['Active screenings',shows.filter(x=>x.active).length]]
+ ...(state.role==='class_mayor'?[]:
+ ['Movie tickets sold',sold],['Revenue in scope',php(income)],['Tickets redeemed',used],['Active screenings',shows.filter(x=>x.active).length])]
  .map(([title,val])=>'<div class="ops-tile"><small>'+esc(title)+'</small><strong>'+esc(val)+'</strong></div>').join('')+'</div>';
 }
 function hourlyChart(){
@@ -52,7 +55,7 @@ function volunteerRows(){
 }
 function pulse(){
  return '<section class="movie-panel"><div class="movie-panel-head"><h2>Event Pulse</h2><span>Auto-refresh every 30 seconds while online · Private aggregate data</span></div>'+
- tiles()+hourlyChart()+'<h3>Movie screenings & capacity</h3>'+showRows()+
+ tiles()+(state.role==='class_mayor'?'':hourlyChart()+'<h3>Movie screenings & capacity</h3>'+showRows())+
  '<div class="ops-inline-note">Attendance counts track IN records, not confirmed absences. Event totals are displayed only within your authorized scope; individual student details are never public.</div>'+
  '<h3>Latest official announcements</h3>'+announcementRows()+'</section>';
 }
@@ -223,7 +226,17 @@ async function start(){
  try{
  const {data:{user},error}=await db.auth.getUser();if(error||!user){render();return}
  const {data:ctx,error:bad}=await db.rpc('lsc_movie_context');
- if(bad||!ctx){render();return}
+ if(bad||!ctx){
+  // Class Mayor retains Foundation Week class attendance and notices access,
+  // but is not authorized for the Movie Booth POS and cannot call movie RPCs.
+  const {data:staff,error:staffError}=await db.from('lsc_staff_roles')
+   .select('role,class_id').eq('user_id',user.id).maybeSingle();
+  if(!staffError&&staff?.role==='class_mayor'&&staff.class_id){
+   state.user=user;state.role='class_mayor';state.scope=staff.class_id;
+   await refresh();return;
+  }
+  render();return;
+ }
  state.user=user;state.role=ctx.role;state.scope=ctx.scope_id;
  if(location.hash.slice(1)==='attendance'&&state.role==='official')state.tab='attendance';
  await refresh();
