@@ -11,7 +11,7 @@ const pht=value=>new Date(value).toLocaleString('en-PH',{timeZone:'Asia/Manila',
 const id=()=>crypto.randomUUID();
 const state={
  user:null,role:null,classId:null,page:'checkout',shows:[],selectedShow:'',editingShowId:null,
- student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',reservation:null,reservationCode:'',
+ student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',reservation:null,reservationCode:'',reservationScanActive:false,reservationLookupBusy:false,
  receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,
  ticketCode:'',ticketResult:null,shift:null,shiftHistory:[],printLog:[],cameraStream:null,cameraTimer:null,html5Scanner:null,scanBusy:false,online:navigator.onLine,otpEmail:'',otpSent:false
 };
@@ -30,7 +30,7 @@ function header(){
  return '<header class="movie-header"><div class="movie-brand"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
  '<div><strong>Movie Booth POS</strong><small>BulSU Laboratory High School · Foundation Week</small></div></div>'+
  '<div class="movie-head-right"><span class="movie-role">'+esc(state.role.replaceAll('_',' ').toUpperCase())+'</span>'+
- '<a href="./reserve.html" class="movie-return">Student Reservations</a> · <a href="./reservation-scanner.html" class="movie-return">Scan Reservation QR</a> · <a href="./operations.html" class="movie-return">Event Command Center</a> · <a href="./login.html#overview" class="movie-return">LSC Dashboard</a> · <button type="button" class="movie-mini" data-act="signout">Sign Out</button></div></header>';
+ '<a href="./reserve.html" class="movie-return">Student Reservations</a> · <a href="./operations.html" class="movie-return">Event Command Center</a> · <a href="./login.html#overview" class="movie-return">LSC Dashboard</a> · <button type="button" class="movie-mini" data-act="signout">Sign Out</button></div></header>';
 }
 function tabs(){
  const items=[];
@@ -67,9 +67,16 @@ function checkout(){
  '<div class="movie-fields"><label>Movie showing<select id="movieShow"'+(!options.length?' disabled':'')+'>'+
  (options.length?options.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===state.selectedShow?' selected':'')+'>'+esc(x.title)+' · '+esc(x.show_date)+' · '+money(x.price_php)+'</option>').join(''):'<option value="">No show available</option>')+
  '</select></label>'+
- '<div class="movie-student-row"><label>Existing reservation reference (optional)<input id="movieReservationCode" autocomplete="off" autocapitalize="characters" maxlength="20" placeholder="RSV-XXXXXXXXXXXXXXXX" value="'+esc(state.reservationCode)+'"></label>'+
- (state.reservation?'<button type="button" class="movie-btn movie-secondary" data-act="clear-reservation">Clear Reservation</button>':
- '<button type="button" class="movie-btn movie-secondary" data-act="find-reservation">Find Reservation</button>')+'</div>'+
+ '<div class="movie-reservation-checkout"><div class="movie-reservation-title"><strong>Online Reservation — Scan & Pay</strong>'+
+ '<span>Scan the student QR here. Booking loads directly into this cashier checkout.</span></div>'+
+ '<div class="movie-reservation-actions"><button class="movie-btn movie-primary" type="button" data-act="scan-reservation"'+(state.reservationScanActive||state.busy||state.reservationLookupBusy||!state.online?' disabled':'')+'>Scan Reservation QR</button>'+
+ (state.reservationScanActive?'<button class="movie-btn movie-secondary" type="button" data-act="stop-reservation-scan">Stop Camera</button>':'')+'</div>'+
+ (state.reservationScanActive?'<div class="movie-reservation-camera" id="movieReservationCamera"><div id="movieReservationQrReader"></div></div>':'')+
+ '<div class="movie-student-row"><label>Or enter / scan reservation code<input id="movieReservationCode" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20" placeholder="RSV-XXXXXXXXXXXXXXXX" value="'+esc(state.reservationCode)+'"></label>'+
+ (state.reservation?'<button type="button" class="movie-btn movie-secondary" data-act="clear-reservation">New / Clear Booking</button>':
+ '<button type="button" class="movie-btn movie-secondary" data-act="find-reservation"'+(state.reservationLookupBusy?' disabled':'')+'>'+
+ (state.reservationLookupBusy?'Finding…':'Find Reservation')+'</button>')+'</div>'+
+ '<p class="movie-helper">Camera on this cashier device, a paired USB/Bluetooth QR scanner, or manual code entry. Press Enter after scanning. No volunteer scan is required.</p></div>'+
  (state.reservation?'<div class="movie-student"><span>ONLINE BOOKING · PAY AT BOOTH</span><strong>'+esc(state.reservation.code)+'</strong>'+
  '<small>'+esc(state.reservation.title)+' · '+state.reservation.quantity+' tickets · Expires '+esc(pht(state.reservation.expires_at))+' PHT</small></div>':'')+
  '<div class="movie-student-row"><label>Student attendance ID<input id="movieStudentId" inputmode="numeric" autocomplete="off" pattern="[0-9]{7,12}" maxlength="12" placeholder="Example: 2023000001" value="'+esc(state.studentSearch)+'"'+(state.reservation?' disabled':'')+'></label>'+
@@ -209,20 +216,69 @@ async function lookupStudent(){
  if(!data?.found){state.notice='Student not found in your assigned authorization scope.';render();return;}
  state.student=data;state.notice='';render();
 }
-async function findReservation(){
- const code=(document.getElementById('movieReservationCode')?.value||state.reservationCode||'').trim().toUpperCase();
- state.reservationCode=code;state.reservation=null;state.student=null;state.requestId=null;state.receipt=null;
- if(!/^RSV-[0-9A-F]{16}$/.test(code)){state.notice='Enter the full RSV reservation reference.';render();return;}
- if(!navigator.onLine){state.notice='Reservation lookup requires internet.';render();return;}
- const {data,error}=await db.rpc('lsc_movie_staff_reservation',{p_code:code});
- if(error){state.notice='Booking lookup failed: '+error.message;render();return;}
- if(data.status!=='RESERVED'){state.notice='Reservation is '+data.status+'. Ask the student to book again if seats remain.';render();return;}
- if(!state.shows.some(x=>x.id===data.show_id)){state.notice='The reservation showing is not available at this cashier station.';render();return;}
- state.reservation=data;state.selectedShow=data.show_id;state.studentSearch=data.student_number;
- state.student={student_id:data.student_number,full_name:data.student_name,grade_level:'',section:data.section};
- state.quantity=data.quantity;state.cash='';
- state.notice='Reservation found. Verify the student ID, collect cash, and issue the paid tickets.';
+async function findReservation(scannedCode=null){
+ if(state.busy||state.reservationLookupBusy)return;
+ const code=String(scannedCode??document.getElementById('movieReservationCode')?.value??state.reservationCode??'').trim().toUpperCase();
+ state.reservationCode=code;
+ if(!/^RSV-[0-9A-F]{16}$/.test(code)){
+  state.notice='Scan the reservation QR or enter an RSV-XXXXXXXXXXXXXXXX reference.';render();return;
+ }
+ if(!navigator.onLine){state.notice='Internet is required to verify the latest reservation status.';render();return;}
+ // A scan only looks up a booking. No payment or ticket is issued automatically.
+ state.reservationLookupBusy=true;state.reservation=null;state.student=null;
+ state.receipt=null;state.requestId=null;state.notice='Checking the student reservation…';
  render();
+ try{
+  const {data,error}=await db.rpc('lsc_movie_staff_reservation',{p_code:code});
+  if(error)throw error;
+  if(data.status!=='RESERVED'){
+   state.notice='Reservation is '+data.status+'. No payment was recorded. Check with the student before starting another booking.';
+   return;
+  }
+  const sh=state.shows.find(x=>x.id===data.show_id);
+  if(!sh||!sh.active||sh.archived_at){
+   state.notice='The reserved showing is not available for checkout. Contact the LSC Official.';
+   return;
+  }
+  state.reservation=data;state.selectedShow=data.show_id;
+  state.studentSearch=data.student_number;
+  state.student={student_id:data.student_number,full_name:data.student_name,grade_level:'',section:data.section};
+  state.quantity=data.quantity;state.cash='';
+  state.notice='✓ Reservation scanned! Verify the student ID, collect cash and tap Confirm Payment & Issue Tickets.';
+ }catch(error){
+  state.notice='Could not load reservation: '+(error.message||'Unknown error')+'. No sale was recorded.';
+ }finally{state.reservationLookupBusy=false;render();}
+}
+async function scanReservationQR(){
+ if(!state.user||!['official','class_mayor','cashier'].includes(state.role)||state.busy||state.reservationLookupBusy||state.reservationScanActive)return;
+ if(!navigator.onLine){state.notice='Internet connection required for reservation scanning.';render();return;}
+ if(!navigator.mediaDevices?.getUserMedia){
+  state.notice='Camera not supported by this browser. Use an external QR scanner or enter the reservation code.';render();return;
+ }
+ try{
+  await ensureScannerLibrary();
+  if(state.page!=='checkout')return;
+  stopCamera();
+  state.reservationScanActive=true;state.notice='';
+  render();
+  const node=document.getElementById('movieReservationQrReader');
+  if(!node){state.reservationScanActive=false;render();return;}
+  const scanner=new window.Html5Qrcode('movieReservationQrReader',{
+   formatsToSupport:[window.Html5QrcodeSupportedFormats.QR_CODE],verbose:false
+  });
+  state.html5Scanner=scanner;
+  await scanner.start({facingMode:'environment'},{fps:8,qrbox:{width:210,height:210}},async raw=>{
+   const code=String(raw||'').trim().toUpperCase();
+   if(!/^RSV-[0-9A-F]{16}$/.test(code)||!state.reservationScanActive||state.reservationLookupBusy)return;
+   stopCamera();
+   state.reservationCode=code;
+   await findReservation(code);
+  },()=>{});
+ }catch(error){
+  stopCamera();
+  state.notice='Camera unavailable: '+(error.message||'Permission denied')+'. Use manual entry or an external scanner.';
+  render();
+ }
 }
 async function makeSale(){
  if(state.busy)return;
@@ -412,6 +468,7 @@ async function checkTicket(redeem=false){
  finally{state.scanBusy=false;render();}
 }
 function stopCamera(){
+ state.reservationScanActive=false;
  if(state.cameraTimer){clearInterval(state.cameraTimer);state.cameraTimer=null}
  if(state.cameraStream){state.cameraStream.getTracks().forEach(t=>t.stop());state.cameraStream=null}
  if(state.html5Scanner){
@@ -636,7 +693,9 @@ document.addEventListener('click',async e=>{
  if(act==='cancel-schedule'){state.editingShowId=null;state.notice='Schedule editing cancelled.';render()}
  if(act==='lookup')await lookupStudent();
  if(act==='find-reservation')await findReservation();
- if(act==='clear-reservation'){state.reservation=null;state.reservationCode='';state.student=null;state.studentSearch='';state.quantity=1;state.cash='';state.requestId=null;state.notice='Reservation cleared. Walk-in checkout is ready.';render()}
+ if(act==='scan-reservation')await scanReservationQR();
+ if(act==='stop-reservation-scan'){stopCamera();state.notice='Cashier QR camera stopped.';render()}
+ if(act==='clear-reservation'){stopCamera();state.reservation=null;state.reservationCode='';state.student=null;state.studentSearch='';state.quantity=1;state.cash='';state.requestId=null;state.notice='Reservation cleared. Walk-in checkout is ready.';render()}
  if(act==='check-ticket')await checkTicket(false);
  if(act==='redeem-ticket')await checkTicket(true);
  if(act==='camera-start')await startCamera();
@@ -648,6 +707,11 @@ document.addEventListener('click',async e=>{
  if(act==='report-all'){state.reportDate='';try{await loadReport()}catch(e){state.notice=e.message}render()}
  if(act==='report-export'){state.reportDate=document.getElementById('movieReportDate')?.value||'';await exportReport()}
  if(act==='report-print')window.print();
+});
+document.addEventListener('keydown',e=>{
+ if(e.target?.id==='movieReservationCode'&&e.key==='Enter'){
+  e.preventDefault();if(!e.repeat)void findReservation();
+ }
 });
 document.addEventListener('submit',async e=>{
  if(e.target.id==='movieSetupForm'){e.preventDefault();await createShow(e.target);}
