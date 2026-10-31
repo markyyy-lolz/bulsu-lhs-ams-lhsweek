@@ -49,3 +49,17 @@
 .ops-bar-fill{width:100%;min-height:1px;background:linear-gradient(#4a82d7,#2552a7);border-radius:3px 3px 0 0}
 .ops-hour small{font-size:9px;color:#7185a1;font-weight:750}
 @media(max-width:550px){.ops-bars{gap:1px}.ops-hour small{font-size:7px}.ops-hourly{padding:12px}}
+
+
+/* Volunteer Attendance Manager: mobile-friendly authorization and limited-scope access */
+#attendanceVolunteerClassWrap[hidden]{display:none!important}
+.ops-form .ops-inline-note{font-weight:500;font-size:12px}
+.ops-row>.movie-mini{flex:0 0 auto}
+.ops-row .movie-status{vertical-align:middle;margin-right:2px}
+#attendanceVolunteerForm .movie-btn{width:100%}
+#attendanceVolunteerForm select{max-width:100%}
+@media(max-width:680px){
+  .ops-row{align-items:flex-start;flex-wrap:wrap}
+  .ops-row>.movie-mini{margin-top:2px}
+  .movie-site .movie-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
