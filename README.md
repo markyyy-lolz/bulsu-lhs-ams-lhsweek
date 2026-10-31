@@ -51,6 +51,14 @@ The database constraint `lsc_verified_before_active` prevents activation while `
 
 Once paid, the cashier converts the reservation into a sale and generates separate \`FW-\` admission ticket QR(s). Physical QR camera access and 80mm printer compatibility still require real-device testing. The implementation preserves existing student, attendance, sales and ticket records.
 
+## Class Mayor Camera Student ID Attendance (2026-10-31)
+
+The supervised `student.html` Quick Attendance card now offers **two input tabs: Enter Student ID (manual keypad), and Scan with Camera (QR/barcode)**. Class Mayors open this page while already signed in on the same device, then scan a classmate's printed or digital ID containing their **numeric 7–12-digit student number**. The camera decodes QR, Code 128/39, EAN/UPC where supported, and submits the extracted numeric ID to the same authenticated `lsc_record_attendance` RPC used by the manual form. Plain text, or prefixed `ID:` / `STUDENT ID:` values are accepted; an ID with only printed human-readable numbers and no QR/barcode cannot be read by this scanner.
+
+**Time IN versus Time OUT is automatic** (never manually selected): the existing server procedure chooses the next attendance event for the Philippine calendar day, checks the operator's authorization and assigned section, audits the operator, and enforces its existing 45-second duplicate guard. A further camera-only repeat guard prevents a QR code held in front of the camera from inadvertently creating a Time OUT when the student has not moved away.
+
+Camera permission is requested on click, not in the background, and scanning stops when switching to manual entry, hiding the page or signing out. The manual keypad and demo mode remain available. Hardware camera support, school-ID barcode content, and live-device operation still need testing. No attendance schema or past records are modified by this UI change. Class Mayors remain **excluded from Movie Booth POS**.
+
 ## Movie Booth v2.2 — RFID/NFC + PIN Staff Card and Supervisor Void Approval
 
 **Status:** Implemented in website and Supabase. Physical RFID readers, Android NFC tags, real sale-to-void flow, and cash/printing workflow still require on-device tests.
