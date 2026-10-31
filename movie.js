@@ -170,6 +170,21 @@ async function lookupStudent(){
  if(!data?.found){state.notice='Student not found in your assigned authorization scope.';render();return;}
  state.student=data;state.notice='';render();
 }
+async function findReservation(){
+ const code=(document.getElementById('movieReservationCode')?.value||state.reservationCode||'').trim().toUpperCase();
+ state.reservationCode=code;state.reservation=null;state.student=null;state.requestId=null;state.receipt=null;
+ if(!/^RSV-[0-9A-F]{16}$/.test(code)){state.notice='Enter the full RSV reservation reference.';render();return;}
+ if(!navigator.onLine){state.notice='Reservation lookup requires internet.';render();return;}
+ const {data,error}=await db.rpc('lsc_movie_staff_reservation',{p_code:code});
+ if(error){state.notice='Booking lookup failed: '+error.message;render();return;}
+ if(data.status!=='RESERVED'){state.notice='Reservation is '+data.status+'. Ask the student to book again if seats remain.';render();return;}
+ if(!state.shows.some(x=>x.id===data.show_id)){state.notice='The reservation showing is not available at this cashier station.';render();return;}
+ state.reservation=data;state.selectedShow=data.show_id;state.studentSearch=data.student_number;
+ state.student={student_id:data.student_number,full_name:data.student_name,grade_level:'',section:data.section};
+ state.quantity=data.quantity;state.cash='';
+ state.notice='Reservation found. Verify the student ID, collect cash, and issue the paid tickets.';
+ render();
+}
 async function makeSale(){
  if(state.busy)return;
  if(!navigator.onLine){state.notice='Offline. No sale can be issued until your connection is restored.';render();return;}
@@ -179,12 +194,13 @@ async function makeSale(){
  const request=state.requestId||(state.requestId=id());
  render();
  try{
-  const {data,error}=await db.rpc('lsc_movie_sell',{
-   p_show_id:sh.id,p_student_number:state.student.student_id,p_quantity:state.quantity,
-   p_cash_received:Number(state.cash),p_request_id:request
-  });
+  const payload=state.reservation?
+   {p_code:state.reservation.code,p_cash_received:Number(state.cash),p_request_id:request}:
+   {p_show_id:sh.id,p_student_number:state.student.student_id,p_quantity:state.quantity,
+    p_cash_received:Number(state.cash),p_request_id:request};
+  const {data,error}=await db.rpc(state.reservation?'lsc_movie_checkout_reservation':'lsc_movie_sell',payload);
   if(error)throw error;
-  state.receipt=data;state.student=null;state.studentSearch='';state.cash='';
+  state.receipt=data;state.reservation=null;state.reservationCode='';state.student=null;state.studentSearch='';state.cash='';
   state.quantity=1;state.requestId=null;state.notice='Payment recorded; individual tickets issued. Print them below.';
  }catch(e){state.notice='Sale was not confirmed: '+(e.message||'Unknown error')+
   '. If the connection failed, retry using the same checkout without changing the student or amount.';}
@@ -499,6 +515,8 @@ document.addEventListener('click',async e=>{
  }
  if(act==='otp-back'){state.otpSent=false;state.otpEmail='';state.notice='';render()}
  if(act==='lookup')await lookupStudent();
+ if(act==='find-reservation')await findReservation();
+ if(act==='clear-reservation'){state.reservation=null;state.reservationCode='';state.student=null;state.studentSearch='';state.quantity=1;state.cash='';state.requestId=null;state.notice='Reservation cleared. Walk-in checkout is ready.';render()}
  if(act==='check-ticket')await checkTicket(false);
  if(act==='redeem-ticket')await checkTicket(true);
  if(act==='camera-start')await startCamera();
@@ -519,11 +537,12 @@ document.addEventListener('submit',async e=>{
 });
 document.addEventListener('change',e=>{
  if(e.target.id==='movieShow'){
-  state.selectedShow=e.target.value;state.student=null;state.requestId=null;state.receipt=null;state.studentSearch='';state.cash='';render();
+  state.selectedShow=e.target.value;state.student=null;state.reservation=null;state.reservationCode='';state.requestId=null;state.receipt=null;state.studentSearch='';state.cash='';render();
  }
 });
 document.addEventListener('input',e=>{
  if(e.target.id==='movieTicketCode'){state.ticketCode=e.target.value.toUpperCase();state.ticketResult=null;}
+ if(e.target.id==='movieReservationCode'){state.reservationCode=e.target.value.toUpperCase();state.requestId=null;}
  if(e.target.id==='movieStudentId'){state.studentSearch=e.target.value;state.student=null;state.requestId=null;const b=document.getElementById('moviePay');if(b)b.disabled=true;}
  if(e.target.id==='movieQty'||e.target.id==='movieCash'){
   if(e.target.id==='movieQty'){
