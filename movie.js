@@ -11,7 +11,7 @@ const pht=value=>new Date(value).toLocaleString('en-PH',{timeZone:'Asia/Manila',
 const id=()=>crypto.randomUUID();
 const state={
  user:null,role:null,classId:null,page:'checkout',shows:[],selectedShow:'',editingShowId:null,
- student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',reservation:null,reservationCode:'',reservationScanActive:false,reservationLookupBusy:false,
+ student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',reservation:null,reservationCode:'',reservationScanActive:false,reservationLookupBusy:false,reservations:[],reservationFilter:'ALL',reservationsBusy:false,reservationsLoadedAt:null,
  receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,
  ticketCode:'',ticketResult:null,shift:null,shiftHistory:[],printLog:[],cameraStream:null,cameraTimer:null,html5Scanner:null,scanBusy:false,online:navigator.onLine,otpEmail:'',otpSent:false
 };
@@ -34,7 +34,7 @@ function header(){
 }
 function tabs(){
  const items=[];
- if(['official','class_mayor','cashier'].includes(state.role))items.push(['checkout','Ticket Checkout']);
+ if(['official','class_mayor','cashier'].includes(state.role)){items.push(['checkout','Ticket Checkout']);items.push(['reservations','Reservations']);}
  if(['official','class_mayor','ticket_checker'].includes(state.role))items.push(['validator','Ticket Check-In']);
  if(['official','class_mayor','cashier'].includes(state.role))items.push(['shifts','Cashier Shifts']);
  if(['official','class_mayor','cashier','event_monitor'].includes(state.role))items.push(['reports','Sales Reports']);
@@ -55,6 +55,53 @@ function ticketPreview(){
  '<div class="movie-codes">'+tickets.map(t=>'<span>'+esc(t.code)+'</span>').join('')+'</div>'+
  '<button type="button" class="movie-btn movie-primary" data-act="print-last">Print '+tickets.length+' Ticket'+(tickets.length===1?'':'s')+'</button>'+
  '<p class="movie-small">Use the browser print dialog. The ticket is not a BIR official sales invoice.</p></section>';
+}
+function reservationsView(){
+ const statuses=['ALL','RESERVED','CONVERTED','EXPIRED','CANCELLED'];
+ const rows=state.reservations||[];
+ const n={};for(const r of rows)n[r.status]=(n[r.status]||0)+1;
+ return '<section class="movie-panel movie-reservations-panel">'+
+ '<div class="movie-panel-head"><div><h2>Student Reservations</h2>'+
+ '<p class="movie-helper">Authorized cashier view · Most recent 100 bookings · Student IDs masked in the list</p></div>'+
+ '<span>'+rows.length+' shown</span></div>'+
+ '<div class="movie-booking-filter"><label>Booking status<select id="movieReservationFilter">'+
+ statuses.map(x=>'<option value="'+x+'"'+(x===state.reservationFilter?' selected':'')+'>'+
+ (x==='ALL'?'All bookings':x==='CONVERTED'?'Paid / Converted':x==='RESERVED'?'Reserved / Pending':x[0]+x.slice(1).toLowerCase())+
+ '</option>').join('')+'</select></label>'+
+ '<button type="button" class="movie-btn movie-secondary" data-act="refresh-reservations"'+(state.reservationsBusy?' disabled':'')+'>'+
+ (state.reservationsBusy?'Refreshing…':'Refresh Reservations')+'</button></div>'+
+ (state.reservationsLoadedAt?'<p class="movie-helper">Last updated '+esc(pht(state.reservationsLoadedAt))+' PHT. Status is checked again before payment.</p>':'')+
+ (!state.online?'<div class="movie-alert">Connect to the internet to load the latest reservations. Offline results cannot verify bookings.</div>':'')+
+ (state.reservationsBusy?'<p class="movie-helper">Loading private reservations…</p>':
+ rows.length?'<div class="movie-table-scroll"><table class="movie-table movie-booking-table"><thead><tr>'+
+ '<th>Reservation</th><th>Student ID</th><th>Showing</th><th>Tickets</th><th>Amount</th><th>Status</th><th>Reserved (PHT)</th><th>Expiry (PHT)</th><th>Action</th>'+
+ '</tr></thead><tbody>'+
+ rows.map(r=>'<tr><td><code>'+esc(r.code)+'</code></td>'+
+ '<td>'+esc(r.student_id_masked)+'</td>'+
+ '<td><strong>'+esc(r.title)+'</strong><small>'+esc(r.show_date)+(r.show_time?' · '+esc(String(r.show_time).slice(0,5)):'')+'</small></td>'+
+ '<td>'+esc(r.quantity)+'</td><td>'+money(r.amount_php)+'</td>'+
+ '<td><span class="movie-booking-status '+esc(r.status)+'">'+
+ esc(r.status==='CONVERTED'?'PAID':r.status)+'</span></td>'+
+ '<td>'+esc(pht(r.created_at))+'</td><td>'+esc(pht(r.expires_at))+'</td>'+
+ '<td>'+(r.status==='RESERVED'?'<button class="movie-mini" type="button" data-reservation-open="'+esc(r.code)+'">Open Checkout</button>':'<span class="movie-helper">View only</span>')+
+ '</td></tr>').join('')+'</tbody></table></div>':
+ '<div class="movie-booking-empty">No reservations match this filter. New student bookings will appear here after refresh.</div>')+
+ '<p class="movie-helper">Only active RESERVED bookings can be opened for payment. Scanning or loading a reservation never charges a student automatically.</p>'+
+ '</section>';
+}
+async function loadReservations(){
+ if(!['official','class_mayor','cashier'].includes(state.role)||state.reservationsBusy)return;
+ if(!navigator.onLine){state.notice='You are offline. Reconnect before refreshing reservations.';render();return;}
+ state.reservationsBusy=true;render();
+ try{
+  const {data,error}=await db.rpc('lsc_movie_list_reservations',{
+   p_show_id:null,p_status:state.reservationFilter==='ALL'?null:state.reservationFilter,p_limit:100
+  });
+  if(error)throw error;
+  state.reservations=Array.isArray(data)?data:[];
+  state.reservationsLoadedAt=new Date().toISOString();state.notice='';
+ }catch(e){state.reservations=[];state.notice='Could not load reservations: '+(e.message||'Unknown error');}
+ finally{state.reservationsBusy=false;render();}
 }
 function checkout(){
  const options=state.shows.filter(x=>x.active&&x.show_date>=today());
@@ -195,7 +242,7 @@ function render(){
  '<div class="movie-title"><div><span>FOUNDATION WEEK · SALES & TICKETING</span><h1>Movie Booth <em>Point of Sale</em></h1>'+
  '<p>Student ID checkout · Printable movie tickets · Audited sales</p></div><span class="movie-operator">Operator: '+esc(state.user.email||'Authorized LSC account')+'</span></div>'+
  tabs()+(state.notice?'<div class="movie-alert" role="status">'+esc(state.notice)+'</div>':'')+
- (state.page==='checkout'?checkout():state.page==='reports'?reports():state.page==='validator'?validator():state.page==='shifts'?shiftView():state.page==='recovery'?recovery():setup())+
+ (state.page==='checkout'?checkout():state.page==='reservations'?reservationsView():state.page==='reports'?reports():state.page==='validator'?validator():state.page==='shifts'?shiftView():state.page==='recovery'?recovery():setup())+
  '<footer class="movie-footer">Powered by Azure&lt;3 · Private event system · Tickets are not official tax invoices</footer></main>';
 }
 async function loadShows(){
@@ -587,7 +634,7 @@ async function start(){
  }catch(e){root.innerHTML='<div class="movie-signin"><h1>Movie Booth unavailable</h1><p>'+esc(e.message)+'</p><a href="./login.html">Return to LSC Login</a></div>';}
 }
 document.addEventListener('click',async e=>{
- const target=e.target.closest('[data-act],[data-page],[data-print],[data-void],[data-toggle],[data-capacity],[data-reserve-toggle],[data-edit-schedule],[data-delete-show],[data-restore-show]');
+ const target=e.target.closest('[data-act],[data-page],[data-print],[data-void],[data-toggle],[data-capacity],[data-reserve-toggle],[data-edit-schedule],[data-delete-show],[data-restore-show],[data-reservation-open]');
  if(!target)return;
  if(target.dataset.page){
   state.page=target.dataset.page;state.notice='';
@@ -595,7 +642,13 @@ document.addEventListener('click',async e=>{
   if(state.page==='recovery')state.reportDate='';
   if(state.page==='reports'||state.page==='recovery'){try{await loadReport()}catch(e){state.notice='Report error: '+e.message}}
   if(state.page==='shifts')await fetchShift();
+  if(state.page==='reservations')await loadReservations();
   render();return;
+ }
+ if(target.dataset.reservationOpen){
+  if(state.busy||state.reservationLookupBusy)return;
+  stopCamera();state.page='checkout';
+  await findReservation(target.dataset.reservationOpen);return;
  }
  if(target.dataset.deleteShow||target.dataset.restoreShow){
   if(state.role!=='official'||state.busy)return;
@@ -694,6 +747,7 @@ document.addEventListener('click',async e=>{
  if(act==='cancel-schedule'){state.editingShowId=null;state.notice='Schedule editing cancelled.';render()}
  if(act==='lookup')await lookupStudent();
  if(act==='find-reservation')await findReservation();
+ if(act==='refresh-reservations')await loadReservations();
  if(act==='scan-reservation')await scanReservationQR();
  if(act==='stop-reservation-scan'){stopCamera();state.notice='Cashier QR camera stopped.';render()}
  if(act==='clear-reservation'){stopCamera();state.reservation=null;state.reservationCode='';state.student=null;state.studentSearch='';state.quantity=1;state.cash='';state.requestId=null;state.notice='Reservation cleared. Walk-in checkout is ready.';render()}
@@ -721,7 +775,10 @@ document.addEventListener('submit',async e=>{
  if(e.target.id==='movieOtpEmail'){e.preventDefault();await volunteerOtpEmail(e.target);}
  if(e.target.id==='movieOtpVerify'){e.preventDefault();await volunteerOtpVerify(e.target);}
 });
-document.addEventListener('change',e=>{
+document.addEventListener('change',async e=>{
+ if(e.target.id==='movieReservationFilter'){
+  state.reservationFilter=e.target.value;await loadReservations();return;
+ }
  if(e.target.id==='movieShow'){
   state.selectedShow=e.target.value;state.student=null;state.reservation=null;state.reservationCode='';state.requestId=null;state.receipt=null;state.studentSearch='';state.cash='';render();
  }
