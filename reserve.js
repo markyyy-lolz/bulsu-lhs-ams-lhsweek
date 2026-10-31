@@ -66,7 +66,9 @@ function statusPage(){
  (r?'<div class="reserve-status '+esc(r.status)+'" role="status"><strong>'+esc(r.status==='RESERVED'?'✓ Reserved · Not Yet Paid':r.status==='CONVERTED'?'✓ Paid at Booth':r.status==='EXPIRED'?'⌛ Hold Expired':'Booking Cancelled')+'</strong>'+
  '<div>'+esc(r.title)+' · '+esc(r.show_date)+' · '+esc(r.quantity)+' ticket(s)</div>'+
  '<div>Amount: '+money(r.total_due_php)+' · '+(r.status==='RESERVED'?'Hold valid until '+esc(timePHT(r.expires_at)):'Reservation is no longer active')+'</div>'+
- (r.status==='RESERVED'?'<button type="button" class="reserve-button reserve-secondary" data-act="cancel" style="margin-top:12px">Cancel My Reservation</button>':'')+
+ (r.status==='RESERVED'?'<div class="reserve-qr-wrap"><div id="reservationQr" role="img" aria-label="QR code for reservation '+esc(r.code)+'"></div>'+
+ '<small>Show this QR to an approved LSC volunteer or cashier. You must pay for the admission ticket.</small></div>'+
+ '<button type="button" class="reserve-button reserve-secondary" data-act="cancel" style="margin-top:12px">Cancel My Reservation</button>':'')+
  '</div>':'')+
  '<div class="reserve-tabs"><button type="button" class="reserve-button reserve-secondary" data-view="book">Back to Booking</button></div></section>';
 }
@@ -87,14 +89,15 @@ function loadQRLibrary(){
 }
 function drawReservationQR(){
  const node=document.getElementById('reservationQr');
- if(!node||!state.receipt)return;
- const code=state.receipt.code;
+ if(!node)return;
+ const code=state.activeView==='receipt'?state.receipt?.code:state.status?.code;
+ if(!code)return;
  if(node.dataset.rendered===code)return;
  node.textContent='Generating reservation QR…';
  loadQRLibrary().then(()=>{
   // A slow QR library response must not render into a new, unrelated booking.
   const current=document.getElementById('reservationQr');
-  if(current!==node||state.receipt?.code!==code)return;
+  if(current!==node||(state.activeView==='receipt'?state.receipt?.code:state.status?.code)!==code)return;
   node.replaceChildren();
   new window.QRCode(node,{text:code,width:182,height:182,
    correctLevel:window.QRCode.CorrectLevel.M,colorDark:'#173b71',colorLight:'#ffffff'});
@@ -115,7 +118,7 @@ function render(){
  summary()+'</div>'+
  '<footer class="reserve-footer"LSC Movie Booth · Powered by Azure&lt;3 · School approval required<br>'+
  'Reservation requests are held temporarily. Student names and roster data are never published on this page.</footer></main>';
- if(state.activeView==='receipt'&&state.receipt)drawReservationQR();
+ if((state.activeView==='receipt'&&state.receipt)||(state.activeView==='status'&&state.status?.status==='RESERVED'))drawReservationQR();
 }
 async function loadShows(){
  if(!navigator.onLine){state.online=false;state.message='You are offline. Reconnect before booking.';render();return;}
