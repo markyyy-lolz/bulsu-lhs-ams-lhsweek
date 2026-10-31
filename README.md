@@ -51,6 +51,20 @@ The database constraint `lsc_verified_before_active` prevents activation while `
 
 Once paid, the cashier converts the reservation into a sale and generates separate \`FW-\` admission ticket QR(s). Physical QR camera access and 80mm printer compatibility still require real-device testing. The implementation preserves existing student, attendance, sales and ticket records.
 
+## Movie Booth v2.2 — RFID/NFC + PIN Staff Card and Supervisor Void Approval
+
+**Status:** Implemented in website and Supabase. Physical RFID readers, Android NFC tags, real sale-to-void flow, and cash/printing workflow still require on-device tests.
+
+**Staff sign-in:** Existing approved Supabase email OTP remains the actual account authentication. Staff enroll one card and six-digit PIN from Movie Booth POS → Staff Card / NFC. The card quick-unlocks an already-authenticated browser station, after initial entry or five minutes of inactivity. New browsers still require email sign-in. Only approved LSC Officials and specifically assigned Movie Booth volunteers have access. Class Mayors remain blocked.
+
+**Readers:** Windows USB HID keyboard-emulation readers enter the card UID into the focused field. Android Chrome supports Read Android NFC only where Web NFC NDEFReader and tag serial numbers are available. NFC compatibility is device- and tag-dependent. A 125 kHz RFID card cannot be read by an Android phone's built-in 13.56 MHz NFC hardware.
+
+**Protection:** Card fingerprints use SHA-256; six-digit PIN verifiers use bcrypt in protected RLS tables. Failed attempts are logged and rate-limited. Staff can revoke or replace their enrolled card by signing in. Quick-unlock is an additional station UI control, not standalone login or server enforcement for every legacy POS action.
+
+**Void:** A cashier requests to void their own paid sale; an enrolled LSC Official approves by scanning their card and entering PIN. Cashier self-approval is blocked. LSC Officials may authorize their own administrator actions using their card and PIN. The backend verifies roles and PIN, row-locks the sale, applies VOID and audits cashier, supervisor, sale, reason and request ID atomically. The old browser-callable void RPC has been revoked to prevent approval bypass. Cash refunds remain manual.
+
+**Functions:** lsc_movie_staff_card, lsc_movie_void_with_approval (client endpoints), and private lsc_movie_card_check (not client-callable). No service-role key is included in browser code.
+
 ## Movie Booth POS role isolation (Class Mayor access disabled)
 
 **Movie Booth POS is restricted to LSC Officials and explicitly approved Movie Booth volunteers only** (Cashier, Ticket Checker, and Event Monitor). The **Class Mayor role does not grant any Movie Booth access**, even for check-in, reservations, sales, shifts, reports, or scans. A user with a Class Mayor role cannot be assigned a separate Movie Booth volunteer role.
