@@ -30,7 +30,7 @@ function header(){
  return '<header class="movie-header"><div class="movie-brand"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
  '<div><strong>Movie Booth POS</strong><small>BulSU Laboratory High School · Foundation Week</small></div></div>'+
  '<div class="movie-head-right"><span class="movie-role">'+esc(state.role.replaceAll('_',' ').toUpperCase())+'</span>'+
- '<a href="./reserve.html" class="movie-return">Student Reservations</a> · <a href="./operations.html" class="movie-return">Event Command Center</a> · <a href="./login.html#overview" class="movie-return">LSC Dashboard</a> · <button type="button" class="movie-mini" data-act="signout">Sign Out</button></div></header>';
+ '<a href="./reserve.html" class="movie-return">Student Reservations</a> · <a href="./reservation-scanner.html" class="movie-return">Scan Reservation QR</a> · <a href="./operations.html" class="movie-return">Event Command Center</a> · <a href="./login.html#overview" class="movie-return">LSC Dashboard</a> · <button type="button" class="movie-mini" data-act="signout">Sign Out</button></div></header>';
 }
 function tabs(){
  const items=[];
