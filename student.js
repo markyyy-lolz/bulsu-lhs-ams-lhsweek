@@ -14,6 +14,7 @@ const stationDot = $('#stationDot');
 const activationNotice = $('#activationNotice');
 const confirmation = $('#confirmation');
 const demoButton = $('#demoButton');
+const signOutButton = $('#stationSignOut');
 
 const state = {
   authorized: false,
@@ -66,6 +67,7 @@ function updateStation() {
   recordButton.disabled=state.busy||(!state.demo&&!state.authorized);
   demoButton.textContent=state.demo?'Exit Demo Mode':'Try Demo Mode';
   activationNotice.hidden=state.demo||state.authorized;
+  if(signOutButton)signOutButton.hidden=state.demo||!state.authorized;
   activationNotice.innerHTML='<strong>Attendance terminal is locked.</strong> Sign in as a <a href="./login.html">Class Mayor or LSC Official</a> using this browser. Only supervised stations can record real attendance.';
 }
 async function checkAuthorization() {
@@ -162,6 +164,7 @@ async function recordAttendance(event) {
     studentInput.value='';
   }catch(e){
     appendMessage('ERROR','Unable to record attendance',[e.message||'Please contact the station operator.']);
+    if(e.code==='42501'&&!state.demo)await checkAuthorization();
   }finally{
     state.busy=false;recordButton.textContent='Record Attendance →';updateStation();studentInput.focus();
   }
@@ -186,6 +189,15 @@ demoButton.addEventListener('click',async()=>{
     state.demo=true;state.demoLogs=[];confirmation.replaceChildren();updateStation();
   }
   studentInput.focus();
+});
+if(signOutButton)signOutButton.addEventListener('click',async()=>{
+  if(!window.confirm('Sign out of this supervised attendance station?'))return;
+  if(state.resetTimer)clearTimeout(state.resetTimer);
+  const {error}=await client.auth.signOut();
+  if(error){appendMessage('ERROR','Sign-out unavailable',[error.message]);return}
+  confirmation.replaceChildren();
+  studentInput.value='';
+  await checkAuthorization();
 });
 document.addEventListener('visibilitychange',()=>{
   if(!document.hidden&&!state.demo)checkAuthorization();
