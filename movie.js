@@ -121,7 +121,7 @@ function reports(){
 function setup(){
  if(state.role!=='official')return '<div class="movie-alert">Only LSC Officials can configure movie showings.</div>';
  return '<div class="movie-layout"><section class="movie-panel"><h2>Add Movie Showing</h2>'+
- '<p class="movie-helper">Configure the actual Foundation Week movie title, date and price before selling. Price is locked for existing showings to preserve transaction consistency.</p>'+
+ '<p class="movie-helper">Configure the approved movie title, date, showtime, price and capacity before selling. Online student booking is OFF by default; enable it per showing only after verification. Existing movie prices are locked for transaction consistency.</p>'+
  '<form id="movieSetupForm" class="movie-fields">'+
  '<label>Movie title<input name="title" required minlength="3" maxlength="120" placeholder="Enter the movie booth title"></label>'+
  '<label>Showing date<input name="show_date" required type="date" min="'+today()+'" value="'+today()+'"></label>'+
@@ -132,7 +132,9 @@ function setup(){
  '<button type="submit" class="movie-btn movie-primary">Create Movie Showing</button></form></section>'+
  '<section class="movie-panel"><h2>Configured Showings</h2>'+
  (state.shows.length?state.shows.map(x=>'<div class="movie-show-item"><span><strong>'+esc(x.title)+'</strong><small>'+esc(x.show_date)+' · '+money(x.price_php)+' · '+esc(x.venue||'Movie Booth')+'</small></span>'+
- '<div><button type="button" class="movie-mini" data-capacity="'+esc(x.id)+'">Capacity '+(x.seat_capacity??'Uncapped')+'</button><button type="button" class="movie-mini" data-toggle="'+esc(x.id)+'">'+(x.active?'Pause Sales':'Resume Sales')+'</button></div></div>').join(''):
+ '<div><button type="button" class="movie-mini" data-capacity="'+esc(x.id)+'">Capacity '+(x.seat_capacity??'Uncapped')+'</button>'+
+ '<button type="button" class="movie-mini" data-reserve-toggle="'+esc(x.id)+'">'+(x.reservations_enabled?'Disable Online Booking':'Enable Online Booking')+'</button>'+
+ '<button type="button" class="movie-mini" data-toggle="'+esc(x.id)+'">'+(x.active?'Pause Sales':'Resume Sales')+'</button></div></div>').join(''):
  '<p class="movie-helper">No shows configured. New sales are disabled until setup is complete.</p>')+'</section></div>';
 }
 function render(){
@@ -153,7 +155,7 @@ function render(){
  '<footer class="movie-footer">Powered by Azure&lt;3 · Private event system · Tickets are not official tax invoices</footer></main>';
 }
 async function loadShows(){
- const {data,error}=await db.from('lsc_movie_shows').select('id,title,show_date,show_time,seat_capacity,price_php,venue,active,created_at')
+ const {data,error}=await db.from('lsc_movie_shows').select('id,title,show_date,show_time,seat_capacity,reservations_enabled,price_php,venue,active,created_at')
  .order('show_date',{ascending:false}).order('created_at',{ascending:false}).limit(200);
  if(error)throw error;
  state.shows=data||[];
@@ -465,7 +467,7 @@ async function start(){
  }catch(e){root.innerHTML='<div class="movie-signin"><h1>Movie Booth unavailable</h1><p>'+esc(e.message)+'</p><a href="./login.html">Return to LSC Login</a></div>';}
 }
 document.addEventListener('click',async e=>{
- const target=e.target.closest('[data-act],[data-page],[data-print],[data-void],[data-toggle],[data-capacity]');
+ const target=e.target.closest('[data-act],[data-page],[data-print],[data-void],[data-toggle],[data-capacity],[data-reserve-toggle]');
  if(!target)return;
  if(target.dataset.page){
   state.page=target.dataset.page;state.notice='';
@@ -473,6 +475,15 @@ document.addEventListener('click',async e=>{
   if(state.page==='recovery')state.reportDate='';
   if(state.page==='reports'||state.page==='recovery'){try{await loadReport()}catch(e){state.notice='Report error: '+e.message}}
   if(state.page==='shifts')await fetchShift();
+  render();return;
+ }
+ if(target.dataset.reserveToggle){
+  if(state.role!=='official')return;
+  const sh=state.shows.find(x=>x.id===target.dataset.reserveToggle);if(!sh)return;
+  if(!sh.reservations_enabled&&!window.confirm('Enable public Student ID movie reservations for '+sh.title+'? Check the official showing date/time, capacity and approved price first.'))return;
+  const {data,error}=await db.rpc('lsc_movie_reservation_switch',{p_show_id:sh.id,p_enabled:!sh.reservations_enabled});
+  if(error){state.notice='Cannot change online booking: '+error.message;render();return}
+  await loadShows();state.notice=data.enabled?'Online reservations enabled for this showing. Students may temporarily hold seats.':'Online reservations closed for new bookings; prior holds remain valid until expiry or conversion.';
   render();return;
  }
  if(target.dataset.capacity){
