@@ -20,6 +20,8 @@ const state = {
   operatorEmail: '',
   operatorRole: '',
   operatorClass: '',
+  operatorScope: '',
+  operatorExpires: '',
   demo: false,
   busy: false,
   demoLogs: [],
@@ -54,11 +56,11 @@ function updateStation() {
     stationDetail.textContent='Simulated attendance only. No data is being sent to Supabase.';
   } else if(state.authorized) {
     stationLabel.textContent='Attendance station ready';
-    stationDetail.textContent=(state.operatorRole==='class_mayor'?'Class Mayor · your assigned class only':'LSC Official · whole-school access')+'\nRecorded by: '+state.operatorEmail+(state.operatorClass?'\nAssigned class: '+state.operatorClass:'');
+    stationDetail.textContent=(state.operatorRole==='class_mayor'?'Class Mayor · your assigned class only':state.operatorRole==='attendance_volunteer'?'Approved Volunteer · '+(state.operatorScope==='whole_school'?'whole-school station':'assigned section only'):'LSC Official · whole-school access')+'\nRecorded by: '+state.operatorEmail+(state.operatorClass?'\nAssigned class: '+state.operatorClass:'')+(state.operatorExpires?'\nAuthorized until: '+new Date(state.operatorExpires).toLocaleString('en-PH',{timeZone:'Asia/Manila',dateStyle:'medium',timeStyle:'short'}):'');
     stationDetail.style.whiteSpace='pre-line';
   } else {
     stationLabel.textContent='LSC account sign-in required';
-    stationDetail.textContent='A Class Mayor or LSC Official must sign in on this same browser before live entries can be recorded.';
+    stationDetail.textContent='An LSC Official, Class Mayor, or approved attendance volunteer must sign in on this browser before live entries can be recorded.';
   }
   stationDot.classList.toggle('ok',state.demo||state.authorized);
   recordButton.disabled=state.busy||(!state.demo&&!state.authorized);
@@ -68,20 +70,19 @@ function updateStation() {
 }
 async function checkAuthorization() {
   if(state.demo)return;
-  state.authorized=false;state.operatorEmail='';state.operatorRole='';state.operatorClass='';updateStation();
+  state.authorized=false;state.operatorEmail='';state.operatorRole='';state.operatorClass='';state.operatorScope='';state.operatorExpires='';updateStation();
   try {
     const {data:{user},error}=await client.auth.getUser();
     if(error||!user){updateStation();return;}
-    const {data:role,error:roleError}=await client.from('lsc_staff_roles')
-      .select('role,class_id').eq('user_id',user.id).maybeSingle();
-    state.authorized=!roleError && (role?.role==='official'||(role?.role==='class_mayor'&&!!role.class_id));
+    const {data:access,error:accessError}=await client.rpc('lsc_attendance_access');
+    state.authorized=!accessError&&access?.authorized===true &&
+      ['official','class_mayor','attendance_volunteer'].includes(access.role);
     if(state.authorized){
-      state.operatorEmail=user.email||'';
-      state.operatorRole=role.role;
-      if(role.role==='class_mayor'&&role.class_id){
-        const {data:assigned}=await client.from('lsc_classes').select('grade_level,section').eq('id',role.class_id).maybeSingle();
-        state.operatorClass=assigned ? [assigned.grade_level,assigned.section].filter(Boolean).join(' · ') : '';
-      }
+      state.operatorEmail=user.email||access.email||'';
+      state.operatorRole=access.role;
+      state.operatorScope=access.scope||'';
+      state.operatorClass=access.class_label||'';
+      state.operatorExpires=access.expires_at||'';
     }
   }catch(error) {
     console.warn('LSC station authorization failed:',error?.message||'unknown error');
@@ -133,7 +134,7 @@ async function recordAttendance(event) {
     appendMessage('ERROR','Invalid Student ID',['Please enter a numeric ID containing 7–12 digits.']);return;
   }
   if(!state.demo&&!state.authorized){
-    appendMessage('ERROR','Station not activated',['Sign in as Class Mayor or LSC Official on this device.']);return;
+    appendMessage('ERROR','Station not activated',['Sign in with your approved LSC or Volunteer Attendance account on this device.']);return;
   }
   state.busy=true;updateStation();
   recordButton.textContent='Saving attendance…';
@@ -154,7 +155,7 @@ async function recordAttendance(event) {
         (result.grade_level||'')+' '+(result.section||''),
         formatTime(result.recorded_at)+' · Philippine Standard Time',
         'Recorded by: '+(result.recorded_by_email||state.operatorEmail||'Unknown operator')+
-           (result.recorded_by_role==='class_mayor'?' (Class Mayor)':result.recorded_by_role==='official'?' (LSC Official)':''),
+           (result.recorded_by_role==='class_mayor'?' (Class Mayor)':result.recorded_by_role==='official'?' (LSC Official)':result.recorded_by_role==='attendance_volunteer'?' (Approved Volunteer)':''),
         ...(status==='DUPLICATE'?['No extra attendance record was created.']:[])
       ]
     );
@@ -190,4 +191,6 @@ document.addEventListener('visibilitychange',()=>{
   if(!document.hidden&&!state.demo)checkAuthorization();
 });
 updateClock();setInterval(updateClock,1000);
+// Expiring or revoked approval is always checked again by the database for every entry.
+setInterval(()=>{if(!document.hidden&&!state.demo&&!state.busy)checkAuthorization()},120000);
 updateStation();checkAuthorization().then(()=>studentInput.focus());
