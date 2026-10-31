@@ -12,7 +12,7 @@ const id=()=>crypto.randomUUID();
 const state={
  user:null,role:null,classId:null,accessDenied:false,page:'checkout',shows:[],selectedShow:'',editingShowId:null,
  student:null,studentSearch:'',quantity:1,cash:'',requestId:null,busy:false,notice:'',reservation:null,reservationCode:'',reservationScanActive:false,reservationLookupBusy:false,reservations:[],reservationFilter:'ALL',reservationsBusy:false,reservationsLoadedAt:null,
- receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,cardEnrolled:false,cardLocked:false,cardSince:Date.now(),cardWorking:false,cardNotice:'',voidSaleId:null,voidRequestId:null,voidWorking:false,
+ receipt:null,sales:[],summary:null,reportDate:today(),reportLimited:false,cardEnrolled:false,cardLocked:false,cardSince:Date.now(),cardWorking:false,cardNotice:'',voidSaleId:null,voidRequestId:null,voidWorking:false,voidReason:'',
  ticketCode:'',ticketResult:null,shift:null,shiftHistory:[],printLog:[],cameraStream:null,cameraTimer:null,html5Scanner:null,scanBusy:false,online:navigator.onLine,otpEmail:'',otpSent:false
 };
 function movie(){
@@ -271,7 +271,7 @@ function voidApprovalView(){
  (sale?' · '+money(sale.total_php):'')+'. Both the requesting cashier and approving LSC Official will be recorded.</p>'+
  (state.cardNotice?'<p class="movie-alert">'+esc(state.cardNotice)+'</p>':'')+
  '<form id="movieVoidApproveForm" class="movie-fields">'+
- '<label>Void reason (8–300 characters)<textarea name="reason" minlength="8" maxlength="300" rows="3" required placeholder="Explain why this transaction must be voided"></textarea></label>'+
+ '<label>Void reason (8–300 characters)<textarea name="reason" minlength="8" maxlength="300" rows="3" required placeholder="Explain why this transaction must be voided">'+esc(state.voidReason)+'</textarea></label>'+
  '<label>LSC Official RFID/NFC card<input name="card" id="movieSupervisorCard" autocomplete="off" spellcheck="false" maxlength="90" placeholder="Supervisor taps their own card" required></label>'+
  '<button type="button" class="movie-btn movie-secondary" data-act="nfc-card" data-target="movieSupervisorCard">Read Supervisor NFC</button>'+
  '<label>Supervisor six-digit PIN<input name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label>'+
@@ -328,6 +328,7 @@ async function approveVoid(form){
  state.voidWorking=true;
  const saleId=state.voidSaleId;
  const reason=form.elements.reason.value.trim(),card=normCard(form.elements.card.value),pin=form.elements.pin.value;
+ state.voidReason=reason;
  const requestId=state.voidRequestId||(state.voidRequestId=id());
  state.cardNotice='';render();
  try{
@@ -336,7 +337,7 @@ async function approveVoid(form){
   });
   if(error)throw error;
   if(data?.status!=='VOID'||!data?.approved){state.cardNotice=data?.message||'Approval denied';return;}
-  state.voidSaleId=null;state.voidRequestId=null;
+  state.voidSaleId=null;state.voidRequestId=null;state.voidReason='';
   state.notice='Sale voided with LSC Official approval. Refund any paid cash manually.';
   await loadReport();
  }catch(e){state.cardNotice='Approval failed: '+e.message;}
@@ -850,7 +851,7 @@ document.addEventListener('click',async e=>{
  }
  if(target.dataset.void){
   if(!['official','cashier'].includes(state.role)||state.cardLocked)return;
-  state.voidSaleId=target.dataset.void;state.voidRequestId=null;state.cardNotice='';render();return;
+  state.voidSaleId=target.dataset.void;state.voidRequestId=null;state.voidReason='';state.cardNotice='';render();return;
  }
  if(target.dataset.toggle){
   if(state.role!=='official')return;
@@ -873,7 +874,7 @@ document.addEventListener('click',async e=>{
   return;
  }
  if(act==='nfc-card'){await readNfc(target.dataset.target);return;}
- if(act==='close-void'){state.voidSaleId=null;state.voidRequestId=null;state.cardNotice='';render();return;}
+ if(act==='close-void'){state.voidSaleId=null;state.voidRequestId=null;state.voidReason='';state.cardNotice='';render();return;}
  if(act==='signout'){
    stopCamera();await db.auth.signOut();
    state.user=null;state.role=null;state.receipt=null;state.sales=[];state.student=null;state.notice='';
@@ -951,4 +952,22 @@ window.addEventListener('offline',()=>{
 });
 window.addEventListener('online',()=>{state.online=true;state.notice='Network restored. Verify pending sales before retrying any payment.';render()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCamera()});
+
+const STATION_IDLE_MS=5*60*1000;
+function rememberStationActivity(){
+ if(state.user&&!state.cardLocked)state.cardSince=Date.now();
+}
+document.addEventListener('pointerdown',rememberStationActivity,{passive:true});
+document.addEventListener('keydown',rememberStationActivity,{passive:true});
+window.addEventListener('pageshow',()=>{
+ if(state.user&&state.cardEnrolled){state.cardLocked=true;stopCamera();render();}
+});
+window.setInterval(()=>{
+ if(state.user&&state.cardEnrolled&&!state.cardLocked
+  &&Date.now()-state.cardSince>=STATION_IDLE_MS){
+   stopCamera();state.voidSaleId=null;state.voidRequestId=null;state.voidReason='';
+   state.cardLocked=true;state.cardNotice='Station auto-locked after 5 minutes of inactivity.';
+   render();
+ }
+},15000);
 start();
