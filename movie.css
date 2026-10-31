@@ -173,3 +173,24 @@ body.movie-site{margin:0;min-height:100vh;font-family:"DM Sans",system-ui,sans-s
 .movie-reservation-checkout .movie-student-row{margin:0}
 .movie-reservation-checkout .movie-helper{font-size:11px;line-height:1.55}
 @media(max-width:610px){.movie-reservation-checkout{padding:14px}.movie-reservation-actions{display:grid;grid-template-columns:1fr}.movie-reservation-actions .movie-btn{width:100%;min-width:0}}
+
+
+/* Authorized POS reservations overview — responsive, read-only until cashier checkout */
+.movie-reservations-panel{width:100%;margin-top:12px}
+.movie-booking-filter{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin:20px 0}
+.movie-booking-filter label{min-width:185px;display:grid;gap:7px;font-size:12px;color:#5673a0;font-weight:800}
+.movie-booking-filter select{height:43px;min-width:185px;padding:0 12px;border:1px solid #c6d7ed;border-radius:11px;color:#234877;background:rgba(255,255,255,.91)}
+.movie-booking-filter .movie-btn{min-height:42px}
+.movie-booking-table{width:100%;border-collapse:collapse}
+.movie-booking-table th,.movie-booking-table td{padding:12px 10px;vertical-align:middle;white-space:nowrap}
+.movie-booking-table td:nth-child(3){white-space:normal;min-width:140px}
+.movie-booking-table td code{font-size:11px;font-weight:800;color:#305893}
+.movie-booking-table td small{display:block;margin-top:5px;font-size:11px;color:#6981a2}
+.movie-booking-table .movie-mini{white-space:nowrap;padding:9px 12px}
+.movie-booking-status{font-size:10px;letter-spacing:.4px;font-weight:850;border-radius:50px;padding:7px 11px;display:inline-block}
+.movie-booking-status.RESERVED{background:#fff0c9;color:#946213}
+.movie-booking-status.CONVERTED{background:#dbf5e6;color:#186b4f}
+.movie-booking-status.EXPIRED{background:#eceff6;color:#617084}
+.movie-booking-status.CANCELLED{background:#ffe1e2;color:#9c4551}
+.movie-booking-empty{padding:35px 20px;background:rgba(231,241,255,.65);border:1px dashed #b6cee8;color:#5f799c;border-radius:13px;text-align:center;font-size:13px;line-height:1.6}
+@media(max-width:650px){.movie-booking-filter{display:grid;grid-template-columns:1fr}.movie-booking-filter label,.movie-booking-filter select,.movie-booking-filter .movie-btn{width:100%;min-width:0}.movie-reservations-panel{padding:17px}.movie-booking-table th,.movie-booking-table td{padding:9px 8px}}
