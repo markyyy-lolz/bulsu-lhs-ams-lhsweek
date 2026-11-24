@@ -108,12 +108,13 @@ function loginHTML(){
 }
 function sidebar(){
   let menu=[['overview','Dashboard'],['passport','Foundation Passport'],['records','Attendance Records'],['security','Account Security']];
+  if(state.role==='class_mayor'){menu.splice(1,0,['masterlist','Class Masterlist']);}
   if(state.role==='official'){menu.splice(1,0,['students','Student Directory'],['classes','Classes'],['officials','Role Assignments']);}
   return '<aside id="lsc-sidebar" class="sidebar'+(state.mobileNav?' open':'')+'" aria-label="Workspace navigation"><button type="button" class="lsc-mobile-close" data-act="closeMenu" aria-label="Close navigation menu">'+navIcon('close')+'</button><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+navIcon(v[0])+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">'+navIcon('kiosk')+'</span>Student Attendance<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./movie.html"><span class="nav-ico">'+navIcon('movie')+'</span>Movie Booth POS<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'<a class="nav-btn" href="./reserve.html"><span class="nav-ico">'+navIcon('movie')+'</span>Online Movie Booking<span class="nav-external">'+navIcon('external')+'</span></a>'+'<a class="nav-btn" href="./operations.html"><span class="nav-ico">'+navIcon('overview')+'</span>Event Command Center<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./operations.html#attendance"><span class="nav-ico">'+navIcon('officials')+'</span>Volunteer Manager<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">'+navIcon('logout')+'<span>Sign out</span></button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
 }
-function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security',passport:'Foundation Passport'})[state.page]||'Dashboard';}
+function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security',passport:'Foundation Passport'})[state.page]||'Dashboard';}
 function appHTML(){
-  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():state.page==='passport'?passportHTML():overviewHTML())+'</div></main></div>';
+  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='masterlist'?masterlistHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():state.page==='passport'?passportHTML():overviewHTML())+'</div></main></div>';
 }
 function header(head,sub,extra=''){return '<div class="page-header"><div><div class="eyebrow" style="margin-bottom:8px">LSC ATTENDANCE MONITOR</div><h1>'+head+'</h1><p>'+sub+'</p></div>'+extra+'</div>';}
 function metrics(){
@@ -168,6 +169,19 @@ function recordsHTML(){
  const rows=state.logs.filter(x=>{let s=getStudent(x);return !q||(s.full_name||'').toLowerCase().includes(q)||(s.student_id||'').includes(q);});
  return header('Attendance Records','Search daily arrivals and departures and export a report.', '<button class="btn btn-secondary" data-act="refresh">↻ Refresh</button>')+
  '<div class="card pad"><form id="filterForm" class="toolbar"><label class="field">School date (PHT)<input type="date" name="date" id="dateField" value="'+esc(state.recordDate)+'" required></label><label class="field search">Search student<input type="search" name="search" id="recordSearch" placeholder="Student ID or name" value="'+esc(state.query)+'"></label><button type="submit" class="btn">Apply</button><button type="button" data-act="export" class="btn btn-secondary">↓ Export CSV</button></form><div class="section-title"><h3>Attendance Log</h3><span class="muted small">'+rows.length+' displayed · up to 1,000 records per date</span></div>'+logTable(rows)+'</div>';
+}
+function masterlistHTML(){
+ if(state.role!=='class_mayor')return '<div class="notice">This page is for Class Mayors. LSC Officials can use the Student Directory.</div>';
+ const cls=state.classes.find(c=>c.id===state.classId)||state.classes[0]||{};
+ const title=cls.grade_level?(/^grade/i.test(cls.grade_level)?cls.grade_level:'Grade '+cls.grade_level)+' · '+cls.section:'Your class';
+ const q=state.query.toLowerCase().trim();
+ const all=state.students.filter(s=>s.active&&(!state.classId||s.class_id===state.classId)).sort((a,b)=>a.full_name.localeCompare(b.full_name));
+ const rows=all.filter(s=>!q||s.student_id.includes(q)||s.full_name.toLowerCase().includes(q));
+ return header('Class Masterlist','Official list of your classmates · '+esc(title)+(cls.adviser_name?' · Adviser: '+esc(cls.adviser_name):''),'<button class="btn" data-act="printMasterlist">Print list</button>')+
+ '<div class="card pad" id="masterlistCard"><div class="toolbar"><label class="field search">Find a classmate<input type="search" id="studentSearch" placeholder="Search by name or ID" value="'+esc(state.query)+'"></label><span class="muted small">'+rows.length+' of '+all.length+' students</span></div>'+
+ '<div class="table-wrap"><table class="table"><thead><tr><th>No.</th><th>Attendance ID</th><th>Full Name</th></tr></thead><tbody>'+
+ (rows.length?rows.map((s,i)=>'<tr><td>'+(i+1)+'</td><td class="mono strong">'+esc(s.student_id)+'</td><td>'+esc(s.full_name)+'</td></tr>').join(''):'<tr><td colspan="3"><div class="empty">No students found.</div></td></tr>')+
+ '</tbody></table></div><div class="notice" style="margin-top:16px">Read-only. You can see only your assigned class. Ask an LSC Official to correct any name or ID.</div></div>';
 }
 function studentsHTML(){
  if(state.role!=='official')return '<div class="notice">LSC Official access required.</div>';
@@ -608,6 +622,7 @@ document.addEventListener('click',async e=>{
  if(act==='skipPasswordSetup'){state.showPasswordSetup=false;render();}
  if(act==='demo')demoStart();
  if(act==='demoMayor')demoStart(true);
+ if(act==='printMasterlist')window.print();
  if(act==='logout')await logOut();
  if(act==='menu'){
   state.mobileNav=!state.mobileNav;
@@ -652,8 +667,8 @@ root.addEventListener('input',e=>{
 });
 window.addEventListener('hashchange',async()=>{
  const page=location.hash.slice(1);
- if(['overview','passport','students','records','classes','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='passport'){await loadFoundationData();await loadPassportRecords();}render();}
+ if(['overview','passport','students','masterlist','records','classes','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='passport'){await loadFoundationData();await loadPassportRecords();}render();}
 });
 setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=stampPH()+' PHT';},15000);
-state.page=['overview','passport','students','records','classes','officials','security'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
+state.page=['overview','passport','students','masterlist','records','classes','officials','security'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
 verifySession().catch(e=>{root.innerHTML=loginHTML();toast('Could not connect to the attendance service: '+e.message,true);});
