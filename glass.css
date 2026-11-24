@@ -504,3 +504,10 @@ body::before,body::after{content:none!important;display:none!important;animation
  .login-box .btn{white-space:normal;text-align:center}
 }
 @media(prefers-reduced-motion:reduce){.sidebar,.lsc-nav-backdrop{transition:none!important}}
+
+@media print{
+  .sidebar,.top,.lsc-nav-backdrop,.toolbar .search,.btn,.notice,.toast{display:none!important}
+  body,.main,.content,.card{background:#fff!important;box-shadow:none!important;border:0!important}
+  .shell{display:block!important}
+  .table th,.table td{border-bottom:1px solid #999!important;color:#000!important;padding:6px 8px!important}
+}
