@@ -8,6 +8,7 @@ const state = {
   demo: false, user: null, role: null, page: 'overview', loading: false,
   students: [], logs: [], classes: [], assignments: [], classId: null, lastResult: null, query: '', recordDate: todayPH(),
   busy: false, mobileNav: false, loginMode:'email', otpSent:false, otpEmail:'', showPasswordSetup:false,
+  live:{data:null,error:null,at:null,busy:false},
   fwPulse:null, fwSelected:'', fwStamps:[], fwBusy:false, fwNotice:null, fwProfile:null
 };
 let clearResultTimer = null;
@@ -109,12 +110,12 @@ function loginHTML(){
 function sidebar(){
   let menu=[['overview','Dashboard'],['passport','Foundation Passport'],['records','Attendance Records'],['security','Account Security']];
   if(state.role==='class_mayor'){menu.splice(1,0,['masterlist','Class Masterlist']);}
-  if(state.role==='official'){menu.splice(1,0,['students','Student Directory'],['classes','Classes'],['officials','Role Assignments']);}
+  if(state.role==='official'){menu.splice(1,0,['live','Live Dashboard'],['students','Student Directory'],['classes','Classes'],['officials','Role Assignments']);}
   return '<aside id="lsc-sidebar" class="sidebar'+(state.mobileNav?' open':'')+'" aria-label="Workspace navigation"><button type="button" class="lsc-mobile-close" data-act="closeMenu" aria-label="Close navigation menu">'+navIcon('close')+'</button><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+navIcon(v[0])+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">'+navIcon('kiosk')+'</span>Student Attendance<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./movie.html"><span class="nav-ico">'+navIcon('movie')+'</span>Movie Booth POS<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'<a class="nav-btn" href="./reserve.html"><span class="nav-ico">'+navIcon('movie')+'</span>Online Movie Booking<span class="nav-external">'+navIcon('external')+'</span></a>'+'<a class="nav-btn" href="./operations.html"><span class="nav-ico">'+navIcon('overview')+'</span>Event Command Center<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./operations.html#attendance"><span class="nav-ico">'+navIcon('officials')+'</span>Volunteer Manager<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">'+navIcon('logout')+'<span>Sign out</span></button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
 }
-function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security',passport:'Foundation Passport'})[state.page]||'Dashboard';}
+function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',live:'Live Dashboard',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security',passport:'Foundation Passport'})[state.page]||'Dashboard';}
 function appHTML(){
-  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='masterlist'?masterlistHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():state.page==='passport'?passportHTML():overviewHTML())+'</div></main></div>';
+  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='live'?liveHTML():state.page==='masterlist'?masterlistHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():state.page==='passport'?passportHTML():overviewHTML())+'</div></main></div>';
 }
 function header(head,sub,extra=''){return '<div class="page-header"><div><div class="eyebrow" style="margin-bottom:8px">LSC ATTENDANCE MONITOR</div><h1>'+head+'</h1><p>'+sub+'</p></div>'+extra+'</div>';}
 function metrics(){
@@ -182,6 +183,51 @@ function masterlistHTML(){
  '<div class="table-wrap"><table class="table"><thead><tr><th>No.</th><th>Attendance ID</th><th>Full Name</th></tr></thead><tbody>'+
  (rows.length?rows.map((s,i)=>'<tr><td>'+(i+1)+'</td><td class="mono strong">'+esc(s.student_id)+'</td><td>'+esc(s.full_name)+'</td></tr>').join(''):'<tr><td colspan="3"><div class="empty">No students found.</div></td></tr>')+
  '</tbody></table></div><div class="notice" style="margin-top:16px">Read-only. You can see only your assigned class. Ask an LSC Official to correct any name or ID.</div></div>';
+}
+const LIVE_LAG_POINTS=10;
+function demoLiveData(){
+ const secs=[['Grade 7','Ipil',46,41],['Grade 7','Lanete',46,30],['Grade 8','Apitong',37,35],['Grade 8','Mahogany',38,36],['Grade 9','Acacia',40,38],['Grade 9','Dao',40,25],['Grade 10','Narra',36,34],['Grade 10','Yakal',37,35]];
+ return {date:todayPH(),inside:Math.round(secs.reduce((a,x)=>a+x[3],0)*.9),
+  sections:secs.map((x,i)=>({class_id:'d'+i,grade_level:x[0],section:x[1],total:x[2],present:x[3]})),
+  hours:[{hour:6,arrivals:40},{hour:7,arrivals:140},{hour:8,arrivals:60},{hour:9,arrivals:18}]};
+}
+async function loadLive(){
+ if(state.live.busy)return;
+ if(state.demo){state.live={data:demoLiveData(),error:null,at:new Date(),busy:false};return;}
+ state.live.busy=true;
+ const r=await sb.rpc('lsc_live_stats');
+ state.live={data:r.error?state.live.data:r.data,error:r.error?r.error.message:null,at:r.error?state.live.at:new Date(),busy:false};
+}
+const pct=(a,b)=>b>0?Math.round(a*1000/b)/10:0;
+const gradeNum=g=>parseInt(String(g).replace(/\D/g,''),10)||0;
+function liveHTML(){
+ if(state.role!=='official')return '<div class="notice">LSC Official access required.</div>';
+ const L=state.live,d=L.data;
+ if(!d)return header('Live Dashboard','Whole-school attendance, refreshed automatically')+(L.error?'<div class="notice warn">'+esc(L.error)+'</div>':'<div class="card pad"><div class="empty">Loading live attendance…</div></div>');
+ const secs=d.sections.map(x=>({...x,pct:pct(x.present,x.total)}));
+ const total=secs.reduce((a,x)=>a+x.total,0),present=secs.reduce((a,x)=>a+x.present,0),school=pct(present,total);
+ const lagging=x=>present>0&&x.total>0&&x.pct<school-LIVE_LAG_POINTS;
+ const lagCount=secs.filter(lagging).length;
+ const grades=[...new Set(secs.map(x=>x.grade_level))].sort((a,b)=>gradeNum(a)-gradeNum(b)).map(g=>{const r=secs.filter(x=>x.grade_level===g);const t=r.reduce((a,x)=>a+x.total,0),p=r.reduce((a,x)=>a+x.present,0);return {g,t,p,pct:pct(p,t)};});
+ const byHour=new Map(d.hours.map(h=>[h.hour,h.arrivals]));
+ const hrs=[];for(let h=5;h<=18;h++)hrs.push(h);
+ let cum=0;const hourRows=hrs.map(h=>{const n=byHour.get(h)||0;cum+=n;return {h,n,cum,pct:pct(cum,total)};});
+ const maxN=Math.max(1,...hourRows.map(r=>r.n));
+ const fmtH=h=>((h+11)%12+1)+(h<12?' AM':' PM');
+ const bar=(v,cls='')=>'<div class="lv-track"><div class="lv-fill '+cls+'" style="width:'+Math.min(100,v)+'%"></div></div>';
+ const tile=(l,n,f)=>'<div class="card stat"><div class="stat-label">'+l+'</div><div class="stat-num mono">'+n+'</div><div class="stat-foot">'+f+'</div></div>';
+ const rows=[...secs].sort((a,b)=>a.pct-b.pct||gradeNum(a.grade_level)-gradeNum(b.grade_level)||a.section.localeCompare(b.section));
+ return header('Live Dashboard','Whole-school attendance for '+esc(d.date)+' · refreshes every 30 seconds','<button class="btn btn-secondary" data-act="refreshLive">'+(L.busy?'Refreshing…':'Refresh now')+'</button>')+
+ (L.error?'<div class="notice warn" style="margin-bottom:14px">Could not refresh: '+esc(L.error)+'. Showing the last data received.</div>':'')+
+ '<section class="stats">'+tile('Present Today',present+' / '+total,'Students with a Time IN')+tile('School Attendance',school.toFixed(1)+'%','Present ÷ active students')+tile('Currently Inside',d.inside,'Latest scan is IN')+tile('Sections Lagging',lagCount,present?'More than '+LIVE_LAG_POINTS+' points below the school rate':'Waiting for the first check-in')+'</section>'+
+ '<div class="two-col" style="margin-top:16px"><div class="card pad"><div class="section-title"><h3>By Grade</h3></div>'+
+ grades.map(x=>'<div class="lv-row"><span class="lv-name">'+esc(x.g)+'</span>'+bar(x.pct)+'<span class="lv-val mono">'+x.pct.toFixed(1)+'% <small>'+x.p+'/'+x.t+'</small></span></div>').join('')+'</div>'+
+ '<div class="card pad"><div class="section-title"><h3>By Hour (first arrivals)</h3></div>'+
+ hourRows.map(r=>'<div class="lv-row"><span class="lv-name">'+fmtH(r.h)+'</span>'+bar(r.n*100/maxN,'alt')+'<span class="lv-val mono">+'+r.n+' <small>'+r.pct.toFixed(1)+'% in</small></span></div>').join('')+'</div></div>'+
+ '<div class="card pad" style="margin-top:16px"><div class="section-title"><h3>By Section</h3><span class="muted small">Lowest attendance first · highlighted rows are lagging</span></div>'+
+ '<div class="table-wrap"><table class="table"><thead><tr><th>Grade</th><th>Section</th><th>Present</th><th>Attendance</th><th></th><th>Status</th></tr></thead><tbody>'+
+ rows.map(x=>'<tr class="'+(lagging(x)?'lv-lag':'')+'"><td>'+esc(x.grade_level)+'</td><td>'+esc(x.section)+'</td><td class="mono">'+x.present+' / '+x.total+'</td><td class="mono strong">'+x.pct.toFixed(1)+'%</td><td style="min-width:140px">'+bar(x.pct,lagging(x)?'warn':'')+'</td><td>'+(x.total===0?'<span class="badge off">No students</span>':lagging(x)?'<span class="badge out">Lagging</span>':'<span class="badge">On track</span>')+'</td></tr>').join('')+'</tbody></table></div>'+
+ '<p class="muted small" style="margin-top:12px">Last updated '+esc(L.at?timePH(L.at):'—')+' PHT. “Present” means the student has at least one Time IN today; “lagging” means a section is more than '+LIVE_LAG_POINTS+' percentage points below the school-wide rate.</p></div>';
 }
 function studentsHTML(){
  if(state.role!=='official')return '<div class="notice">LSC Official access required.</div>';
@@ -417,7 +463,7 @@ function fwExport(){
 function render(){
  document.body.classList.toggle('lsc-menu-open',Boolean(state.user&&state.mobileNav));
  if(!state.user){state.mobileNav=false;lastAnimatedPage=null;root.innerHTML=loginHTML();return;}
- if((['students','classes','officials'].includes(state.page)&&state.role!=='official')||state.page==='kiosk')state.page='overview';
+ if((['students','classes','officials','live'].includes(state.page)&&state.role!=='official')||state.page==='kiosk')state.page='overview';
  const newPage=lastAnimatedPage!==state.page;
  root.innerHTML=appHTML();
  if(newPage){
@@ -610,7 +656,7 @@ document.addEventListener('click',async e=>{
  const fwSelect=e.target.closest('[data-fw-select]');
  if(fwSelect){state.fwSelected=fwSelect.dataset.fwSelect;state.fwNotice=null;await loadPassportRecords();render();return;}
  const nav=e.target.closest('[data-nav]');
- if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if(state.page==='passport'){await loadFoundationData();await loadPassportRecords();}if(state.page==='overview'&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
+ if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if(state.page==='passport'){await loadFoundationData();await loadPassportRecords();}if(state.page==='live')await loadLive();if(state.page==='overview'&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
  const key=e.target.closest('[data-key]');
  if(key){const input=document.getElementById('studentID');if(!input)return;const value=key.dataset.key;if(value==='Clear')input.value='';else if(value==='⌫')input.value=input.value.slice(0,-1);else input.value=(input.value+value).slice(0,12);input.focus();return;}
  const b=e.target.closest('[data-act]');if(!b)return;
@@ -622,6 +668,7 @@ document.addEventListener('click',async e=>{
  if(act==='skipPasswordSetup'){state.showPasswordSetup=false;render();}
  if(act==='demo')demoStart();
  if(act==='demoMayor')demoStart(true);
+ if(act==='refreshLive'){await loadLive();render();}
  if(act==='printMasterlist')window.print();
  if(act==='logout')await logOut();
  if(act==='menu'){
@@ -667,8 +714,9 @@ root.addEventListener('input',e=>{
 });
 window.addEventListener('hashchange',async()=>{
  const page=location.hash.slice(1);
- if(['overview','passport','students','masterlist','records','classes','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='passport'){await loadFoundationData();await loadPassportRecords();}render();}
+ if(['overview','passport','students','live','masterlist','records','classes','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='passport'){await loadFoundationData();await loadPassportRecords();}if(page==='live')await loadLive();render();}
 });
+setInterval(async()=>{if(state.page==='live'&&state.user&&!document.hidden){await loadLive();if(state.page==='live')render();}},30000);
 setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=stampPH()+' PHT';},15000);
-state.page=['overview','passport','students','masterlist','records','classes','officials','security'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
+state.page=['overview','passport','students','live','masterlist','records','classes','officials','security'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
 verifySession().catch(e=>{root.innerHTML=loginHTML();toast('Could not connect to the attendance service: '+e.message,true);});

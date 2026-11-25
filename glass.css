@@ -511,3 +511,15 @@ body::before,body::after{content:none!important;display:none!important;animation
   .shell{display:block!important}
   .table th,.table td{border-bottom:1px solid #999!important;color:#000!important;padding:6px 8px!important}
 }
+
+/* Live dashboard */
+.lv-row{display:grid;grid-template-columns:78px 1fr auto;gap:12px;align-items:center;padding:6px 0}
+.lv-name{font-weight:700;font-size:13px;color:var(--ink)}
+.lv-val{font-size:13px;font-weight:700;color:var(--ink);text-align:right;white-space:nowrap}
+.lv-val small{color:var(--muted);font-weight:600;margin-left:4px}
+.lv-track{height:10px;border-radius:99px;background:rgba(49,94,200,.12);overflow:hidden}
+.lv-fill{height:100%;border-radius:99px;background:var(--blue);transition:width .5s}
+.lv-fill.alt{background:#4a8fd8}
+.lv-fill.warn{background:#c8741b}
+tr.lv-lag td{background:var(--orangeLight)}
+@media (max-width:640px){.lv-row{grid-template-columns:64px 1fr auto;gap:8px}}
