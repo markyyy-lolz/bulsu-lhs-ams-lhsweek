@@ -59,14 +59,30 @@ The supervised `student.html` Quick Attendance card now offers **two input tabs:
 
 Camera permission is requested on click, not in the background, and scanning stops when switching to manual entry, hiding the page or signing out. The manual keypad and demo mode remain available. Hardware camera support, school-ID barcode content, and live-device operation still need testing. No attendance schema or past records are modified by this UI change. Class Mayors remain **excluded from Movie Booth POS**.
 
-## Student Time IN Photo Confirmation
+## Student Time IN Photo Confirmation (Google Drive)
 
-A successful Time IN on the supervised student terminal now displays the student's name, grade/section, Philippine time-in, and an optional square portrait. The image uses a centered `object-fit: cover` crop; missing or unavailable images fall back to a neutral placeholder. The arrival card clears after about 6.5 seconds. Time OUT and duplicate-entry confirmations retain the existing text layout.
+A successful Time IN displays the student's name, grade/section, Philippine time-in, and an optional square portrait. Photos are center-cropped using `object-fit: cover`; missing or unavailable images use a placeholder. The card clears after about 6.5 seconds. Time OUT and duplicate confirmations keep the existing text layout.
 
-Student portraits are stored in a **private** Supabase Storage bucket and are readable only by an LSC Official, the assigned Class Mayor, or an active Attendance Volunteer whose scope includes that student's class. The browser requests a short-lived signed URL only after the authorized attendance RPC succeeds. No student photos are committed to GitHub or exposed through a public bucket.
+Portraits stay in a **private Google Drive folder**. The browser never receives Drive credentials or public image links. The `lsc-student-photo` Supabase Edge Function checks the signed-in operator's live attendance authorization and class scope before streaming the image. Share the Drive root with a dedicated service account as Viewer only.
 
-To enable portraits in Supabase, run `database/lsc-student-photos.sql` once in the SQL Editor. Upload each image to `lsc-student-photos` as `<class_uuid>/<student_uuid>.<jpg|jpeg|png|webp>` (maximum 5 MB), then set that student's `lsc_students.photo_path` to the same object path. The image field is optional; until a photo is configured, the terminal displays the placeholder. Photo upload/management remains an administrator task in Supabase Storage.
+### One-time setup
 
+1. Create a Google Cloud project and enable the **Google Drive API**.
+2. Create a Google service account and download its JSON key. Keep it private; never commit it to GitHub or place it in browser code.
+3. In Google Drive, create a private root folder named **LSC Student Photos** and share it with the service account's `client_email` as **Viewer**. Do not enable public/link sharing.
+4. In Supabase **Project Settings → Edge Functions → Secrets**, add `GOOGLE_SERVICE_ACCOUNT_JSON` containing the complete service-account JSON key.
+5. Run `database/lsc-student-photos.sql` once in the Supabase SQL Editor. Deploy the function from the repository root with `supabase functions deploy lsc-student-photo --project-ref rfxzbuocxersgbshczbj` after linking/authenticating the Supabase CLI.
+6. Create one subfolder inside the root folder for each class/section. Copy each class folder ID from its Drive URL and save it to the matching class row:
+
+   ```sql
+   UPDATE public.lsc_classes
+   SET photo_folder_id = 'GOOGLE_DRIVE_CLASS_FOLDER_ID'
+   WHERE id = 'CLASS_UUID';
+   ```
+
+7. Upload each portrait to its class folder. Name it with the student's registered ID, such as `2023107337.jpg`. Supported formats are JPG, JPEG, PNG, and WebP; maximum size is 5 MB.
+
+Drive folder IDs are stored in `lsc_classes.photo_folder_id`. No photo URL or image content is stored in the public website or GitHub. Class Mayors and assigned-class volunteers can retrieve photos only from their own section; Officials and whole-school volunteers can retrieve photos for classes within their authorized scope.
 
 ## Movie Booth v2.2 — RFID/NFC + PIN Staff Card and Supervisor Void Approval
 
