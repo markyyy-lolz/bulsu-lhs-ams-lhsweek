@@ -72,17 +72,16 @@ Portraits stay in a **private Google Drive folder**. The browser never receives 
 3. In Google Drive, create a private root folder named **LSC Student Photos** and share it with the service account's `client_email` as **Viewer**. Do not enable public/link sharing.
 4. In Supabase **Project Settings → Edge Functions → Secrets**, add `GOOGLE_SERVICE_ACCOUNT_JSON` containing the complete service-account JSON key.
 5. Run `database/lsc-student-photos.sql` once in the Supabase SQL Editor. Deploy the function from the repository root with `supabase functions deploy lsc-student-photo --project-ref rfxzbuocxersgbshczbj` after linking/authenticating the Supabase CLI.
-6. Create one subfolder inside the root folder for each class/section. Copy each class folder ID from its Drive URL and save it to the matching class row:
+6. Use the **root folder ID** from the LSC Student Photos URL for each class's `photo_folder_id`. The same root folder can be assigned to every class; the Edge Function still checks the student's class against the signed-in operator's authorization before returning a photo. For example:
 
    ```sql
    UPDATE public.lsc_classes
-   SET photo_folder_id = 'GOOGLE_DRIVE_CLASS_FOLDER_ID'
-   WHERE id = 'CLASS_UUID';
+   SET photo_folder_id = 'GOOGLE_DRIVE_ROOT_FOLDER_ID';
    ```
 
-7. Upload each portrait to its class folder. Name it with the student's registered ID, such as `2023107337.jpg`. Supported formats are JPG, JPEG, PNG, and WebP; maximum size is 5 MB.
+7. Upload portraits **directly into the root folder** (no per-class subfolders). Name each file exactly with the student's registered ID, such as `2023107337.jpg`. Student IDs must be unique. Supported formats are JPG, JPEG, PNG, and WebP; maximum size is 5 MB.
 
-Drive folder IDs are stored in `lsc_classes.photo_folder_id`. No photo URL or image content is stored in the public website or GitHub. Class Mayors and assigned-class volunteers can retrieve photos only from their own section; Officials and whole-school volunteers can retrieve photos for classes within their authorized scope.
+Drive folder IDs are stored in `lsc_classes.photo_folder_id`. No photo URL or image content is stored in the public website or GitHub. Class Mayors and assigned-class volunteers can retrieve photos only for students in their own section; Officials and whole-school volunteers can retrieve photos for classes within their authorized scope.
 
 ## Movie Booth v2.2 — RFID/NFC + PIN Staff Card and Supervisor Void Approval
 
