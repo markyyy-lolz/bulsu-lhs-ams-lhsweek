@@ -1,8 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.95.0';
 
+const SUPABASE_URL = 'https://rfxzbuocxersgbshczbj.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_CR-CJKna_rcjQi7gg1CZGQ__DnXI6Lb';
 const client = createClient(
-  'https://rfxzbuocxersgbshczbj.supabase.co',
-  'sb_publishable_CR-CJKna_rcjQi7gg1CZGQ__DnXI6Lb',
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
   { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
 );
 const $ = selector => document.querySelector(selector);
@@ -248,6 +250,8 @@ async function checkAuthorization() {
   }
 }
 function appendMessage(type,title,lines) {
+  if(state.resetTimer)clearTimeout(state.resetTimer);
+  releaseArrivalPhotoUrl();
   confirmation.replaceChildren();
   const card=document.createElement('div');
   card.className='result'+(type==='OUT'?' out':type==='ERROR'?' err':'');
@@ -271,21 +275,33 @@ function appendMessage(type,title,lines) {
     if(camera.mode==='manual')studentInput.focus();
   },8000);
 }
-async function loadStudentPhotoUrl(photoPath) {
-  const path=String(photoPath||'').trim();
-  // Photos use class UUID / student UUID filenames in a private Storage bucket.
-  if(!/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(?:jpe?g|png|webp)$/i.test(path))return null;
+let activeArrivalPhotoUrl=null;
+function releaseArrivalPhotoUrl() {
+  if(activeArrivalPhotoUrl){URL.revokeObjectURL(activeArrivalPhotoUrl);activeArrivalPhotoUrl=null;}
+}
+async function loadStudentPhotoUrl(studentId) {
+  const id=String(studentId||'').trim();
+  if(!/^[0-9]{7,12}$/.test(id)||state.demo)return null;
   try {
-    const {data,error}=await client.storage.from('lsc-student-photos').createSignedUrl(path,60);
-    if(error||!data?.signedUrl)return null;
-    return data.signedUrl;
+    const {data:{session},error:sessionError}=await client.auth.getSession();
+    if(sessionError||!session?.access_token)return null;
+    const response=await fetch(SUPABASE_URL+'/functions/v1/lsc-student-photo',{
+      method:'POST',
+      headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({student_id:id}),cache:'no-store'
+    });
+    if(!response.ok)return null;
+    const blob=await response.blob();
+    if(!/^image\/(jpeg|png|webp)$/.test(blob.type)||!blob.size||blob.size>5*1024*1024)return null;
+    return URL.createObjectURL(blob);
   } catch(error) {
     console.warn('Student photo unavailable; showing placeholder.');
     return null;
   }
 }
 function attachArrivalPhoto(card,url,studentName) {
-  if(!card?.isConnected||!url)return;
+  if(!card?.isConnected||!url){if(url)URL.revokeObjectURL(url);return;}
+  releaseArrivalPhotoUrl();activeArrivalPhotoUrl=url;
   const frame=card.querySelector('.arrival-photo');
   const placeholder=card.querySelector('.arrival-photo-placeholder');
   if(!frame||!placeholder)return;
@@ -298,11 +314,13 @@ function attachArrivalPhoto(card,url,studentName) {
     placeholder.hidden=true;
     frame.classList.add('has-photo');
   },{once:true});
-  image.addEventListener('error',()=>image.remove(),{once:true});
+  image.addEventListener('error',()=>{image.remove();if(activeArrivalPhotoUrl===url)releaseArrivalPhotoUrl();},{once:true});
   image.src=url;
   frame.append(image);
 }
 function appendArrivalCard(result,studentId) {
+  if(state.resetTimer)clearTimeout(state.resetTimer);
+  releaseArrivalPhotoUrl();
   confirmation.replaceChildren();
   const card=document.createElement('div');
   card.className='result arrival-result';
@@ -352,6 +370,7 @@ function appendArrivalCard(result,studentId) {
   if(state.resetTimer)clearTimeout(state.resetTimer);
   state.resetTimer=setTimeout(()=>{
     if(card.isConnected)confirmation.replaceChildren();
+    releaseArrivalPhotoUrl();state.resetTimer=null;
     if(camera.mode==='manual')studentInput.focus();
   },6500);
   return card;
@@ -393,11 +412,9 @@ async function recordAttendance(event=null,scannedId=null) {
     const status=result.status||'SUCCESS';
     if(status==='SUCCESS'&&result.event_type==='IN'){
       const arrivalCard=appendArrivalCard(result,id);
-      if(result.photo_path){
-        void loadStudentPhotoUrl(result.photo_path).then(url=>{
-          if(url)attachArrivalPhoto(arrivalCard,url,result.full_name);
-        });
-      }
+      void loadStudentPhotoUrl(result.student_id||id).then(url=>{
+        if(url)attachArrivalPhoto(arrivalCard,url,result.full_name);
+      });
     }else{
       appendMessage(status==='DUPLICATE'?'DUPLICATE':result.event_type,
         (status==='DUPLICATE'?'Previous ':'Time ')+result.event_type,
@@ -438,9 +455,14 @@ demoButton.addEventListener('click',async()=>{
   if(camera.mode==='camera')selectAttendanceMethod('manual');
   if(state.demo){
     state.demo=false;state.demoLogs=[];confirmation.replaceChildren();
+    if(state.resetTimer)clearTimeout(state.resetTimer);
+    releaseArrivalPhotoUrl();
     await checkAuthorization();
   }else{
-    state.demo=true;state.demoLogs=[];confirmation.replaceChildren();updateStation();
+    state.demo=true;state.demoLogs=[];confirmation.replaceChildren();
+    if(state.resetTimer)clearTimeout(state.resetTimer);
+    releaseArrivalPhotoUrl();
+    updateStation();
   }
   studentInput.focus();
 });
@@ -448,6 +470,7 @@ if(signOutButton)signOutButton.addEventListener('click',async()=>{
   if(!window.confirm('Sign out of this supervised attendance station?'))return;
   selectAttendanceMethod('manual');
   if(state.resetTimer)clearTimeout(state.resetTimer);
+  releaseArrivalPhotoUrl();
   const {error}=await client.auth.signOut();
   if(error){appendMessage('ERROR','Sign-out unavailable',[error.message]);return}
   confirmation.replaceChildren();
