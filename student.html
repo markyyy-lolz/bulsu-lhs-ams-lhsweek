@@ -79,6 +79,22 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
 .scanner-retry{margin:3px auto;min-height:43px}
 #cameraAttendancePanel[hidden],#manualAttendancePanel[hidden]{display:none!important}
 @media(max-width:540px){.attendance-methods{gap:7px}.attendance-method{font-size:12px;padding:10px 7px}.scanner-frame{min-height:210px}.scanner-frame #attendanceReader{min-height:208px}}
+
+/* Successful Time IN confirmation: square, cover-cropped student portrait. */
+.arrival-result{max-width:540px;padding:22px;background:#f0fbf7;border-color:#c9eadc}
+.arrival-eyebrow{color:#168264!important;margin-bottom:15px}
+.arrival-layout{display:grid;grid-template-columns:148px minmax(0,1fr);gap:20px;align-items:center}
+.arrival-photo{position:relative;width:148px;aspect-ratio:1/1;overflow:hidden;border:1px solid #dce5f1;border-radius:16px;background:#eaf0f8}
+.arrival-photo-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+.arrival-photo-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#71819a;background:linear-gradient(145deg,#f6f8fc,#e8eef7);font-size:11px;font-weight:800}
+.arrival-placeholder-icon{font-size:43px;line-height:1}
+.arrival-details{min-width:0}
+.arrival-name{font:800 23px/1.15 Outfit,sans-serif;color:#203653;overflow-wrap:anywhere}
+.arrival-section{font-size:13px;color:#73839b;margin-top:7px}
+.arrival-time-label{font-size:10px;font-weight:800;letter-spacing:1.4px;color:#168264;margin-top:17px}
+.arrival-time{display:block;font:800 23px Outfit,sans-serif;color:#18395f;margin-top:3px;font-variant-numeric:tabular-nums}
+.arrival-student-id,.arrival-operator{font-size:11px;color:#75849a;margin-top:7px;overflow-wrap:anywhere}
+@media(max-width:540px){.arrival-result{padding:16px}.arrival-layout{grid-template-columns:112px minmax(0,1fr);gap:13px}.arrival-photo{width:112px}.arrival-name{font-size:19px}.arrival-time{font-size:20px}.arrival-time-label{margin-top:12px}}
 </style>
 <link rel="stylesheet" href="./glass.css?v=ios-gearfix-1">
 </head>
@@ -141,5 +157,5 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
  </div>
  <footer class="student-footer">LSC Attendance Monitor · Independent prototype · Powered by Azure&lt;3 · School approval required.<br>Student attendance information is handled through Supabase, never stored on GitHub Pages.</footer>
 </main>
-<script type="module" src="./student.js?v=class-mayor-camera-v1"></script>
+<script type="module" src="./student.js?v=student-photo-card-v1"></script>
 </body></html>

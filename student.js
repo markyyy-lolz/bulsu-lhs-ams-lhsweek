@@ -271,6 +271,91 @@ function appendMessage(type,title,lines) {
     if(camera.mode==='manual')studentInput.focus();
   },8000);
 }
+async function loadStudentPhotoUrl(photoPath) {
+  const path=String(photoPath||'').trim();
+  // Photos use class UUID / student UUID filenames in a private Storage bucket.
+  if(!/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(?:jpe?g|png|webp)$/i.test(path))return null;
+  try {
+    const {data,error}=await client.storage.from('lsc-student-photos').createSignedUrl(path,60);
+    if(error||!data?.signedUrl)return null;
+    return data.signedUrl;
+  } catch(error) {
+    console.warn('Student photo unavailable; showing placeholder.');
+    return null;
+  }
+}
+function attachArrivalPhoto(card,url,studentName) {
+  if(!card?.isConnected||!url)return;
+  const frame=card.querySelector('.arrival-photo');
+  const placeholder=card.querySelector('.arrival-photo-placeholder');
+  if(!frame||!placeholder)return;
+  const image=document.createElement('img');
+  image.className='arrival-photo-image';
+  image.alt=(studentName||'Student')+' photo';
+  image.decoding='async';
+  image.addEventListener('load',()=>{
+    if(!card.isConnected)return;
+    placeholder.hidden=true;
+    frame.classList.add('has-photo');
+  },{once:true});
+  image.addEventListener('error',()=>image.remove(),{once:true});
+  image.src=url;
+  frame.append(image);
+}
+function appendArrivalCard(result,studentId) {
+  confirmation.replaceChildren();
+  const card=document.createElement('div');
+  card.className='result arrival-result';
+  const eyebrow=document.createElement('div');
+  eyebrow.className='eyebrow arrival-eyebrow';
+  eyebrow.textContent='ATTENDANCE RECORDED'+(state.demo?' — DEMO':'');
+  const layout=document.createElement('div');
+  layout.className='arrival-layout';
+  const frame=document.createElement('div');
+  frame.className='arrival-photo';
+  const placeholder=document.createElement('div');
+  placeholder.className='arrival-photo-placeholder';
+  const placeholderIcon=document.createElement('span');
+  placeholderIcon.className='arrival-placeholder-icon';
+  placeholderIcon.setAttribute('aria-hidden','true');
+  placeholderIcon.textContent='👤';
+  const placeholderText=document.createElement('span');
+  placeholderText.textContent='No photo';
+  placeholder.append(placeholderIcon,placeholderText);
+  frame.append(placeholder);
+  const details=document.createElement('div');
+  details.className='arrival-details';
+  const title=document.createElement('h3');
+  title.className='arrival-name';
+  title.textContent=result.full_name||'Student';
+  const section=document.createElement('p');
+  section.className='arrival-section';
+  const sectionName=[result.grade_level?'Grade '+result.grade_level:'',result.section||''].filter(Boolean).join(' · ');
+  section.textContent=sectionName||'Section not provided';
+  const timeLabel=document.createElement('div');
+  timeLabel.className='arrival-time-label';
+  timeLabel.textContent='TIME IN';
+  const time=document.createElement('time');
+  time.className='arrival-time';
+  time.dateTime=result.recorded_at||'';
+  time.textContent=formatTime(result.recorded_at)+' PHT';
+  const studentCode=document.createElement('div');
+  studentCode.className='arrival-student-id';
+  studentCode.textContent='Student ID · '+(result.student_id||studentId);
+  const operator=document.createElement('div');
+  operator.className='arrival-operator';
+  operator.textContent='Recorded by · '+(result.recorded_by_email||state.operatorEmail||'Demo Mode');
+  details.append(title,section,timeLabel,time,studentCode,operator);
+  layout.append(frame,details);
+  card.append(eyebrow,layout);
+  confirmation.append(card);
+  if(state.resetTimer)clearTimeout(state.resetTimer);
+  state.resetTimer=setTimeout(()=>{
+    if(card.isConnected)confirmation.replaceChildren();
+    if(camera.mode==='manual')studentInput.focus();
+  },6500);
+  return card;
+}
 function simulate(studentId) {
   const student=demoRoster.find(s=>s.student_id===studentId);
   if(!student)throw new Error('Not a registered demo ID. Try 2023107337.');
@@ -306,17 +391,26 @@ async function recordAttendance(event=null,scannedId=null) {
       result=data;
     }
     const status=result.status||'SUCCESS';
-    appendMessage(status==='DUPLICATE'?'DUPLICATE':result.event_type,
-      (status==='DUPLICATE'?'Previous ':'Time ')+result.event_type,
-      [
-        (result.full_name||'Student')+' · '+(result.student_id||id),
-        (result.grade_level||'')+' '+(result.section||''),
-        formatTime(result.recorded_at)+' · Philippine Standard Time',
-        'Recorded by: '+(result.recorded_by_email||state.operatorEmail||'Unknown operator')+
-           (result.recorded_by_role==='class_mayor'?' (Class Mayor)':result.recorded_by_role==='official'?' (LSC Official)':result.recorded_by_role==='attendance_volunteer'?' (Approved Volunteer)':''),
-        ...(status==='DUPLICATE'?['No extra attendance record was created.']:[])
-      ]
-    );
+    if(status==='SUCCESS'&&result.event_type==='IN'){
+      const arrivalCard=appendArrivalCard(result,id);
+      if(result.photo_path){
+        void loadStudentPhotoUrl(result.photo_path).then(url=>{
+          if(url)attachArrivalPhoto(arrivalCard,url,result.full_name);
+        });
+      }
+    }else{
+      appendMessage(status==='DUPLICATE'?'DUPLICATE':result.event_type,
+        (status==='DUPLICATE'?'Previous ':'Time ')+result.event_type,
+        [
+          (result.full_name||'Student')+' · '+(result.student_id||id),
+          (result.grade_level||'')+' '+(result.section||''),
+          formatTime(result.recorded_at)+' · Philippine Standard Time',
+          'Recorded by: '+(result.recorded_by_email||state.operatorEmail||'Unknown operator')+
+             (result.recorded_by_role==='class_mayor'?' (Class Mayor)':result.recorded_by_role==='official'?' (LSC Official)':result.recorded_by_role==='attendance_volunteer'?' (Approved Volunteer)':''),
+          ...(status==='DUPLICATE'?['No extra attendance record was created.']:[])
+        ]
+      );
+    }
     studentInput.value='';
     return status;
   }catch(e){
