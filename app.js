@@ -460,12 +460,19 @@ function fwExport(){
  link.download='LSC-Foundation-Passport-'+(activity?.session_date||todayPH())+'.csv';
  link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1200);
 }
+function labelTables(){
+ document.querySelectorAll('table.table').forEach(t=>{
+  const h=[...t.querySelectorAll('thead th')].map(x=>x.textContent.trim());
+  t.querySelectorAll('tbody tr').forEach(tr=>[...tr.children].forEach((td,i)=>{if(h[i]&&!td.hasAttribute('colspan'))td.setAttribute('data-label',h[i]);}));
+ });
+}
 function render(){
  document.body.classList.toggle('lsc-menu-open',Boolean(state.user&&state.mobileNav));
  if(!state.user){state.mobileNav=false;lastAnimatedPage=null;root.innerHTML=loginHTML();return;}
  if((['students','classes','officials','live'].includes(state.page)&&state.role!=='official')||state.page==='kiosk')state.page='overview';
  const newPage=lastAnimatedPage!==state.page;
  root.innerHTML=appHTML();
+ labelTables();
  if(newPage){
    root.querySelector('.content')?.classList.add('page-enter');
    lastAnimatedPage=state.page;
