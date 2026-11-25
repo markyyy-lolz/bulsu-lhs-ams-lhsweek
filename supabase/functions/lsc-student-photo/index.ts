@@ -20,10 +20,10 @@ function toBase64Url(value: string | Uint8Array): string {
   const bytes = typeof value === "string" ? new TextEncoder().encode(value) : value;
   let binary = "";
   for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  return btoa(binary).replace(/=/g, "").replaceAll("+", "-").replaceAll("/", "_");
 }
 function pemToBytes(pem: string): ArrayBuffer {
-  const normalized = pem.replace(/\\n/g, "\n");
+  const normalized = pem;
   const body = normalized.replace("-----BEGIN PRIVATE KEY-----", "")
     .replace("-----END PRIVATE KEY-----", "").replace(/\s/g, "");
   const binary = atob(body);
@@ -65,7 +65,7 @@ async function getGoogleAccessToken() {
   return cachedDriveToken.value;
 }
 async function findDrivePhoto(token: string, folderId: string, studentId: string) {
-  const safeFolder = folderId.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const safeFolder = folderId;
   const nameQuery = EXTENSIONS.map((ext) => "name = '" + studentId + "." + ext + "'").join(" or ");
   const url = new URL("https://www.googleapis.com/drive/v3/files");
   url.search = new URLSearchParams({
