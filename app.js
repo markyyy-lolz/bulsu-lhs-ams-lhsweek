@@ -8,7 +8,7 @@ const state = {
   demo: false, user: null, role: null, page: 'overview', loading: false,
   students: [], logs: [], classes: [], assignments: [], classId: null, lastResult: null, query: '', recordDate: todayPH(),
   busy: false, mobileNav: false, loginMode:'email', otpSent:false, otpEmail:'', showPasswordSetup:false,
-  live:{data:null,error:null,at:null,busy:false},corr:{data:[],error:null,busy:false},settings:{data:null,error:null,busy:false},
+  live:{data:null,error:null,at:null,busy:false},corr:{data:[],error:null,busy:false},tgLink:null,settings:{data:null,error:null,busy:false},
   fwPulse:null, fwSelected:'', fwStamps:[], fwBusy:false, fwNotice:null, fwProfile:null
 };
 let clearResultTimer = null;
@@ -230,7 +230,7 @@ function liveHTML(){
  rows.map(x=>'<tr class="'+(lagging(x)?'lv-lag':'')+'"><td>'+esc(x.grade_level)+'</td><td>'+esc(x.section)+'</td><td class="mono">'+x.present+' / '+x.total+'</td><td class="mono strong">'+x.pct.toFixed(1)+'%</td><td style="min-width:140px">'+bar(x.pct,lagging(x)?'warn':'')+'</td><td>'+(x.total===0?'<span class="badge off">No students</span>':lagging(x)?'<span class="badge out">Lagging</span>':'<span class="badge">On track</span>')+'</td></tr>').join('')+'</tbody></table></div>'+
  '<p class="muted small" style="margin-top:12px">Last updated '+esc(L.at?timePH(L.at):'—')+' PHT. “Present” means the student has at least one Time IN today; “lagging” means a section is more than '+lagPts+' percentage points below the school-wide rate.</p></div>';
 }
-const DEMO_SETTINGS={lag_points:10,late_cutoff:'07:30',summary_time:'09:00',eod_time:'16:00',lag_start_hour:8,lag_end_hour:11,lag_interval:30,telegram_enabled:true,student_notifications:true,student_links:0,join_code:'DEMO1234',subscribers:[{chat_id:1,label:'Demo Developer',role:'developer',active:true,joined_at:new Date().toISOString()}]};
+const DEMO_SETTINGS={lag_points:10,late_cutoff:'07:30',summary_time:'09:00',eod_time:'16:00',lag_start_hour:8,lag_end_hour:11,lag_interval:30,telegram_enabled:true,student_notifications:true,student_links:0,mayor_notifications:true,mayor_reminder_time:'08:30',correction_alerts:true,official_links:0,mayor_links:0,join_code:'DEMO1234',subscribers:[{chat_id:1,label:'Demo Developer',role:'developer',active:true,joined_at:new Date().toISOString()}]};
 async function loadSettings(){
  if(state.role!=='official')return;
  if(state.demo){if(!state.settings.data)state.settings={data:JSON.parse(JSON.stringify(DEMO_SETTINGS)),error:null,busy:false};return;}
@@ -254,12 +254,16 @@ function settingsHTML(){
  '<div class="card pad"><div class="section-title"><h3>Telegram Reports</h3><span class="muted small">Philippine time</span></div><div class="stack">'+
  '<label class="field check-field"><input type="checkbox" name="telegram_enabled"'+(d.telegram_enabled?' checked':'')+'> <span>Send Telegram reports and alerts</span></label>'+
  '<label class="field check-field"><input type="checkbox" name="student_notifications"'+(d.student_notifications?' checked':'')+'> <span>Notify students/parents on Time IN/OUT ('+(d.student_links||0)+' linked chats)</span></label>'+
+ '<label class="field check-field"><input type="checkbox" name="correction_alerts"'+(d.correction_alerts?' checked':'')+'> <span>Send correction requests to linked officials ('+(d.official_links||0)+' linked)</span></label>'+
+ '<label class="field check-field"><input type="checkbox" name="mayor_notifications"'+(d.mayor_notifications?' checked':'')+'> <span>Send class mayors a “who has not scanned in” reminder ('+(d.mayor_links||0)+' linked)</span></label>'+
+ '<label class="field">Mayor reminder time<input type="time" name="mayor_reminder_time" value="'+esc(d.mayor_reminder_time||'08:30')+'" required></label>'+
  '<div class="set-grid"><label class="field">Morning summary<input type="time" name="summary_time" value="'+esc(d.summary_time)+'" required></label>'+
  '<label class="field">End-of-day report<input type="time" name="eod_time" value="'+esc(d.eod_time)+'" required></label>'+
  '<label class="field">Lag alerts start<select name="lag_start_hour">'+hourOpts(d.lag_start_hour,0,23)+'</select></label>'+
  '<label class="field">Lag alerts stop<select name="lag_end_hour">'+hourOpts(d.lag_end_hour,1,24)+'</select></label></div>'+
  '<label class="field">Check for lagging sections<select name="lag_interval">'+intervalOpts+'</select></label></div></div></div>'+
  '<div><button class="btn" type="submit">'+(S.busy?'Saving…':'Save Settings')+'</button> <span class="muted small">Saving also updates the Telegram schedule.</span></div></form>'+
+ '<div style="margin-top:16px">'+tgLinkCard()+'</div>'+
  '<div class="two-col" style="margin-top:16px"><div class="card pad"><div class="section-title"><h3>Telegram Join Code</h3></div>'+
  '<p class="muted small">Officials send <span class="mono strong">/join CODE</span> to the bot to subscribe.</p>'+
  '<div class="join-code mono strong">'+esc(d.join_code||'—')+'</div>'+
@@ -272,7 +276,7 @@ function settingsHTML(){
 }
 async function saveSettings(form){
  const f=form.elements,g=n=>f[n].value;
- const p={lag_points:parseInt(g('lag_points'),10),late_cutoff:g('late_cutoff'),summary_time:g('summary_time'),eod_time:g('eod_time'),lag_start_hour:parseInt(g('lag_start_hour'),10),lag_end_hour:parseInt(g('lag_end_hour'),10),lag_interval:parseInt(g('lag_interval'),10),telegram_enabled:f.telegram_enabled.checked,student_notifications:f.student_notifications.checked};
+ const p={lag_points:parseInt(g('lag_points'),10),late_cutoff:g('late_cutoff'),summary_time:g('summary_time'),eod_time:g('eod_time'),lag_start_hour:parseInt(g('lag_start_hour'),10),lag_end_hour:parseInt(g('lag_end_hour'),10),lag_interval:parseInt(g('lag_interval'),10),telegram_enabled:f.telegram_enabled.checked,student_notifications:f.student_notifications.checked,correction_alerts:f.correction_alerts.checked,mayor_notifications:f.mayor_notifications.checked,mayor_reminder_time:g('mayor_reminder_time')};
  if(!(p.lag_points>=1&&p.lag_points<=50))return toast('Lagging threshold must be between 1 and 50.',true);
  if(p.lag_start_hour>=p.lag_end_hour)return toast('Lag alerts must stop after they start.',true);
  state.settings.busy=true;render();
@@ -282,6 +286,24 @@ async function saveSettings(form){
   toast('Settings saved. Telegram schedule updated.');
  }catch(err){toast('Could not save: '+(err.message||err),true);}
  state.settings.busy=false;render();
+}
+
+
+// ===== Personal Telegram link (officials and class mayors) =====
+const TG_BOT='lhslscbot';
+function tgLinkCard(){
+ const L=state.tgLink,isOff=state.role==='official';
+ const what=isOff?'Get correction requests here with Approve / Reject buttons.':'Get a reminder of who has not scanned in yet, and updates on your correction requests.';
+ return '<div class="card pad"><div class="section-title"><h3>Telegram for your account</h3></div><p class="muted small">'+esc(what)+' Link your own Telegram once; it is tied to your login, so only you receive it.</p>'+
+ (L&&L.url?'<p><a class="btn" href="'+esc(L.url)+'" target="_blank" rel="noopener">Open Telegram and press START</a></p><p class="muted small">'+(L.linked?esc(L.linked)+' chat(s) already linked. ':'')+'Do not share this link: it connects whoever opens it to your account. Send <span class="mono">/stop</span> to the bot to unlink.</p>':
+  '<button type="button" class="btn btn-secondary" data-act="tgLink">Link my Telegram</button>')+'</div>';
+}
+async function makeTgLink(){
+ try{
+  if(state.demo){state.tgLink={url:'https://t.me/'+TG_BOT,linked:0};return;}
+  const r=await sb.rpc('lsc_my_telegram_link');if(r.error)throw r.error;
+  state.tgLink={url:'https://t.me/'+TG_BOT+'?start=U_'+r.data.token,linked:r.data.linked};
+ }catch(err){toast('Could not create link: '+(err.message||err),true);}
 }
 
 // ===== Correction requests =====
@@ -316,7 +338,7 @@ function correctionsHTML(){
   (isOff?'<td>'+(c.status==='pending'?'<button type="button" class="btn" data-act="corrApprove" data-id="'+esc(c.id)+'">Approve</button> <button type="button" class="linkbtn" data-act="corrReject" data-id="'+esc(c.id)+'">Reject</button>':'')+'</td>':'')+'</tr>').join('')+'</tbody></table></div>':'<div class="empty">No correction requests yet.</div>';
  return header(isOff?'Correction Requests':'Corrections',isOff?'Review requests from class mayors. Approved fixes are applied to attendance and kept in the audit trail.':'Missed or wrong scan? Request a fix and an LSC Official will approve it.')+
  (C.error?'<div class="notice warn">'+esc(C.error)+'</div>':'')+
- '<div class="stack">'+form+'<div class="card pad"><div class="section-title"><h3>'+(isOff?'Requests':'Your section’s requests')+'</h3><span class="muted small">'+(pending?pending+' pending':'none pending')+'</span></div>'+rows+'</div></div>';
+ '<div class="stack">'+tgLinkCard()+form+'<div class="card pad"><div class="section-title"><h3>'+(isOff?'Requests':'Your section’s requests')+'</h3><span class="muted small">'+(pending?pending+' pending':'none pending')+'</span></div>'+rows+'</div></div>';
 }
 async function submitCorrection(form){
  const f=form.elements,kind=f.kind.value;
@@ -811,6 +833,7 @@ document.addEventListener('click',async e=>{
    const sub=state.settings.data.subscribers.find(x=>String(x.chat_id)===chat);if(sub)sub.active=on;toast(on?'Subscriber restored.':'Subscriber removed.');}catch(err){toast('Could not update: '+(err.message||err),true);}
   render();}
  if(act==='refreshLive'){await loadLive();render();}
+ if(act==='tgLink'){await makeTgLink();render();}
  if(act==='corrLoadEvents')await corrLoadEvents();
  if(act==='corrApprove')await decideCorrection(b.dataset.id,true);
  if(act==='corrReject')await decideCorrection(b.dataset.id,false);
