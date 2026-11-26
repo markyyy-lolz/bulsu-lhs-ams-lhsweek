@@ -2,6 +2,11 @@
 
 Independent prototype for **Bulacan State University Laboratory High School LSC**. Not an official school system unless approved by the institution.
 
+## Current UI status (2026-11-27)
+
+The **Foundation Week Passport** workspace and the related **Stamp Rally** tab have been retired from the live website. They are not available from the LSC Attendance dashboard or the Foundation Week Command Center. The related `lsc_fw_*` database tables and functions have been left in place; no historical rows were deleted. The older Passport description below is retained only as historical implementation documentation, not as a current feature.
+
+
 **Website hosting:** GitHub Pages — `markyyy-lolz/bulsu-lhs-ams-lhsweek`
 **Database:** Existing BrewPOS Supabase project `rfxzbuocxersgbshczbj`, using only separately named `lsc_*` tables and functions. No BrewPOS customer data or tables changed.
 **Branding:** User-supplied LSC crest and **Powered by Azure<3**.
@@ -159,7 +164,7 @@ The restriction is enforced in the \`lsc_movie_context()\` server-side authoriza
 - **Printed ticket is an event admission pass, not a BIR-registered invoice/official receipt**. Ticket codes are not automatically redeemed or scanned at entry in this release.
 - New tables \`lsc_movie_shows\`, \`lsc_movie_sales\`, \`lsc_movie_tickets\` are isolated from the main attendance tables and unrelated BrewPOS data. No automatic student attendance events are created from ticket sales.
 
-## Foundation Week Experience — unique event features
+## Retired Foundation Week Passport — historical implementation notes
 
 The **existing system name is unchanged**. A new, private **Foundation Passport** workspace has been added for Foundation Week operations; the original Student Time IN/OUT terminal and historical records remain separate and untouched.
 
