@@ -230,7 +230,7 @@ function liveHTML(){
  rows.map(x=>'<tr class="'+(lagging(x)?'lv-lag':'')+'"><td>'+esc(x.grade_level)+'</td><td>'+esc(x.section)+'</td><td class="mono">'+x.present+' / '+x.total+'</td><td class="mono strong">'+x.pct.toFixed(1)+'%</td><td style="min-width:140px">'+bar(x.pct,lagging(x)?'warn':'')+'</td><td>'+(x.total===0?'<span class="badge off">No students</span>':lagging(x)?'<span class="badge out">Lagging</span>':'<span class="badge">On track</span>')+'</td></tr>').join('')+'</tbody></table></div>'+
  '<p class="muted small" style="margin-top:12px">Last updated '+esc(L.at?timePH(L.at):'—')+' PHT. “Present” means the student has at least one Time IN today; “lagging” means a section is more than '+lagPts+' percentage points below the school-wide rate.</p></div>';
 }
-const DEMO_SETTINGS={lag_points:10,late_cutoff:'07:30',summary_time:'09:00',eod_time:'16:00',lag_start_hour:8,lag_end_hour:11,lag_interval:30,telegram_enabled:true,student_notifications:true,student_links:0,mayor_notifications:true,mayor_reminder_time:'08:30',correction_alerts:true,official_links:0,mayor_links:0,join_code:'DEMO1234',subscribers:[{chat_id:1,label:'Demo Developer',role:'developer',active:true,joined_at:new Date().toISOString()}]};
+const DEMO_SETTINGS={lag_points:10,late_cutoff:'07:30',summary_time:'09:00',eod_time:'16:00',lag_start_hour:8,lag_end_hour:11,lag_interval:30,telegram_enabled:true,student_notifications:true,student_links:0,mayor_notifications:true,mayor_reminder_time:'08:30',parent_absent_alerts:false,parent_alert_time:'08:00',correction_alerts:true,official_links:0,mayor_links:0,join_code:'DEMO1234',subscribers:[{chat_id:1,label:'Demo Developer',role:'developer',active:true,joined_at:new Date().toISOString()}]};
 async function loadSettings(){
  if(state.role!=='official')return;
  if(state.demo){if(!state.settings.data)state.settings={data:JSON.parse(JSON.stringify(DEMO_SETTINGS)),error:null,busy:false};return;}
@@ -257,6 +257,9 @@ function settingsHTML(){
  '<label class="field check-field"><input type="checkbox" name="correction_alerts"'+(d.correction_alerts?' checked':'')+'> <span>Send correction requests to linked officials ('+(d.official_links||0)+' linked)</span></label>'+
  '<label class="field check-field"><input type="checkbox" name="mayor_notifications"'+(d.mayor_notifications?' checked':'')+'> <span>Send class mayors a “who has not scanned in” reminder ('+(d.mayor_links||0)+' linked)</span></label>'+
  '<label class="field">Mayor reminder time<input type="time" name="mayor_reminder_time" value="'+esc(d.mayor_reminder_time||'08:30')+'" required></label>'+
+ '<label class="field check-field"><input type="checkbox" name="parent_absent_alerts"'+(d.parent_absent_alerts?' checked':'')+'> <span>Tell linked parents when no Time IN is recorded yet ('+(d.student_links||0)+' linked chats)</span></label>'+
+ '<label class="field">Parent alert time (PHT)<input type="time" name="parent_alert_time" value="'+esc(d.parent_alert_time||'08:00')+'" required></label>'+
+ '<p class="muted small" style="margin:-6px 0 0">Off by default. Each parent gets one message a day, and a section where nobody has scanned in yet is skipped. Get the school’s approval of the wording first.</p>'+
  '<div class="set-grid"><label class="field">Morning summary<input type="time" name="summary_time" value="'+esc(d.summary_time)+'" required></label>'+
  '<label class="field">End-of-day report<input type="time" name="eod_time" value="'+esc(d.eod_time)+'" required></label>'+
  '<label class="field">Lag alerts start<select name="lag_start_hour">'+hourOpts(d.lag_start_hour,0,23)+'</select></label>'+
@@ -276,7 +279,7 @@ function settingsHTML(){
 }
 async function saveSettings(form){
  const f=form.elements,g=n=>f[n].value;
- const p={lag_points:parseInt(g('lag_points'),10),late_cutoff:g('late_cutoff'),summary_time:g('summary_time'),eod_time:g('eod_time'),lag_start_hour:parseInt(g('lag_start_hour'),10),lag_end_hour:parseInt(g('lag_end_hour'),10),lag_interval:parseInt(g('lag_interval'),10),telegram_enabled:f.telegram_enabled.checked,student_notifications:f.student_notifications.checked,correction_alerts:f.correction_alerts.checked,mayor_notifications:f.mayor_notifications.checked,mayor_reminder_time:g('mayor_reminder_time')};
+ const p={lag_points:parseInt(g('lag_points'),10),late_cutoff:g('late_cutoff'),summary_time:g('summary_time'),eod_time:g('eod_time'),lag_start_hour:parseInt(g('lag_start_hour'),10),lag_end_hour:parseInt(g('lag_end_hour'),10),lag_interval:parseInt(g('lag_interval'),10),telegram_enabled:f.telegram_enabled.checked,student_notifications:f.student_notifications.checked,correction_alerts:f.correction_alerts.checked,mayor_notifications:f.mayor_notifications.checked,mayor_reminder_time:g('mayor_reminder_time'),parent_absent_alerts:f.parent_absent_alerts.checked,parent_alert_time:g('parent_alert_time')};
  if(!(p.lag_points>=1&&p.lag_points<=50))return toast('Lagging threshold must be between 1 and 50.',true);
  if(p.lag_start_hour>=p.lag_end_hour)return toast('Lag alerts must stop after they start.',true);
  state.settings.busy=true;render();
