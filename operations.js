@@ -4,8 +4,8 @@ const root=document.getElementById('opsRoot');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const php=n=>'₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
 const ph=n=>new Date(n).toLocaleString('en-PH',{timeZone:'Asia/Manila',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-const state={user:null,role:null,scope:null,hub:null,hourly:[],notices:[],rewards:[],volunteers:[],attendanceVolunteers:[],attendanceClasses:[],print:[],scans:[],tab:'pulse',busy:false,notice:'',lastRefresh:null,online:navigator.onLine};
-const tabs=[['pulse','Event Pulse'],['announcements','Announcements'],['rally','Stamp Rally'],['team','Movie Volunteers'],['attendance','Volunteer Attendance'],['audit','Audit Center'],['recap','Closing Report']];
+const state={user:null,role:null,scope:null,hub:null,hourly:[],notices:[],volunteers:[],attendanceVolunteers:[],attendanceClasses:[],print:[],scans:[],tab:'pulse',busy:false,notice:'',lastRefresh:null,online:navigator.onLine};
+const tabs=[['pulse','Event Pulse'],['announcements','Announcements'],['team','Movie Volunteers'],['attendance','Volunteer Attendance'],['audit','Audit Center'],['recap','Closing Report']];
 const allowed=()=>['official','class_mayor','event_monitor','cashier','ticket_checker'].includes(state.role);
 function top(){
  return '<header class="movie-header"><div class="movie-brand"><img src="./assets/lsc-glass-logo.png?v=2" alt="LSC crest">'+
@@ -17,7 +17,7 @@ function top(){
 function tiles(){
  const h=state.hub||{},shows=h.shows||[];
  const sold=shows.reduce((a,b)=>a+Number(b.sold||0),0),income=shows.reduce((a,b)=>a+Number(b.revenue||0),0),used=shows.reduce((a,b)=>a+Number(b.redeemed||0),0);
- return '<div class="ops-tiles">'+[['Attendance arrivals',h.today_checkins??'Role-limited'],['Passport stamps',h.passport_stamps??'Role-limited'],
+ return '<div class="ops-tiles">'+[['Attendance arrivals',h.today_checkins??'Role-limited'],
  ...(state.role==='class_mayor'?[]:
  ['Movie tickets sold',sold],['Revenue in scope',php(income)],['Tickets redeemed',used],['Active screenings',shows.filter(x=>x.active).length])]
  .map(([title,val])=>'<div class="ops-tile"><small>'+esc(title)+'</small><strong>'+esc(val)+'</strong></div>').join('')+'</div>';
@@ -46,10 +46,6 @@ function announcementRows(){
  (state.role==='official'?'<button class="movie-mini" data-toggle-notice="'+esc(x.id)+'">'+(x.active?'Hide':'Publish')+'</button>':'')+'</div>').join('')||
  '<p class="movie-helper">No official announcements yet.</p>';
 }
-function rewardRows(){
- return (state.rewards||[]).map(x=>'<div class="ops-row"><div><strong>'+esc(x.title)+'</strong><p>'+esc(x.required_stamps)+' activity stamp(s) required · '+(x.active?'Available':'Paused')+'</p></div>'+
- (state.role==='official'?'<button class="movie-mini" data-toggle-reward="'+esc(x.id)+'">'+(x.active?'Pause':'Resume')+'</button>':'')+'</div>').join('')||'<p class="movie-helper">No school-approved rewards set up yet. The Digital Passport badges still work independently.</p>';
-}
 function volunteerRows(){
  return (state.volunteers||[]).map(v=>'<div class="ops-row"><div><strong>'+esc(v.email||v.user_id)+'</strong><p>'+esc(v.role)+' · '+(v.enabled?'Enabled':'Disabled')+' · '+esc(v.show_id||'All showings')+'</p></div></div>').join('')||'<p class="movie-helper">No Movie Booth volunteers assigned yet.</p>';
 }
@@ -65,15 +61,6 @@ function announcements(){
  '<label>Message<textarea name="message" required minlength="3" maxlength="700" rows="3" placeholder="Write a clear official notice"></textarea></label>'+
  '<button class="movie-btn movie-primary" type="submit">Publish Announcement</button></form>':'')+
  announcementRows()+'</section>';
-}
-function rally(){
- return '<section class="movie-panel"><h2>Foundation Week Stamp Rally</h2><p class="movie-helper">Rewards use distinct verified activity stamps from the separate Digital Passport database. No public leaderboard or academic grading.</p>'+
- (state.role==='official'?'<div class="ops-two"><form id="rewardForm" class="ops-form"><h3>Add Reward</h3><label>Reward title<input name="title" required minlength="3" maxlength="90" placeholder="Example: Foundation Week Souvenir"></label>'+
- '<label>Stamps required<input name="required_stamps" type="number" min="1" max="40" required value="3"></label><button class="movie-btn movie-primary">Add Reward</button></form>'+
- '<form id="claimForm" class="ops-form"><h3>Verify & Claim Prize</h3><label>Student attendance ID<input name="student_id" required pattern="[0-9]{7,12}" maxlength="12" inputmode="numeric"></label>'+
- '<label>Reward<select name="reward_id" required>'+state.rewards.filter(x=>x.active).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.title)+' ('+x.required_stamps+' stamps)</option>').join('')+'</select></label>'+
- '<button type="submit" class="movie-btn movie-primary">Verify & Record Claim</button></form></div>':'')+
- '<h3>Approved rewards</h3>'+rewardRows()+'</section>';
 }
 function team(){
  if(state.role!=='official')return '<section class="movie-panel"><h2>Volunteer Team</h2><p>Only LSC Officials can assign volunteer access.</p></section>';
@@ -122,7 +109,7 @@ function recap(){
  const shows=state.hub?.shows||[],h=state.hub||{};
  return '<section class="movie-panel" id="opsPrintable"><h2>Foundation Week Closing Report</h2>'+
  '<p class="movie-helper">Current authorized scope · Generated '+esc(state.lastRefresh?ph(state.lastRefresh):'—')+'</p>'+
- '<div class="ops-tiles">'+[['Students in scope',h.roster??'N/A'],['Distinct check-ins today',h.today_checkins??'N/A'],['Passport stamps',h.passport_stamps??'N/A'],
+ '<div class="ops-tiles">'+[['Students in scope',h.roster??'N/A'],['Distinct check-ins today',h.today_checkins??'N/A'],
  ['Sold movie tickets',shows.reduce((n,s)=>n+Number(s.sold),0)],['Movie revenue',php(shows.reduce((n,s)=>n+Number(s.revenue),0))]]
  .map(([label,val])=>'<div class="ops-tile"><small>'+esc(label)+'</small><strong>'+esc(val)+'</strong></div>').join('')+'</div>'+
  '<h3>Movie activity summary</h3>'+showRows()+
@@ -139,19 +126,18 @@ function render(){
  '<nav class="movie-tabs">'+visibleTabs.map(([k,label])=>'<button data-tab="'+k+'" class="'+(state.tab===k?'selected':'')+'">'+label+'</button>').join('')+'</nav>'+
  '<div class="ops-actions"><button data-act="refresh" class="movie-btn movie-secondary">Refresh Data</button><span class="movie-helper">Last sync: '+(state.lastRefresh?ph(state.lastRefresh):'not yet loaded')+'</span></div>'+
  (state.notice?'<div role="status" class="movie-alert">'+esc(state.notice)+'</div>':'')+
- (state.tab==='pulse'?pulse():state.tab==='announcements'?announcements():state.tab==='rally'?rally():state.tab==='team'?team():state.tab==='attendance'?attendanceVolunteers():state.tab==='audit'?audit():recap())+
+ (state.tab==='pulse'?pulse():state.tab==='announcements'?announcements():state.tab==='team'?team():state.tab==='attendance'?attendanceVolunteers():state.tab==='audit'?audit():recap())+
  '<footer class="movie-footer">Powered by Azure&lt;3 · School approval required · Private staff access</footer></main>';
 }
 async function load(){
  if(!state.user)return;
- const [h,n,r,hourly]=await Promise.all([
+ const [h,n,hourly]=await Promise.all([
  db.rpc('lsc_fw_operations'),
  db.from('lsc_fw_announcements').select('id,title,message,active,created_at').order('created_at',{ascending:false}).limit(60),
- db.from('lsc_fw_rewards').select('id,title,required_stamps,active').order('required_stamps').limit(60),
  db.rpc('lsc_movie_hourly_sales',{p_day:null})
  ]);
  if(h.error)throw h.error;
- state.hub=h.data;state.notices=n.data||[];state.rewards=r.data||[];state.hourly=hourly.error?[]:(hourly.data||[]);
+ state.hub=h.data;state.notices=n.data||[];state.hourly=hourly.error?[]:(hourly.data||[]);
  if(state.role==='official'){
  const [v,s,p,av,cl]=await Promise.all([
   db.rpc('lsc_movie_list_volunteers'),
@@ -184,10 +170,9 @@ async function runRpc(fn,args){
  finally{state.busy=false}
 }
 document.addEventListener('click',async e=>{
- const t=e.target.closest('[data-tab],[data-act],[data-toggle-notice],[data-toggle-reward],[data-attendance-revoke]');if(!t)return;
+ const t=e.target.closest('[data-tab],[data-act],[data-toggle-notice],[data-attendance-revoke]');if(!t)return;
  if(t.dataset.tab){state.tab=t.dataset.tab;location.hash=state.tab;render();return}
  if(t.dataset.toggleNotice){await runRpc('lsc_fw_manage_notice',{p_action:'toggle',p_id:t.dataset.toggleNotice});return}
- if(t.dataset.toggleReward){await runRpc('lsc_fw_manage_reward',{p_action:'toggle',p_id:t.dataset.toggleReward});return}
  if(t.dataset.attendanceRevoke){
   if(state.role!=='official')return;
   if(!window.confirm('Revoke attendance terminal access for '+(t.dataset.volunteerEmail||'this volunteer')+'? This does not delete recorded attendance history.'))return;
@@ -199,17 +184,15 @@ document.addEventListener('click',async e=>{
  if(act==='recap-print')window.print();
  if(act==='recap-csv'){
   const h=state.hub||{},shows=h.shows||[];
-  csv([['Metric','Value'],['Roster',h.roster],['Check-ins today',h.today_checkins],['Passport stamps',h.passport_stamps],
+  csv([['Metric','Value'],['Roster',h.roster],['Check-ins today',h.today_checkins],
    ...shows.flatMap(s=>[[s.title+' tickets sold',s.sold],[s.title+' revenue PHP',s.revenue],[s.title+' redeemed',s.redeemed]])],
   'LSC-Foundation-Week-Closing-Report.csv');
  }
 });
 document.addEventListener('submit',async e=>{
- if(!['noticeForm','rewardForm','claimForm','teamForm','attendanceVolunteerForm'].includes(e.target.id))return;
+ if(!['noticeForm','teamForm','attendanceVolunteerForm'].includes(e.target.id))return;
  e.preventDefault();const f=e.target;
  if(f.id==='noticeForm')await runRpc('lsc_fw_manage_notice',{p_action:'create',p_title:f.elements.title.value,p_message:f.elements.message.value});
- if(f.id==='rewardForm')await runRpc('lsc_fw_manage_reward',{p_action:'create',p_title:f.elements.title.value,p_stamps:Number(f.elements.required_stamps.value)});
- if(f.id==='claimForm')await runRpc('lsc_fw_manage_reward',{p_action:'claim',p_id:f.elements.reward_id.value,p_student_number:f.elements.student_id.value});
  if(f.id==='teamForm')await runRpc('lsc_movie_assign_volunteer',{p_email:f.elements.email.value,p_role:f.elements.role.value,p_show_id:f.elements.show_id.value||null,p_enabled:f.elements.enabled.checked});
  if(f.id==='attendanceVolunteerForm'){
   const scope=f.elements.scope.value;
