@@ -230,7 +230,7 @@ function liveHTML(){
  rows.map(x=>'<tr class="'+(lagging(x)?'lv-lag':'')+'"><td>'+esc(x.grade_level)+'</td><td>'+esc(x.section)+'</td><td class="mono">'+x.present+' / '+x.total+'</td><td class="mono strong">'+x.pct.toFixed(1)+'%</td><td style="min-width:140px">'+bar(x.pct,lagging(x)?'warn':'')+'</td><td>'+(x.total===0?'<span class="badge off">No students</span>':lagging(x)?'<span class="badge out">Lagging</span>':'<span class="badge">On track</span>')+'</td></tr>').join('')+'</tbody></table></div>'+
  '<p class="muted small" style="margin-top:12px">Last updated '+esc(L.at?timePH(L.at):'—')+' PHT. “Present” means the student has at least one Time IN today; “lagging” means a section is more than '+lagPts+' percentage points below the school-wide rate.</p></div>';
 }
-const DEMO_SETTINGS={lag_points:10,late_cutoff:'07:30',summary_time:'09:00',eod_time:'16:00',lag_start_hour:8,lag_end_hour:11,lag_interval:30,telegram_enabled:true,join_code:'DEMO1234',subscribers:[{chat_id:1,label:'Demo Developer',role:'developer',active:true,joined_at:new Date().toISOString()}]};
+const DEMO_SETTINGS={lag_points:10,late_cutoff:'07:30',summary_time:'09:00',eod_time:'16:00',lag_start_hour:8,lag_end_hour:11,lag_interval:30,telegram_enabled:true,student_notifications:true,student_links:0,join_code:'DEMO1234',subscribers:[{chat_id:1,label:'Demo Developer',role:'developer',active:true,joined_at:new Date().toISOString()}]};
 async function loadSettings(){
  if(state.role!=='official')return;
  if(state.demo){if(!state.settings.data)state.settings={data:JSON.parse(JSON.stringify(DEMO_SETTINGS)),error:null,busy:false};return;}
@@ -253,6 +253,7 @@ function settingsHTML(){
  '<p class="muted small" style="margin:-6px 0 0">A student whose first Time IN is after this time counts as late on the Live Dashboard and in the Telegram reports.</p></div></div>'+
  '<div class="card pad"><div class="section-title"><h3>Telegram Reports</h3><span class="muted small">Philippine time</span></div><div class="stack">'+
  '<label class="field check-field"><input type="checkbox" name="telegram_enabled"'+(d.telegram_enabled?' checked':'')+'> <span>Send Telegram reports and alerts</span></label>'+
+ '<label class="field check-field"><input type="checkbox" name="student_notifications"'+(d.student_notifications?' checked':'')+'> <span>Notify students/parents on Time IN/OUT ('+(d.student_links||0)+' linked chats)</span></label>'+
  '<div class="set-grid"><label class="field">Morning summary<input type="time" name="summary_time" value="'+esc(d.summary_time)+'" required></label>'+
  '<label class="field">End-of-day report<input type="time" name="eod_time" value="'+esc(d.eod_time)+'" required></label>'+
  '<label class="field">Lag alerts start<select name="lag_start_hour">'+hourOpts(d.lag_start_hour,0,23)+'</select></label>'+
@@ -271,7 +272,7 @@ function settingsHTML(){
 }
 async function saveSettings(form){
  const f=form.elements,g=n=>f[n].value;
- const p={lag_points:parseInt(g('lag_points'),10),late_cutoff:g('late_cutoff'),summary_time:g('summary_time'),eod_time:g('eod_time'),lag_start_hour:parseInt(g('lag_start_hour'),10),lag_end_hour:parseInt(g('lag_end_hour'),10),lag_interval:parseInt(g('lag_interval'),10),telegram_enabled:f.telegram_enabled.checked};
+ const p={lag_points:parseInt(g('lag_points'),10),late_cutoff:g('late_cutoff'),summary_time:g('summary_time'),eod_time:g('eod_time'),lag_start_hour:parseInt(g('lag_start_hour'),10),lag_end_hour:parseInt(g('lag_end_hour'),10),lag_interval:parseInt(g('lag_interval'),10),telegram_enabled:f.telegram_enabled.checked,student_notifications:f.student_notifications.checked};
  if(!(p.lag_points>=1&&p.lag_points<=50))return toast('Lagging threshold must be between 1 and 50.',true);
  if(p.lag_start_hour>=p.lag_end_hour)return toast('Lag alerts must stop after they start.',true);
  state.settings.busy=true;render();
