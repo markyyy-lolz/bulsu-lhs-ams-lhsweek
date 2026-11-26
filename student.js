@@ -105,6 +105,8 @@ async function onCameraScan(raw){
     const status=await recordAttendance(null,studentId);
     if(status==='SUCCESS'){
       scannerMessage('Attendance recorded. Scan the next student ID.');
+    }else if(status==='QUEUED'){
+      scannerMessage('Saved offline. It will upload when the connection returns. Scan the next student ID.');
     }else if(status==='DUPLICATE'){
       scannerMessage('This ID was already recorded recently. No duplicate attendance was added.');
     }else{
@@ -217,11 +219,74 @@ function updateStation() {
   if(signOutButton)signOutButton.hidden=state.demo||!state.authorized;
   activationNotice.innerHTML='<strong>Attendance terminal is locked.</strong> Sign in as a <a href="./login.html">Class Mayor or LSC Official</a> using this browser. Only supervised stations can record real attendance.';
 }
+
+// ===== Offline queue: scans made while the connection is down are kept on this device and synced later =====
+const QUEUE_KEY='lsc_offline_queue_v1',FAILED_KEY='lsc_offline_failed_v1',AUTH_KEY='lsc_offline_auth_v1';
+const readJSON=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}};
+const writeJSON=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+function isNetworkError(e){
+  if(!e)return false;
+  const m=String(e.message||e);
+  return e.name==='AuthRetryableFetchError'||e.status===0||/failed to fetch|networkerror|load failed|network request failed|fetch failed/i.test(m);
+}
+const getQueue=()=>readJSON(QUEUE_KEY,[]);
+const setQueue=q=>{writeJSON(QUEUE_KEY,q);renderSyncBar();};
+const syncBar=document.createElement('div');
+syncBar.id='syncBar';syncBar.setAttribute('role','status');syncBar.hidden=true;
+syncBar.style.cssText='max-width:460px;margin:14px auto 0;border-radius:12px;padding:12px 16px;font-size:12px;line-height:1.6;text-align:left;border:1px solid #f4dfb2;background:#fff7e8;color:#9a6b22';
+activationNotice.parentNode.insertBefore(syncBar,activationNotice.nextSibling);
+let syncing=false;
+function renderSyncBar(){
+  const q=getQueue(),failed=readJSON(FAILED_KEY,[]),offline=!navigator.onLine;
+  if(!q.length&&!failed.length&&!offline){syncBar.hidden=true;return;}
+  syncBar.hidden=false;syncBar.replaceChildren();
+  const line=(t,b)=>{const d=document.createElement('div');if(b)d.style.fontWeight='800';d.textContent=t;syncBar.append(d);};
+  if(offline)line('⚠ No connection — scanning still works.',true);
+  if(q.length)line((syncing?'Syncing ':'')+q.length+' scan'+(q.length===1?'':'s')+' saved on this device'+(offline?' · will upload when you are back online.':syncing?'…':' · uploading shortly.'));
+  if(failed.length){
+    line(failed.length+' scan'+(failed.length===1?'':'s')+' could not be recorded:',true);
+    failed.slice(-5).forEach(f=>line('• '+f.student_id+' at '+formatTime(f.at)+' — '+f.reason));
+    const btn=document.createElement('button');btn.type='button';btn.textContent='Dismiss';btn.style.cssText='margin-top:6px;border:1px solid #e0c98f;background:#fff;border-radius:8px;padding:5px 10px;font-weight:700';
+    btn.onclick=()=>{writeJSON(FAILED_KEY,[]);renderSyncBar();};syncBar.append(btn);
+  }
+}
+function queueScan(id){
+  const q=getQueue(),now=Date.now();
+  const recent=q.filter(x=>x.student_id===id).at(-1);
+  if(recent&&now-new Date(recent.at).getTime()<45000)return {status:'DUPLICATE_QUEUED',at:recent.at};
+  const key=(crypto.randomUUID?crypto.randomUUID():String(now)+Math.random().toString(16).slice(2))+'';
+  const at=new Date(now).toISOString();
+  q.push({key,student_id:id,at});setQueue(q);
+  return {status:'QUEUED',at};
+}
+async function flushQueue(){
+  if(syncing||state.demo||!state.authorized||!navigator.onLine)return;
+  let q=getQueue();if(!q.length)return;
+  syncing=true;renderSyncBar();
+  try{
+    while(q.length){
+      const item=q[0];
+      const {data,error}=await client.rpc('lsc_record_attendance_offline',{p_student_id:item.student_id,p_scanned_at:item.at,p_key:item.key});
+      if(error){
+        if(isNetworkError(error))break;
+        const failed=readJSON(FAILED_KEY,[]);failed.push({student_id:item.student_id,at:item.at,reason:error.message||'Rejected'});writeJSON(FAILED_KEY,failed);
+      }
+      q=q.slice(1);setQueue(q);
+    }
+  }finally{syncing=false;renderSyncBar();}
+}
+window.addEventListener('online',()=>{renderSyncBar();checkAuthorization().then(flushQueue);});
+window.addEventListener('offline',renderSyncBar);
+setInterval(()=>{if(getQueue().length&&navigator.onLine)flushQueue();},15000);
 async function checkAuthorization() {
   if(state.demo)return;
-  state.authorized=false;state.operatorEmail='';state.operatorRole='';state.operatorClass='';state.operatorScope='';state.operatorExpires='';updateStation();
+  const prev={authorized:state.authorized,operatorEmail:state.operatorEmail,operatorRole:state.operatorRole,operatorClass:state.operatorClass,operatorScope:state.operatorScope,operatorExpires:state.operatorExpires};
+  let offlineFail=false;
   try {
+    if(!navigator.onLine)throw Object.assign(new Error('Failed to fetch'),{status:0});
     const {data:{user},error}=await client.auth.getUser();
+    if(error&&isNetworkError(error))throw error;
+    state.authorized=false;state.operatorEmail='';state.operatorRole='';state.operatorClass='';state.operatorScope='';state.operatorExpires='';updateStation();
     if(error||!user){
       updateStation();
       if(camera.mode==='camera'){
@@ -231,6 +296,7 @@ async function checkAuthorization() {
       return;
     }
     const {data:access,error:accessError}=await client.rpc('lsc_attendance_access');
+    if(accessError&&isNetworkError(accessError))throw accessError;
     state.authorized=!accessError&&access?.authorized===true &&
       ['official','class_mayor','attendance_volunteer'].includes(access.role);
     if(state.authorized){
@@ -239,12 +305,26 @@ async function checkAuthorization() {
       state.operatorScope=access.scope||'';
       state.operatorClass=access.class_label||'';
       state.operatorExpires=access.expires_at||'';
-    }
+      writeJSON(AUTH_KEY,{uid:user.id,email:state.operatorEmail,role:state.operatorRole,scope:state.operatorScope,cls:state.operatorClass,exp:state.operatorExpires});
+    }else{try{localStorage.removeItem(AUTH_KEY)}catch{}}
   }catch(error) {
-    console.warn('LSC station authorization failed:',error?.message||'unknown error');
+    if(isNetworkError(error)){
+      offlineFail=true;
+      // Stay usable offline: keep the last verified authorization (the database re-checks everything when scans sync).
+      if(prev.authorized)Object.assign(state,prev);
+      else{
+        const cached=readJSON(AUTH_KEY,null);
+        const {data:{session}}=await client.auth.getSession().catch(()=>({data:{session:null}}));
+        const stillValid=cached&&(!cached.exp||new Date(cached.exp)>new Date());
+        if(cached&&session?.user?.id===cached.uid&&stillValid){
+          state.authorized=true;state.operatorEmail=cached.email;state.operatorRole=cached.role;state.operatorScope=cached.scope;state.operatorClass=cached.cls;state.operatorExpires=cached.exp;
+        }
+      }
+    }else console.warn('LSC station authorization failed:',error?.message||'unknown error');
   }
+  renderSyncBar();
   updateStation();
-  if(!state.authorized&&camera.mode==='camera'&&!state.demo&&camera.scanner){
+  if(!state.authorized&&!offlineFail&&camera.mode==='camera'&&!state.demo&&camera.scanner){
     stopCamera();
     scannerMessage('Your attendance session is no longer authorized. Sign in again.',true);
   }
@@ -259,7 +339,7 @@ function appendMessage(type,title,lines) {
   small.className='eyebrow';
   small.style.marginBottom='8px';
   small.style.color='inherit';
-  small.textContent=type==='ERROR'?'NOT RECORDED':type==='DUPLICATE'?'DUPLICATE ENTRY — NO NEW RECORD':'ATTENDANCE RECORDED'+(state.demo?' — DEMO':'');
+  small.textContent=type==='ERROR'?'NOT RECORDED':type==='QUEUED'?'SAVED OFFLINE — NOT YET UPLOADED':type==='DUPLICATE'?'DUPLICATE ENTRY — NO NEW RECORD':'ATTENDANCE RECORDED'+(state.demo?' — DEMO':'');
   const heading=document.createElement('div');
   heading.className='result-title';
   heading.textContent=title;
@@ -405,9 +485,25 @@ async function recordAttendance(event=null,scannedId=null) {
     if(state.demo){
       result=simulate(id);
     } else {
-      const {data,error}=await client.rpc('lsc_record_attendance',{p_student_id:id});
-      if(error)throw error;
-      result=data;
+      let queued=null;
+      if(!navigator.onLine)queued=queueScan(id);
+      else{
+        const {data,error}=await client.rpc('lsc_record_attendance',{p_student_id:id});
+        if(error&&isNetworkError(error))queued=queueScan(id);
+        else if(error)throw error;
+        else{result=data;void flushQueue();}
+      }
+      if(queued){
+        const dup=queued.status==='DUPLICATE_QUEUED';
+        appendMessage(dup?'DUPLICATE':'QUEUED',dup?'Already saved':'Saved offline',[
+          'Student ID · '+id,
+          formatTime(queued.at)+' · Philippine Standard Time',
+          dup?'Scanned a moment ago. No extra entry was saved.':'No connection. This scan is kept on this device and uploads automatically when the internet is back.',
+          'IN or OUT is decided when it syncs.'
+        ]);
+        studentInput.value='';
+        return dup?'DUPLICATE':'QUEUED';
+      }
     }
     const status=result.status||'SUCCESS';
     if(status==='SUCCESS'&&result.event_type==='IN'){
@@ -489,3 +585,5 @@ updateClock();setInterval(updateClock,1000);
 // Expiring or revoked approval is always checked again by the database for every entry.
 setInterval(()=>{if(!document.hidden&&!state.demo&&!state.busy)checkAuthorization()},120000);
 updateStation();checkAuthorization().then(()=>studentInput.focus());
+renderSyncBar();if(navigator.onLine)setTimeout(flushQueue,2500);
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
