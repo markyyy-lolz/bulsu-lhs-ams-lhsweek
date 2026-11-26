@@ -2,7 +2,7 @@
 .ops-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0}
 .ops-tile{padding:20px;background:rgba(232,240,254,.63);border:1px solid rgba(180,200,228,.45);border-radius:16px;min-width:0}
 .ops-tile small{display:block;font-weight:800;font-size:12px;color:#627a9c}
-.ops-tile strong{font:800 clamp(20px,2.6vw,33px) "Outfit",sans-serif;display:block;color:#1a3c77;overflow-wrap:anywhere;margin-top:9px}
+.ops-tile strong{font:800 clamp(20px,2.6vw,33px) "Poppins",sans-serif;display:block;color:#1a3c77;overflow-wrap:anywhere;margin-top:9px}
 .ops-show{border:1px solid rgba(172,195,228,.38);padding:15px 18px;border-radius:13px;margin:12px 0;background:rgba(250,253,255,.65)}
 .ops-show strong{font-size:15px;color:#1c3e72}
 .ops-show p{font-size:12px;color:#637b9d;margin:8px 0 0}
@@ -20,7 +20,7 @@
 .ops-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:19px;align-items:start}
 .ops-form{border:1px solid rgba(175,197,226,.55);padding:20px;border-radius:16px;background:rgba(255,255,255,.48);display:flex;flex-direction:column;gap:14px;margin:16px 0}
 .ops-form label{display:grid;gap:8px;font-size:12px;font-weight:800;color:#4c6994}
-.ops-form textarea{border:1px solid rgba(153,179,216,.53);background:white;border-radius:12px;padding:13px;color:#1a365e;font:500 14px "DM Sans",sans-serif;resize:vertical;min-height:94px}
+.ops-form textarea{border:1px solid rgba(153,179,216,.53);background:white;border-radius:12px;padding:13px;color:#1a365e;font:500 14px "Poppins",sans-serif;resize:vertical;min-height:94px}
 .ops-form .ops-check{display:flex;align-items:center}
 .ops-check input{width:18px!important;height:18px!important}
 .movie-tabs{width:auto}
