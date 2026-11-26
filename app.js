@@ -8,12 +8,12 @@ const state = {
   demo: false, user: null, role: null, page: 'overview', loading: false,
   students: [], logs: [], classes: [], assignments: [], classId: null, lastResult: null, query: '', recordDate: todayPH(),
   busy: false, mobileNav: false, loginMode:'email', otpSent:false, otpEmail:'', showPasswordSetup:false,
-  live:{data:null,error:null,at:null,busy:false},settings:{data:null,error:null,busy:false},
+  live:{data:null,error:null,at:null,busy:false},corr:{data:[],error:null,busy:false},settings:{data:null,error:null,busy:false},
   fwPulse:null, fwSelected:'', fwStamps:[], fwBusy:false, fwNotice:null, fwProfile:null
 };
 let clearResultTimer = null;
 let lastAnimatedPage = null;
-const iconPaths=Object.freeze({"overview":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/>","students":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>","classes":"<path d=\"M4 22V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16\"/><path d=\"M2 22h20M9 22v-6h6v6M8 9h.01M16 9h.01M8 13h.01M16 13h.01\"/>","officials":"<circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2\"/><path d=\"m16 8 2 2 4-4\"/>","records":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M8 2v4M16 2v4M3 10h18m-13 6 2 2 5-5\"/>","security":"<rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/><circle cx=\"12\" cy=\"16\" r=\"1\"/><path d=\"M12 17v2\"/>","kiosk":"<path d=\"M7 3H5a2 2 0 0 0-2 2v2m14-4h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M3 17v2a2 2 0 0 0 2 2h2M4 12h16\"/>","logout":"<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"m16 17 5-5-5-5M21 12H9\"/>","external":"<path d=\"M13 5h6v6M19 5l-9 9\"/><path d=\"M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6\"/>","movie":"<rect x=\"2\" y=\"3\" width=\"20\" height=\"18\" rx=\"2\"/><path d=\"M7 3v18M17 3v18M2 8h5M2 16h5M17 8h5M17 16h5\"/>","passport":"<path d=\"M5 3h14v18l-7-4-7 4V3Z\"/><path d=\"M8 7h8M8 11h5\"/>","close":"<path d=\"M18 6 6 18M6 6l12 12\"/>","menu":"<path d=\"M4 6h16M4 12h16M4 18h16\"/>"});
+const iconPaths=Object.freeze({"overview":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/>","students":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>","classes":"<path d=\"M4 22V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16\"/><path d=\"M2 22h20M9 22v-6h6v6M8 9h.01M16 9h.01M8 13h.01M16 13h.01\"/>","officials":"<circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2\"/><path d=\"m16 8 2 2 4-4\"/>","records":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M8 2v4M16 2v4M3 10h18m-13 6 2 2 5-5\"/>","security":"<rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/><circle cx=\"12\" cy=\"16\" r=\"1\"/><path d=\"M12 17v2\"/>","kiosk":"<path d=\"M7 3H5a2 2 0 0 0-2 2v2m14-4h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M3 17v2a2 2 0 0 0 2 2h2M4 12h16\"/>","logout":"<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"m16 17 5-5-5-5M21 12H9\"/>","external":"<path d=\"M13 5h6v6M19 5l-9 9\"/><path d=\"M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6\"/>","movie":"<rect x=\"2\" y=\"3\" width=\"20\" height=\"18\" rx=\"2\"/><path d=\"M7 3v18M17 3v18M2 8h5M2 16h5M17 8h5M17 16h5\"/>","passport":"<path d=\"M5 3h14v18l-7-4-7 4V3Z\"/><path d=\"M8 7h8M8 11h5\"/>","corrections":"<path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z\"/>","close":"<path d=\"M18 6 6 18M6 6l12 12\"/>","menu":"<path d=\"M4 6h16M4 12h16M4 18h16\"/>"});
 function navIcon(name){return '<svg class="outline-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+(iconPaths[name]||iconPaths.overview)+'</svg>';}
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function todayPH(){
@@ -109,13 +109,13 @@ function loginHTML(){
 }
 function sidebar(){
   let menu=[['overview','Dashboard'],['passport','Foundation Passport'],['records','Attendance Records'],['security','Account Security']];
-  if(state.role==='class_mayor'){menu.splice(1,0,['masterlist','Class Masterlist']);}
-  if(state.role==='official'){menu.splice(1,0,['live','Live Dashboard'],['students','Student Directory'],['classes','Classes'],['officials','Role Assignments'],['settings','Admin Settings']);}
+  if(state.role==='class_mayor'){menu.splice(1,0,['masterlist','Class Masterlist'],['corrections','Corrections']);}
+  if(state.role==='official'){menu.splice(1,0,['live','Live Dashboard'],['students','Student Directory'],['classes','Classes'],['officials','Role Assignments'],['corrections','Correction Requests'],['settings','Admin Settings']);}
   return '<aside id="lsc-sidebar" class="sidebar'+(state.mobileNav?' open':'')+'" aria-label="Workspace navigation"><button type="button" class="lsc-mobile-close" data-act="closeMenu" aria-label="Close navigation menu">'+navIcon('close')+'</button><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+navIcon(v[0])+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">'+navIcon('kiosk')+'</span>Student Attendance<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./movie.html"><span class="nav-ico">'+navIcon('movie')+'</span>Movie Booth POS<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'<a class="nav-btn" href="./reserve.html"><span class="nav-ico">'+navIcon('movie')+'</span>Online Movie Booking<span class="nav-external">'+navIcon('external')+'</span></a>'+'<a class="nav-btn" href="./operations.html"><span class="nav-ico">'+navIcon('overview')+'</span>Event Command Center<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./operations.html#attendance"><span class="nav-ico">'+navIcon('officials')+'</span>Volunteer Manager<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">'+navIcon('logout')+'<span>Sign out</span></button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
 }
-function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',live:'Live Dashboard',settings:'Admin Settings',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security',passport:'Foundation Passport'})[state.page]||'Dashboard';}
+function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',live:'Live Dashboard',settings:'Admin Settings',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security',passport:'Foundation Passport',corrections:'Corrections'})[state.page]||'Dashboard';}
 function appHTML(){
-  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='live'?liveHTML():state.page==='settings'?settingsHTML():state.page==='masterlist'?masterlistHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():state.page==='passport'?passportHTML():overviewHTML())+'</div></main></div>';
+  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='live'?liveHTML():state.page==='settings'?settingsHTML():state.page==='masterlist'?masterlistHTML():state.page==='corrections'?correctionsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():state.page==='passport'?passportHTML():overviewHTML())+'</div></main></div>';
 }
 function header(head,sub,extra=''){return '<div class="page-header"><div><div class="eyebrow" style="margin-bottom:8px">LSC ATTENDANCE MONITOR</div><h1>'+head+'</h1><p>'+sub+'</p></div>'+extra+'</div>';}
 function metrics(){
@@ -282,6 +282,76 @@ async function saveSettings(form){
   toast('Settings saved. Telegram schedule updated.');
  }catch(err){toast('Could not save: '+(err.message||err),true);}
  state.settings.busy=false;render();
+}
+
+// ===== Correction requests =====
+const CORR_KIND={ADD_IN:'Add missed Time IN',ADD_OUT:'Add missed Time OUT',REMOVE:'Remove wrong/duplicate scan'};
+async function loadCorrections(){
+ if(state.demo){return;}
+ state.corr.busy=true;
+ const r=await sb.rpc('lsc_list_corrections');
+ state.corr={data:r.error?state.corr.data:(r.data||[]),error:r.error?r.error.message:null,busy:false};
+}
+function corrDesc(c){
+ if(c.kind==='REMOVE')return 'Remove '+esc(c.event_type||'')+' scan'+(c.event_recorded_at?' at '+esc(timePH(c.event_recorded_at)):'')+' · '+esc(c.event_date);
+ return (c.kind==='ADD_IN'?'Add Time IN':'Add Time OUT')+' at '+esc(c.event_time)+' · '+esc(c.event_date);
+}
+function correctionsHTML(){
+ const isOff=state.role==='official',C=state.corr,list=[...(C.data||[])].sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1));
+ const pending=list.filter(x=>x.status==='pending').length;
+ const mine=state.students.filter(x=>x.active&&(isOff||!state.classId||x.class_id===state.classId)).sort((a,b)=>a.full_name.localeCompare(b.full_name));
+ const today=todayPH();
+ const form='<div class="card pad"><div class="section-title"><h3>Request a correction</h3></div>'+
+ '<form id="corrForm" class="stack"><div class="two-col" style="margin-top:0">'+
+ '<label class="field">Student<input name="student" list="corrStudents" placeholder="Type name or ID" autocomplete="off" required><datalist id="corrStudents">'+mine.map(x=>'<option value="'+esc(x.student_id)+'">'+esc(x.full_name)+'</option>').join('')+'</datalist></label>'+
+ '<label class="field">What needs fixing?<select name="kind" id="corrKind"><option value="ADD_IN">'+CORR_KIND.ADD_IN+'</option><option value="ADD_OUT">'+CORR_KIND.ADD_OUT+'</option><option value="REMOVE">'+CORR_KIND.REMOVE+'</option></select></label>'+
+ '<label class="field">Date<input type="date" name="date" value="'+today+'" max="'+today+'" required></label>'+
+ '<label class="field" id="corrTimeWrap">Time (PHT)<input type="time" name="time" required></label>'+
+ '<label class="field" id="corrEventWrap" hidden>Scan to remove<select name="event_id" id="corrEvent"><option value="">Press “Load scans” first</option></select></label>'+
+ '</div><label class="field">Reason<input name="reason" maxlength="300" placeholder="e.g. Scanner was offline, student arrived at 6:50" required></label>'+
+ '<div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="btn btn-secondary" id="corrLoadBtn" data-act="corrLoadEvents" hidden>Load scans</button><button class="btn" type="submit"'+(C.busy?' disabled':'')+'>'+(isOff?'Add correction':'Submit for approval')+'</button></div></form>'+
+ '<p class="muted small" style="margin-top:12px">'+(isOff?'As an official your request is saved as pending until you approve it below.':'An LSC Official will review your request. You can see its status here.')+'</p></div>';
+ const rows=list.length?'<div class="table-wrap"><table class="table"><thead><tr><th>Student</th><th>Request</th><th>Reason</th><th>Status</th>'+(isOff?'<th>Action</th>':'')+'</tr></thead><tbody>'+
+ list.map(c=>'<tr><td><strong>'+esc(c.full_name)+'</strong><br><span class="muted small mono">'+esc(c.student_id)+' · '+esc(c.grade_level)+' '+esc(c.section)+'</span></td><td>'+corrDesc(c)+'<br><span class="muted small">by '+esc(c.requested_by_email||'')+' · '+esc(datePH(c.requested_at))+'</span></td><td>'+esc(c.reason)+(c.decision_note?'<br><span class="muted small">Note: '+esc(c.decision_note)+'</span>':'')+'</td><td><span class="badge '+(c.status==='approved'?'':'off')+'">'+(c.status==='pending'?'Pending':c.status==='approved'?'Approved':'Rejected')+'</span>'+(c.decided_by_email?'<br><span class="muted small">'+esc(c.decided_by_email)+'</span>':'')+'</td>'+
+  (isOff?'<td>'+(c.status==='pending'?'<button type="button" class="btn" data-act="corrApprove" data-id="'+esc(c.id)+'">Approve</button> <button type="button" class="linkbtn" data-act="corrReject" data-id="'+esc(c.id)+'">Reject</button>':'')+'</td>':'')+'</tr>').join('')+'</tbody></table></div>':'<div class="empty">No correction requests yet.</div>';
+ return header(isOff?'Correction Requests':'Corrections',isOff?'Review requests from class mayors. Approved fixes are applied to attendance and kept in the audit trail.':'Missed or wrong scan? Request a fix and an LSC Official will approve it.')+
+ (C.error?'<div class="notice warn">'+esc(C.error)+'</div>':'')+
+ '<div class="stack">'+form+'<div class="card pad"><div class="section-title"><h3>'+(isOff?'Requests':'Your section’s requests')+'</h3><span class="muted small">'+(pending?pending+' pending':'none pending')+'</span></div>'+rows+'</div></div>';
+}
+async function submitCorrection(form){
+ const f=form.elements,kind=f.kind.value;
+ const body={p_student_id:f.student.value.trim(),p_kind:kind,p_date:f.date.value,p_time:kind==='REMOVE'?null:f.time.value,p_event_id:kind==='REMOVE'?(Number(f.event_id.value)||null):null,p_reason:f.reason.value.trim()};
+ if(kind==='REMOVE'&&!body.p_event_id)return toast('Press “Load scans” and choose the scan to remove.',true);
+ try{
+  if(state.demo){
+   const st=state.students.find(x=>x.student_id===body.p_student_id);if(!st)throw new Error('Student not found in your section');
+   state.corr.data.unshift({id:Date.now(),kind,status:'pending',event_date:body.p_date,event_time:body.p_time,reason:body.p_reason,requested_by_email:state.user.email,requested_at:new Date().toISOString(),student_id:st.student_id,full_name:st.full_name,grade_level:st.grade_level,section:st.section});
+  }else{const r=await sb.rpc('lsc_request_correction',body);if(r.error)throw r.error;await loadCorrections();}
+  toast(state.role==='official'?'Correction saved as pending.':'Request sent to the LSC Officials.');
+  form.reset();render();
+ }catch(err){toast('Could not send: '+(err.message||err),true);}
+}
+async function corrLoadEvents(){
+ const form=document.getElementById('corrForm');if(!form)return;
+ const sid=form.elements.student.value.trim(),date=form.elements.date.value,sel=document.getElementById('corrEvent');
+ if(!sid||!date)return toast('Enter the student and date first.',true);
+ try{
+  let rows;
+  if(state.demo){const st=state.students.find(x=>x.student_id===sid);rows=state.logs.filter(l=>st&&l.student_id===st.id&&l.event_date===date).map(l=>({id:l.id,event_type:l.event_type,recorded_at:l.recorded_at}));}
+  else{const r=await sb.rpc('lsc_student_day_events',{p_student_id:sid,p_date:date});if(r.error)throw r.error;rows=r.data||[];}
+  sel.innerHTML=rows.length?rows.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.event_type)+' · '+esc(timePH(x.recorded_at))+'</option>').join(''):'<option value="">No scans on that day</option>';
+ }catch(err){toast('Could not load scans: '+(err.message||err),true);}
+}
+async function decideCorrection(id,approve){
+ let note='';
+ if(!approve){note=prompt('Reason for rejecting (optional):')??null;if(note===null)return;}
+ else if(!confirm('Approve and apply this correction to the attendance record?'))return;
+ try{
+  if(state.demo){const c=state.corr.data.find(x=>String(x.id)===String(id));if(c){c.status=approve?'approved':'rejected';c.decision_note=note;c.decided_by_email=state.user.email;}}
+  else{const r=await sb.rpc('lsc_decide_correction',{p_id:Number(id),p_approve:approve,p_note:note});if(r.error)throw r.error;await loadCorrections();await loadData();}
+  toast(approve?'Correction applied.':'Request rejected.');
+ }catch(err){toast('Could not save: '+(err.message||err),true);}
+ render();
 }
 function studentsHTML(){
  if(state.role!=='official')return '<div class="notice">LSC Official access required.</div>';
@@ -709,6 +779,7 @@ root.addEventListener('submit',async e=>{
  if(e.target.id==='classForm'){e.preventDefault();await createClass(e.target);}
  if(e.target.id==='roleForm'){e.preventDefault();await assignRole(e.target);}
  if(e.target.id==='settingsForm'){e.preventDefault();await saveSettings(e.target);}
+ if(e.target.id==='corrForm'){e.preventDefault();await submitCorrection(e.target);}
  if(e.target.id==='fwActivityForm'){e.preventDefault();await fwCreate(e.target);}
  if(e.target.id==='fwStampForm'){e.preventDefault();await fwStamp(e.target);}
  if(e.target.id==='fwLookupForm'){e.preventDefault();await fwLookup(e.target);}
@@ -718,7 +789,7 @@ document.addEventListener('click',async e=>{
  const fwSelect=e.target.closest('[data-fw-select]');
  if(fwSelect){state.fwSelected=fwSelect.dataset.fwSelect;state.fwNotice=null;await loadPassportRecords();render();return;}
  const nav=e.target.closest('[data-nav]');
- if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if(state.page==='passport'){await loadFoundationData();await loadPassportRecords();}if(state.page==='live')await loadLive();if(state.page==='settings')await loadSettings();if(state.page==='overview'&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
+ if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if(state.page==='passport'){await loadFoundationData();await loadPassportRecords();}if(state.page==='live')await loadLive();if(state.page==='settings')await loadSettings();if(state.page==='corrections')await loadCorrections();if(state.page==='overview'&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
  const key=e.target.closest('[data-key]');
  if(key){const input=document.getElementById('studentID');if(!input)return;const value=key.dataset.key;if(value==='Clear')input.value='';else if(value==='⌫')input.value=input.value.slice(0,-1);else input.value=(input.value+value).slice(0,12);input.focus();return;}
  const b=e.target.closest('[data-act]');if(!b)return;
@@ -740,6 +811,9 @@ document.addEventListener('click',async e=>{
    const sub=state.settings.data.subscribers.find(x=>String(x.chat_id)===chat);if(sub)sub.active=on;toast(on?'Subscriber restored.':'Subscriber removed.');}catch(err){toast('Could not update: '+(err.message||err),true);}
   render();}
  if(act==='refreshLive'){await loadLive();render();}
+ if(act==='corrLoadEvents')await corrLoadEvents();
+ if(act==='corrApprove')await decideCorrection(b.dataset.id,true);
+ if(act==='corrReject')await decideCorrection(b.dataset.id,false);
  if(act==='printMasterlist')window.print();
  if(act==='logout')await logOut();
  if(act==='menu'){
@@ -774,7 +848,7 @@ document.addEventListener('keydown',e=>{
   document.querySelector('.hamb')?.focus();
  }
 });
-root.addEventListener('change',e=>{if(e.target.id==='roleSelect'){const wrap=document.getElementById('roleClassWrap');if(wrap){wrap.hidden=e.target.value==='official';document.getElementById('roleClassSelect').required=e.target.value==='class_mayor';}}});
+root.addEventListener('change',e=>{if(e.target.id==='corrKind'){const rm=e.target.value==='REMOVE';document.getElementById('corrTimeWrap').hidden=rm;document.getElementById('corrEventWrap').hidden=!rm;document.getElementById('corrLoadBtn').hidden=!rm;const t=document.querySelector('#corrForm [name=time]');if(t)t.required=!rm;}if(e.target.id==='roleSelect'){const wrap=document.getElementById('roleClassWrap');if(wrap){wrap.hidden=e.target.value==='official';document.getElementById('roleClassSelect').required=e.target.value==='class_mayor';}}});
 root.addEventListener('input',e=>{
  if(e.target.id==='studentSearch'){
   state.query=e.target.value;
@@ -785,7 +859,7 @@ root.addEventListener('input',e=>{
 });
 window.addEventListener('hashchange',async()=>{
  const page=location.hash.slice(1);
- if(['overview','passport','students','live','settings','masterlist','records','classes','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='passport'){await loadFoundationData();await loadPassportRecords();}if(page==='live')await loadLive();if(page==='settings')await loadSettings();render();}
+ if(['overview','passport','students','live','settings','corrections','masterlist','records','classes','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='passport'){await loadFoundationData();await loadPassportRecords();}if(page==='live')await loadLive();if(page==='settings')await loadSettings();if(page==='corrections')await loadCorrections();render();}
 });
 setInterval(async()=>{if(state.page==='live'&&state.user&&!document.hidden){await loadLive();if(state.page==='live')render();}},30000);
 setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=stampPH()+' PHT';},15000);
