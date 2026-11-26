@@ -12,7 +12,7 @@
 .scanner-camera #qrScannerReader{width:100%;min-height:235px;border:0!important;color:#fff}
 .scanner-camera #qrScannerReader video{border-radius:12px}
 .scanner-result{border:1px solid #bbd0e8;border-radius:17px;padding:18px;background:#edf5ff;overflow-wrap:anywhere}
-.scanner-status{font:800 17px "Outfit",sans-serif;letter-spacing:.3px;margin:0 0 15px}
+.scanner-status{font:800 17px "Poppins",sans-serif;letter-spacing:.3px;margin:0 0 15px}
 .scanner-result.RESERVED{background:#e4f7ee;border-color:#9bdbc1}
 .scanner-result.RESERVED .scanner-status{color:#0d7652}
 .scanner-result.CONVERTED{background:#dff4eb;border-color:#96cdbb}
@@ -20,7 +20,7 @@
 .scanner-result.EXPIRED,.scanner-result.CANCELLED,.scanner-result.NOT_FOUND{background:#fff0ed;border-color:#f0bbba}
 .scanner-result.EXPIRED .scanner-status,.scanner-result.CANCELLED .scanner-status,.scanner-result.NOT_FOUND .scanner-status{color:#a23b49}
 .scanner-result-body{display:grid;gap:11px;font-size:12px;color:#577397}
-.scanner-result-body>strong{font:800 19px "Outfit",sans-serif;color:#1e436f}
+.scanner-result-body>strong{font:800 19px "Poppins",sans-serif;color:#1e436f}
 .scanner-result-body .scanner-code{border-radius:9px;border:1px dashed #a9bddc;padding:10px;background:rgba(255,255,255,.7);font-weight:900;letter-spacing:1px;color:#234d82;text-align:center;font-size:14px;word-break:break-all}
 .scanner-empty{text-align:center;padding:35px 18px}
 .scanner-empty strong{display:block;color:#2d528b;font-size:16px}
