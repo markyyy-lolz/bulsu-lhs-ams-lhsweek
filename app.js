@@ -8,7 +8,7 @@ const state = {
   demo: false, user: null, role: null, page: 'overview', loading: false,
   students: [], logs: [], classes: [], assignments: [], classId: null, lastResult: null, query: '', recordDate: todayPH(),
   busy: false, mobileNav: false, loginMode:'email', otpSent:false, otpEmail:'', showPasswordSetup:false,
-  live:{data:null,error:null,at:null,busy:false},
+  live:{data:null,error:null,at:null,busy:false},settings:{data:null,error:null,busy:false},
   fwPulse:null, fwSelected:'', fwStamps:[], fwBusy:false, fwNotice:null, fwProfile:null
 };
 let clearResultTimer = null;
@@ -110,12 +110,12 @@ function loginHTML(){
 function sidebar(){
   let menu=[['overview','Dashboard'],['passport','Foundation Passport'],['records','Attendance Records'],['security','Account Security']];
   if(state.role==='class_mayor'){menu.splice(1,0,['masterlist','Class Masterlist']);}
-  if(state.role==='official'){menu.splice(1,0,['live','Live Dashboard'],['students','Student Directory'],['classes','Classes'],['officials','Role Assignments']);}
+  if(state.role==='official'){menu.splice(1,0,['live','Live Dashboard'],['students','Student Directory'],['classes','Classes'],['officials','Role Assignments'],['settings','Admin Settings']);}
   return '<aside id="lsc-sidebar" class="sidebar'+(state.mobileNav?' open':'')+'" aria-label="Workspace navigation"><button type="button" class="lsc-mobile-close" data-act="closeMenu" aria-label="Close navigation menu">'+navIcon('close')+'</button><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+navIcon(v[0])+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">'+navIcon('kiosk')+'</span>Student Attendance<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./movie.html"><span class="nav-ico">'+navIcon('movie')+'</span>Movie Booth POS<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'<a class="nav-btn" href="./reserve.html"><span class="nav-ico">'+navIcon('movie')+'</span>Online Movie Booking<span class="nav-external">'+navIcon('external')+'</span></a>'+'<a class="nav-btn" href="./operations.html"><span class="nav-ico">'+navIcon('overview')+'</span>Event Command Center<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./operations.html#attendance"><span class="nav-ico">'+navIcon('officials')+'</span>Volunteer Manager<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">'+navIcon('logout')+'<span>Sign out</span></button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
 }
-function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',live:'Live Dashboard',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security',passport:'Foundation Passport'})[state.page]||'Dashboard';}
+function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',live:'Live Dashboard',settings:'Admin Settings',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security',passport:'Foundation Passport'})[state.page]||'Dashboard';}
 function appHTML(){
-  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='live'?liveHTML():state.page==='masterlist'?masterlistHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():state.page==='passport'?passportHTML():overviewHTML())+'</div></main></div>';
+  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='live'?liveHTML():state.page==='settings'?settingsHTML():state.page==='masterlist'?masterlistHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():state.page==='passport'?passportHTML():overviewHTML())+'</div></main></div>';
 }
 function header(head,sub,extra=''){return '<div class="page-header"><div><div class="eyebrow" style="margin-bottom:8px">LSC ATTENDANCE MONITOR</div><h1>'+head+'</h1><p>'+sub+'</p></div>'+extra+'</div>';}
 function metrics(){
@@ -187,7 +187,7 @@ function masterlistHTML(){
 const LIVE_LAG_POINTS=10;
 function demoLiveData(){
  const secs=[['Grade 7','Ipil',46,41],['Grade 7','Lanete',46,30],['Grade 8','Apitong',37,35],['Grade 8','Mahogany',38,36],['Grade 9','Acacia',40,38],['Grade 9','Dao',40,25],['Grade 10','Narra',36,34],['Grade 10','Yakal',37,35]];
- return {date:todayPH(),inside:Math.round(secs.reduce((a,x)=>a+x[3],0)*.9),
+ return {date:todayPH(),lag_points:10,late:24,late_cutoff:'07:30',inside:Math.round(secs.reduce((a,x)=>a+x[3],0)*.9),
   sections:secs.map((x,i)=>({class_id:'d'+i,grade_level:x[0],section:x[1],total:x[2],present:x[3]})),
   hours:[{hour:6,arrivals:40},{hour:7,arrivals:140},{hour:8,arrivals:60},{hour:9,arrivals:18}]};
 }
@@ -206,7 +206,8 @@ function liveHTML(){
  if(!d)return header('Live Dashboard','Whole-school attendance, refreshed automatically')+(L.error?'<div class="notice warn">'+esc(L.error)+'</div>':'<div class="card pad"><div class="empty">Loading live attendance…</div></div>');
  const secs=d.sections.map(x=>({...x,pct:pct(x.present,x.total)}));
  const total=secs.reduce((a,x)=>a+x.total,0),present=secs.reduce((a,x)=>a+x.present,0),school=pct(present,total);
- const lagging=x=>present>0&&x.total>0&&x.pct<school-LIVE_LAG_POINTS;
+ const lagPts=d.lag_points??LIVE_LAG_POINTS;
+ const lagging=x=>present>0&&x.total>0&&x.pct<school-lagPts;
  const lagCount=secs.filter(lagging).length;
  const grades=[...new Set(secs.map(x=>x.grade_level))].sort((a,b)=>gradeNum(a)-gradeNum(b)).map(g=>{const r=secs.filter(x=>x.grade_level===g);const t=r.reduce((a,x)=>a+x.total,0),p=r.reduce((a,x)=>a+x.present,0);return {g,t,p,pct:pct(p,t)};});
  const byHour=new Map(d.hours.map(h=>[h.hour,h.arrivals]));
@@ -219,7 +220,7 @@ function liveHTML(){
  const rows=[...secs].sort((a,b)=>a.pct-b.pct||gradeNum(a.grade_level)-gradeNum(b.grade_level)||a.section.localeCompare(b.section));
  return header('Live Dashboard','Whole-school attendance for '+esc(d.date)+' · refreshes every 30 seconds','<button class="btn btn-secondary" data-act="refreshLive">'+(L.busy?'Refreshing…':'Refresh now')+'</button>')+
  (L.error?'<div class="notice warn" style="margin-bottom:14px">Could not refresh: '+esc(L.error)+'. Showing the last data received.</div>':'')+
- '<section class="stats">'+tile('Present Today',present+' / '+total,'Students with a Time IN')+tile('School Attendance',school.toFixed(1)+'%','Present ÷ active students')+tile('Currently Inside',d.inside,'Latest scan is IN')+tile('Sections Lagging',lagCount,present?'More than '+LIVE_LAG_POINTS+' points below the school rate':'Waiting for the first check-in')+'</section>'+
+ '<section class="stats">'+tile('Present Today',present+' / '+total,(d.late!=null?d.late+' late (after '+esc(d.late_cutoff||'')+')':'Students with a Time IN'))+tile('School Attendance',school.toFixed(1)+'%','Present ÷ active students')+tile('Currently Inside',d.inside,'Latest scan is IN')+tile('Sections Lagging',lagCount,present?'More than '+lagPts+' points below the school rate':'Waiting for the first check-in')+'</section>'+
  '<div class="two-col" style="margin-top:16px"><div class="card pad"><div class="section-title"><h3>By Grade</h3></div>'+
  grades.map(x=>'<div class="lv-row"><span class="lv-name">'+esc(x.g)+'</span>'+bar(x.pct)+'<span class="lv-val mono">'+x.pct.toFixed(1)+'% <small>'+x.p+'/'+x.t+'</small></span></div>').join('')+'</div>'+
  '<div class="card pad"><div class="section-title"><h3>By Hour (first arrivals)</h3></div>'+
@@ -227,7 +228,59 @@ function liveHTML(){
  '<div class="card pad" style="margin-top:16px"><div class="section-title"><h3>By Section</h3><span class="muted small">Lowest attendance first · highlighted rows are lagging</span></div>'+
  '<div class="table-wrap"><table class="table"><thead><tr><th>Grade</th><th>Section</th><th>Present</th><th>Attendance</th><th></th><th>Status</th></tr></thead><tbody>'+
  rows.map(x=>'<tr class="'+(lagging(x)?'lv-lag':'')+'"><td>'+esc(x.grade_level)+'</td><td>'+esc(x.section)+'</td><td class="mono">'+x.present+' / '+x.total+'</td><td class="mono strong">'+x.pct.toFixed(1)+'%</td><td style="min-width:140px">'+bar(x.pct,lagging(x)?'warn':'')+'</td><td>'+(x.total===0?'<span class="badge off">No students</span>':lagging(x)?'<span class="badge out">Lagging</span>':'<span class="badge">On track</span>')+'</td></tr>').join('')+'</tbody></table></div>'+
- '<p class="muted small" style="margin-top:12px">Last updated '+esc(L.at?timePH(L.at):'—')+' PHT. “Present” means the student has at least one Time IN today; “lagging” means a section is more than '+LIVE_LAG_POINTS+' percentage points below the school-wide rate.</p></div>';
+ '<p class="muted small" style="margin-top:12px">Last updated '+esc(L.at?timePH(L.at):'—')+' PHT. “Present” means the student has at least one Time IN today; “lagging” means a section is more than '+lagPts+' percentage points below the school-wide rate.</p></div>';
+}
+const DEMO_SETTINGS={lag_points:10,late_cutoff:'07:30',summary_time:'09:00',eod_time:'16:00',lag_start_hour:8,lag_end_hour:11,lag_interval:30,telegram_enabled:true,join_code:'DEMO1234',subscribers:[{chat_id:1,label:'Demo Developer',role:'developer',active:true,joined_at:new Date().toISOString()}]};
+async function loadSettings(){
+ if(state.role!=='official')return;
+ if(state.demo){if(!state.settings.data)state.settings={data:JSON.parse(JSON.stringify(DEMO_SETTINGS)),error:null,busy:false};return;}
+ const r=await sb.rpc('lsc_get_settings');
+ state.settings={data:r.error?state.settings.data:r.data,error:r.error?r.error.message:null,busy:false};
+}
+function settingsHTML(){
+ if(state.role!=='official')return '<div class="notice">LSC Official access required.</div>';
+ const S=state.settings,d=S.data;
+ if(!d)return header('Admin Settings','Thresholds, cutoffs and Telegram reports')+(S.error?'<div class="notice warn">'+esc(S.error)+'</div>':'<div class="card pad"><div class="empty">Loading settings…</div></div>');
+ const hourOpts=(sel,from,to)=>{let o='';for(let h=from;h<=to;h++){const l=((h+11)%12+1)+(h%24<12||h===24?' AM':' PM');o+='<option value="'+h+'"'+(h===sel?' selected':'')+'>'+(h===24?'12 AM (end of day)':l)+'</option>';}return o;};
+ const intervalOpts=[5,10,15,20,30,60].map(v=>'<option value="'+v+'"'+(v===d.lag_interval?' selected':'')+'>Every '+(v===60?'hour':v+' minutes')+'</option>').join('');
+ const subs=d.subscribers||[];
+ return header('Admin Settings','Change thresholds, the late cutoff, Telegram report times and the join code')+
+ '<form id="settingsForm" class="stack"><div class="two-col" style="margin-top:0">'+
+ '<div class="card pad"><div class="section-title"><h3>Attendance Rules</h3></div><div class="stack">'+
+ '<label class="field">Lagging threshold (percentage points)<input type="number" name="lag_points" min="1" max="50" step="1" value="'+esc(d.lag_points)+'" required></label>'+
+ '<p class="muted small" style="margin:-6px 0 0">A section is “lagging” when its attendance is this many points below the school-wide rate.</p>'+
+ '<label class="field">Late cutoff time (PHT)<input type="time" name="late_cutoff" value="'+esc(d.late_cutoff)+'" required></label>'+
+ '<p class="muted small" style="margin:-6px 0 0">A student whose first Time IN is after this time counts as late on the Live Dashboard and in the Telegram reports.</p></div></div>'+
+ '<div class="card pad"><div class="section-title"><h3>Telegram Reports</h3><span class="muted small">Philippine time</span></div><div class="stack">'+
+ '<label class="field check-field"><input type="checkbox" name="telegram_enabled"'+(d.telegram_enabled?' checked':'')+'> <span>Send Telegram reports and alerts</span></label>'+
+ '<div class="set-grid"><label class="field">Morning summary<input type="time" name="summary_time" value="'+esc(d.summary_time)+'" required></label>'+
+ '<label class="field">End-of-day report<input type="time" name="eod_time" value="'+esc(d.eod_time)+'" required></label>'+
+ '<label class="field">Lag alerts start<select name="lag_start_hour">'+hourOpts(d.lag_start_hour,0,23)+'</select></label>'+
+ '<label class="field">Lag alerts stop<select name="lag_end_hour">'+hourOpts(d.lag_end_hour,1,24)+'</select></label></div>'+
+ '<label class="field">Check for lagging sections<select name="lag_interval">'+intervalOpts+'</select></label></div></div></div>'+
+ '<div><button class="btn" type="submit">'+(S.busy?'Saving…':'Save Settings')+'</button> <span class="muted small">Saving also updates the Telegram schedule.</span></div></form>'+
+ '<div class="two-col" style="margin-top:16px"><div class="card pad"><div class="section-title"><h3>Telegram Join Code</h3></div>'+
+ '<p class="muted small">Officials send <span class="mono strong">/join CODE</span> to the bot to subscribe.</p>'+
+ '<div class="join-code mono strong">'+esc(d.join_code||'—')+'</div>'+
+ '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><button type="button" class="btn btn-secondary" data-act="copyJoin">Copy code</button><button type="button" class="btn btn-secondary" data-act="regenJoin">Generate new code</button></div>'+
+ '<p class="muted small" style="margin-top:12px">A new code stops anyone else from joining with the old one. People already subscribed stay subscribed until you remove them.</p></div>'+
+ '<div class="card pad"><div class="section-title"><h3>Telegram Subscribers</h3><span class="muted small">'+subs.filter(x=>x.active).length+' active</span></div>'+
+ (subs.length?'<div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>'+
+ subs.map(x=>'<tr><td>'+esc(x.label||'(no name)')+'</td><td><span class="badge '+(x.active?'':'off')+'">'+(x.active?'Subscribed':'Removed')+'</span></td><td><button type="button" class="linkbtn" data-act="tgActive" data-id="'+esc(x.chat_id)+'" data-active="'+(x.active?'0':'1')+'">'+(x.active?'Remove':'Restore')+'</button></td></tr>').join('')+'</tbody></table></div>':'<div class="empty">Nobody has joined yet.</div>')+
+ '</div></div>';
+}
+async function saveSettings(form){
+ const f=form.elements,g=n=>f[n].value;
+ const p={lag_points:parseInt(g('lag_points'),10),late_cutoff:g('late_cutoff'),summary_time:g('summary_time'),eod_time:g('eod_time'),lag_start_hour:parseInt(g('lag_start_hour'),10),lag_end_hour:parseInt(g('lag_end_hour'),10),lag_interval:parseInt(g('lag_interval'),10),telegram_enabled:f.telegram_enabled.checked};
+ if(!(p.lag_points>=1&&p.lag_points<=50))return toast('Lagging threshold must be between 1 and 50.',true);
+ if(p.lag_start_hour>=p.lag_end_hour)return toast('Lag alerts must stop after they start.',true);
+ state.settings.busy=true;render();
+ try{
+  if(state.demo){Object.assign(state.settings.data,p);}
+  else{const r=await sb.rpc('lsc_update_settings',{p});if(r.error)throw r.error;state.settings.data=r.data;}
+  toast('Settings saved. Telegram schedule updated.');
+ }catch(err){toast('Could not save: '+(err.message||err),true);}
+ state.settings.busy=false;render();
 }
 function studentsHTML(){
  if(state.role!=='official')return '<div class="notice">LSC Official access required.</div>';
@@ -469,7 +522,7 @@ function labelTables(){
 function render(){
  document.body.classList.toggle('lsc-menu-open',Boolean(state.user&&state.mobileNav));
  if(!state.user){state.mobileNav=false;lastAnimatedPage=null;root.innerHTML=loginHTML();return;}
- if((['students','classes','officials','live'].includes(state.page)&&state.role!=='official')||state.page==='kiosk')state.page='overview';
+ if((['students','classes','officials','live','settings'].includes(state.page)&&state.role!=='official')||state.page==='kiosk')state.page='overview';
  const newPage=lastAnimatedPage!==state.page;
  root.innerHTML=appHTML();
  labelTables();
@@ -654,6 +707,7 @@ root.addEventListener('submit',async e=>{
  if(e.target.id==='studentForm'){e.preventDefault();await saveStudent(e.target);}
  if(e.target.id==='classForm'){e.preventDefault();await createClass(e.target);}
  if(e.target.id==='roleForm'){e.preventDefault();await assignRole(e.target);}
+ if(e.target.id==='settingsForm'){e.preventDefault();await saveSettings(e.target);}
  if(e.target.id==='fwActivityForm'){e.preventDefault();await fwCreate(e.target);}
  if(e.target.id==='fwStampForm'){e.preventDefault();await fwStamp(e.target);}
  if(e.target.id==='fwLookupForm'){e.preventDefault();await fwLookup(e.target);}
@@ -663,7 +717,7 @@ document.addEventListener('click',async e=>{
  const fwSelect=e.target.closest('[data-fw-select]');
  if(fwSelect){state.fwSelected=fwSelect.dataset.fwSelect;state.fwNotice=null;await loadPassportRecords();render();return;}
  const nav=e.target.closest('[data-nav]');
- if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if(state.page==='passport'){await loadFoundationData();await loadPassportRecords();}if(state.page==='live')await loadLive();if(state.page==='overview'&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
+ if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if(state.page==='passport'){await loadFoundationData();await loadPassportRecords();}if(state.page==='live')await loadLive();if(state.page==='settings')await loadSettings();if(state.page==='overview'&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
  const key=e.target.closest('[data-key]');
  if(key){const input=document.getElementById('studentID');if(!input)return;const value=key.dataset.key;if(value==='Clear')input.value='';else if(value==='⌫')input.value=input.value.slice(0,-1);else input.value=(input.value+value).slice(0,12);input.focus();return;}
  const b=e.target.closest('[data-act]');if(!b)return;
@@ -675,6 +729,15 @@ document.addEventListener('click',async e=>{
  if(act==='skipPasswordSetup'){state.showPasswordSetup=false;render();}
  if(act==='demo')demoStart();
  if(act==='demoMayor')demoStart(true);
+ if(act==='copyJoin'){try{await navigator.clipboard.writeText(state.settings.data.join_code);toast('Join code copied.');}catch{toast('Select the code and copy it manually.',true);}}
+ if(act==='regenJoin'&&confirm('Generate a new join code? The old code will stop working for new subscribers.')){
+  try{if(state.demo)state.settings.data.join_code='DEMO'+Math.floor(1000+Math.random()*9000);else{const r=await sb.rpc('lsc_regenerate_join_code');if(r.error)throw r.error;state.settings.data.join_code=r.data;}toast('New join code generated.');}catch(err){toast('Could not generate: '+(err.message||err),true);}
+  render();}
+ if(act==='tgActive'){
+  const chat=b.dataset.id,on=b.dataset.active==='1';
+  try{if(!state.demo){const r=await sb.rpc('lsc_telegram_set_active',{p_chat_id:Number(chat),p_active:on});if(r.error)throw r.error;}
+   const sub=state.settings.data.subscribers.find(x=>String(x.chat_id)===chat);if(sub)sub.active=on;toast(on?'Subscriber restored.':'Subscriber removed.');}catch(err){toast('Could not update: '+(err.message||err),true);}
+  render();}
  if(act==='refreshLive'){await loadLive();render();}
  if(act==='printMasterlist')window.print();
  if(act==='logout')await logOut();
@@ -721,9 +784,9 @@ root.addEventListener('input',e=>{
 });
 window.addEventListener('hashchange',async()=>{
  const page=location.hash.slice(1);
- if(['overview','passport','students','live','masterlist','records','classes','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='passport'){await loadFoundationData();await loadPassportRecords();}if(page==='live')await loadLive();render();}
+ if(['overview','passport','students','live','settings','masterlist','records','classes','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='passport'){await loadFoundationData();await loadPassportRecords();}if(page==='live')await loadLive();if(page==='settings')await loadSettings();render();}
 });
 setInterval(async()=>{if(state.page==='live'&&state.user&&!document.hidden){await loadLive();if(state.page==='live')render();}},30000);
 setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=stampPH()+' PHT';},15000);
-state.page=['overview','passport','students','live','masterlist','records','classes','officials','security'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
+state.page=['overview','passport','students','live','settings','masterlist','records','classes','officials','security'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
 verifySession().catch(e=>{root.innerHTML=loginHTML();toast('Could not connect to the attendance service: '+e.message,true);});
