@@ -11,6 +11,25 @@ The **Foundation Week Passport** workspace and the related **Stamp Rally** tab h
 **Database:** Existing BrewPOS Supabase project `rfxzbuocxersgbshczbj`, using only separately named `lsc_*` tables and functions. No BrewPOS customer data or tables changed.
 **Branding:** User-supplied LSC crest and **Powered by Azure<3**.
 
+## LHS Week feature summary (updated 2026-11-28)
+
+| Feature | Where | Notes |
+|---|---|---|
+| Telegram bot **@lhslscbot** | Edge function `lsc-telegram` | Time IN/OUT messages to students/parents, mayor reminders, parent absence alerts, daily summaries. Link via QR/deep link (`?start=L_…` student/parent, `U_…` official/mayor). |
+| Parent consent record | Bot + Admin Settings | Parents must tap **I agree** before linking; consent date/version stored. Settings → **Download consent log (CSV)** and **View linked chats** (per-student linked Telegram accounts). Notice wording needs school approval. |
+| ID Cards generator | Dashboard → ID Cards | 8.5×13 in portrait, one-sided, 9 per sheet, QR per student. **Reset Telegram codes** invalidates old QR/links when regenerating. |
+| Class Lists PDF | Dashboard → Class Lists | Boys left / girls right. Sex data is imported by CSV template or edited per student. |
+| Kiosk mode | `student.html` → kiosk | Fullscreen gate display, sound/flash feedback, student photo match, last-5 scan strip. |
+| Last 5 scans | `student.html` | Recent results shown under the scan result. |
+| Public stats screen | `stats.html` | Counts per grade only, no names. Off by default; enable in Admin Settings. |
+| Mayor selfie check-in | `student.html` for class mayors | Once per PHT day, off by default (Admin Settings). Officials view photos; auto-deleted after 7 days; skip-with-reason if camera fails. An accountability record, not face verification. Needs school approval (minors). |
+| Offline queue | `student.html`, `sw.js` | Scans saved offline and synced later; server re-checks authorization. |
+| DEVELOPER label | Dashboard | Shown for the developer account. |
+
+Removed on request: parent daily digest.
+
+**Before real use:** fill sex data, verify real student IDs, print and scan a test card, test the kiosk camera on the actual tablet, test the Telegram consent flow with a real account, and get school approval for the consent notice, parent alerts and selfies.
+
 ## Two independent website screens
 
 | Screen | URL |
