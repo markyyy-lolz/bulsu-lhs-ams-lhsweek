@@ -43,6 +43,19 @@ The database constraint `lsc_verified_before_active` prevents activation while `
 
 **Demo mode:** Student page demos IDs `2023107337` and `2023999999` without database writes. Login page provides demo previews for both LSC Official and Class Mayor roles, also without writes.
 
+## School Year Management
+
+LSC Officials can create a draft school year, set the current and next year's dates, preview a rollover, and explicitly activate the new year from **School Year Management**.
+
+- The initial active year is **2026–2027**. Its dates are intentionally unset until an LSC Official supplies the approved school calendar.
+- Attendance events are tagged with their school year and preserve the Student ID, name, grade, and section recorded at the time of attendance.
+- Each year has a saved enrollment roster. Closed-year rosters are read-only and can be viewed or exported as CSV.
+- Rollover clones section templates and portrait-folder configuration, advances Grade 7–9 profiles by one grade, creates incoming Grade 7 section templates, and archives active Grade 10 completers as inactive.
+- Class Mayor assignments are cleared for reassignment to new-year classes, and temporary attendance volunteer authorizations are disabled during rollover.
+- Creating a draft does not affect the live roster. Activating a year is a confirmed, transaction-based operation; do not activate it until the official school-year dates and roster are reviewed.
+
+The active school year is managed in Supabase through the `lsc_school_year_*` RPCs. New school-year, enrollment-history, and audit tables use RLS with direct client table access revoked; use the checked RPCs from the authenticated LSC Official dashboard.
+
 ## Showing Deletion and Student Reservation QR
 
 **Movie Setup → Delete Showing** is restricted to authenticated LSC Officials and requires typing \`DELETE\`:
