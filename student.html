@@ -5,6 +5,7 @@
 <meta name="description" content="Dedicated student ID attendance terminal for LSC Laboratory High School">
 <title>Student Time IN / OUT | LSC Attendance</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="./kiosk.css?v=1">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--navy:#152645;--navy2:#20365e;--blue:#3d65df;--blueLight:#eaf0ff;--ink:#19273c;--muted:#738099;--edge:#e4eaf3;--surface:#fff;--bg:#f5f7fb;--green:#159c79;--greenLight:#e9fbf5;--orange:#e18c27;--orangeLight:#fff4e7;--radius:18px;font-family:'Poppins',system-ui,sans-serif;color:var(--ink)}
@@ -101,7 +102,7 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
 <body class="student-site">
 <header class="student-header">
  <div class="brand"><img src="./assets/lsc-glass-logo.png?v=2" class="lsc-logo" alt="LSC crest"><span><span class="brand-title">Attendance System</span><span class="brand-sub">BULSU LABORATORY HIGH SCHOOL</span></span></div>
- <div class="header-links"><a href="./reserve.html">🎬 Reserve Movie Tickets</a> <a href="./login.html">LSC Staff Login ↗</a></div>
+ <div class="header-links"><button type="button" id="kioskButton" style="border:1px solid #e3eaf5;background:#fff;color:#4a6287;font-weight:800;font-size:13px;padding:10px 12px;border-radius:11px">⛶ Kiosk mode</button> <a href="./reserve.html">🎬 Reserve Movie Tickets</a> <a href="./login.html">LSC Staff Login ↗</a></div>
 </header>
 <main class="student-wrap">
  <div class="student-hero"><div><div class="eyebrow">STUDENT ATTENDANCE TERMINAL</div><h1>Welcome to LSC.</h1><p>Class Mayor: enter or scan a classmate's Student ID to record attendance automatically.</p></div><div class="live-clock"><span class="clock-icon">◷</span><div><strong id="clockTime">--:--:--</strong><span class="small muted" id="clockDate">Philippine Standard Time</span></div></div></div>
@@ -157,5 +158,6 @@ body.student-site{background:radial-gradient(circle at 78% 0%,#ecf1fc 0,transpar
  </div>
  <footer class="student-footer">LSC Attendance Monitor · Independent prototype · Powered by Azure&lt;3 · School approval required.<br>Student attendance information is handled through Supabase, never stored on GitHub Pages.</footer>
 </main>
+<script src="./kiosk.js?v=1"></script>
 <script type="module" src="./student.js?v=google-drive-student-photo-v1"></script>
 </body></html>
