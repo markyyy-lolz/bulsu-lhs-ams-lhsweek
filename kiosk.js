@@ -2,7 +2,7 @@
 (function(){
   const $=s=>document.querySelector(s);
   const SOUND_KEY='lsc_kiosk_sound';
-  let ac=null,soundOn=true,resetT=null,lastId=null,fsTried=false,wake=null,built=false;
+  const hist=[],cache=new Map();let ac=null,soundOn=true,resetT=null,lastId=null,fsTried=false,wake=null,built=false;
   try{soundOn=localStorage.getItem(SOUND_KEY)!=='0'}catch(e){}
   function build(){
     if(built)return;built=true;
@@ -18,7 +18,7 @@
      '</div>'+
      '<div class="k-body">'+
        '<div class="k-cam" id="kCam"><div class="k-lock" id="kLock"><div>Scanner locked</div><div style="font:600 16px Poppins,sans-serif;opacity:.85">A Class Mayor, Official or approved volunteer must sign in on this device.</div><a href="./login.html">Open sign-in ↗</a></div></div>'+
-       '<div class="k-res idle" id="kRes"><div class="k-kind" id="kKind">READY</div><img class="k-photo" id="kPhoto" alt=""><div class="k-name" id="kName">Hold your ID QR to the camera</div><div class="k-sub" id="kSub"></div><div class="k-time" id="kTime"></div><div class="k-note" id="kNote"></div></div>'+
+       '<div class="k-right"><div class="k-res idle" id="kRes"><div class="k-kind" id="kKind">READY</div><div class="k-photowrap" id="kPW"><img class="k-photo" id="kPhoto" alt=""><div class="k-nophoto" id="kNP">NO PHOTO ON FILE<small>Check the ID carefully</small></div></div><div class="k-name" id="kName">Hold your ID QR to the camera</div><div class="k-sub" id="kSub"></div><div class="k-time" id="kTime"></div><div class="k-note" id="kNote"></div></div><div class="k-hist" id="kHist" aria-label="Last scans"></div></div>'+
      '</div>';
     document.body.append(k);
     const f=document.createElement('div');f.id='kFlash';f.setAttribute('aria-hidden','true');document.body.append(f);
@@ -58,10 +58,31 @@
     $('#kTime').textContent=o.time||'';
     $('#kNote').textContent=o.note||'';
     const p=$('#kPhoto');p.classList.remove('on');p.removeAttribute('src');
+    const person=kind==='in'||kind==='out'||kind==='dup';
+    $('#kPW').style.display=person?'block':'none';$('#kNP').style.display=person?'flex':'none';
+    if(person&&o.id){const c=cache.get(o.id);if(c){cache.delete(o.id);cache.set(o.id,c);showPhoto(c);}}
+    hist.unshift({kind,name:kind==='err'?(o.note||'Not recorded'):o.name,time:o.time||'',id:o.id||null});
+    if(hist.length>5)hist.pop();paintHist();
     const fl=$('#kFlash');fl.className='';fl.textContent=ICON[kind]||'';void fl.offsetWidth;fl.className=kind+' go';
     beep(kind);
     try{if(navigator.vibrate)navigator.vibrate(kind==='err'?[200,80,200]:60)}catch(e){}
     clearTimeout(resetT);resetT=setTimeout(idle,kind==='err'?5000:3500);
+  }
+  function showPhoto(url){
+    const p=$('#kPhoto');p.onload=()=>{p.classList.add('on');$('#kNP').style.display='none';};p.src=url;
+  }
+  function paintHist(){
+    const h=$('#kHist');if(!h)return;h.replaceChildren();
+    hist.forEach((x,i)=>{
+      const c=document.createElement('div');c.className='k-h '+x.kind+(i===0?' cur':'');
+      const t=cache.get(x.id);
+      if(t){const im=document.createElement('img');im.src=t;im.alt='';c.append(im);}
+      else{const d=document.createElement('span');d.className='k-hdot';d.textContent=({in:'IN',out:'OUT',dup:'DUP',queued:'OFF',err:'✕'})[x.kind]||'';c.append(d);}
+      const b=document.createElement('div');b.className='k-htxt';
+      const n=document.createElement('b');n.textContent=x.name||'';
+      const m=document.createElement('small');m.textContent=(({in:'IN',out:'OUT',dup:'Again',queued:'Offline',err:'Failed'})[x.kind]||'')+(x.time?' '+x.time.replace(/:\d\d (AM|PM)$/i,' $1'):'');
+      b.append(n,m);c.append(b);h.append(c);
+    });
   }
   function idle(){
     lastId=null;
@@ -69,11 +90,22 @@
     $('#kKind').textContent='READY';$('#kName').textContent='Hold your ID QR to the camera';
     ['kSub','kTime','kNote'].forEach(i=>$('#'+i).textContent='');
     const p=$('#kPhoto');p.classList.remove('on');p.removeAttribute('src');
+    $('#kPW').style.display='none';$('#kNP').style.display='none';
   }
-  function photo(url,id){
-    if(!url||!document.body.classList.contains('kiosk')||id!==lastId)return;
-    const p=$('#kPhoto');p.onload=()=>p.classList.add('on');p.src=url;
+  async function photo(url,id,own){
+    if(!url||!id||!document.body.classList.contains('kiosk'))return;
+    let copy=cache.get(id);
+    if(!copy){
+      try{const b=await (await fetch(url)).blob();copy=URL.createObjectURL(b);}catch(e){copy=null}
+      if(own){try{URL.revokeObjectURL(url)}catch(e){}}
+      if(!copy)return;
+      cache.set(id,copy);
+      while(cache.size>40){const k=cache.keys().next().value;try{URL.revokeObjectURL(cache.get(k))}catch(e){}cache.delete(k);}
+    }else if(own){try{URL.revokeObjectURL(url)}catch(e){}}
+    if(id===lastId)showPhoto(copy);
+    paintHist();
   }
+  const cachedPhoto=id=>cache.has(id);
   // d: {ready, demo, label, queued, offline}
   function tick(d){
     if(!built)return;
@@ -128,7 +160,7 @@
     else if(e.key==='Escape'){}
   });
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&document.body.classList.contains('kiosk'))wakeLock();});
-  window.lscKiosk={enter,exit,signal,photo,tick,isOn:()=>document.body.classList.contains('kiosk')};
+  window.lscKiosk={enter,exit,signal,photo,cachedPhoto,tick,isOn:()=>document.body.classList.contains('kiosk')};
   document.addEventListener('DOMContentLoaded',()=>{
     const b=$('#kioskButton');if(b)b.addEventListener('click',()=>enter(true));
     if(new URLSearchParams(location.search).get('kiosk')==='1')enter(false);

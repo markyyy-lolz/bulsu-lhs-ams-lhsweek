@@ -521,6 +521,9 @@ async function recordAttendance(event=null,scannedId=null) {
         if(url){attachArrivalPhoto(arrivalCard,url,result.full_name);window.lscKiosk?.photo(url,result.student_id||id);}
       });
     }else{
+      if(window.lscKiosk?.isOn()&&!window.lscKiosk.cachedPhoto(result.student_id||id)){
+        void loadStudentPhotoUrl(result.student_id||id).then(url=>{if(url)window.lscKiosk.photo(url,result.student_id||id,true);});
+      }
       appendMessage(status==='DUPLICATE'?'DUPLICATE':result.event_type,
         (status==='DUPLICATE'?'Previous ':'Time ')+result.event_type,
         [

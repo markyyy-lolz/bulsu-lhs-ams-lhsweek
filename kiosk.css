@@ -34,11 +34,25 @@ body.kiosk #kiosk{display:grid}
 #kiosk.locked .k-lock{display:flex}
 .k-res{border-radius:22px;background:#152645;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:clamp(16px,3vw,40px);gap:clamp(6px,1.4vh,16px);min-height:0;overflow:hidden;transition:background .15s}
 .k-res .k-kind{font:800 clamp(18px,3vw,34px) Poppins,sans-serif;letter-spacing:3px;opacity:.92}
-.k-res .k-photo{width:clamp(110px,22vh,220px);aspect-ratio:1/1;border-radius:24px;object-fit:cover;border:4px solid #ffffff55;display:none}
+.k-right{display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
+.k-right .k-res{flex:1}
+.k-photowrap{position:relative;width:clamp(96px,21vh,300px);aspect-ratio:1/1;flex:none;display:none}
+.k-res .k-photo{position:absolute;inset:0;width:100%;height:100%;border-radius:26px;object-fit:cover;border:5px solid #ffffffaa;box-shadow:0 8px 30px #0006;display:none}
 .k-res .k-photo.on{display:block}
-.k-res .k-name{font:800 clamp(30px,6.2vw,76px)/1.05 Poppins,sans-serif;letter-spacing:-1.5px;overflow-wrap:anywhere}
-.k-res .k-sub{font:700 clamp(18px,3vw,36px) Poppins,sans-serif;opacity:.92}
-.k-res .k-time{font:800 clamp(26px,5vw,60px) Poppins,sans-serif;font-variant-numeric:tabular-nums}
+.k-nophoto{position:absolute;inset:0;border-radius:26px;border:4px dashed #ffffff88;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:clamp(13px,2vw,22px);letter-spacing:1px;background:#00000026;padding:10px}
+.k-nophoto small{font-weight:500;font-size:.7em;opacity:.85;margin-top:6px;letter-spacing:0}
+.k-hist{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;flex:none}
+.k-h{display:flex;align-items:center;gap:8px;background:#152645;border-radius:14px;padding:8px;border-left:5px solid #ffffff33;min-width:0;opacity:.85}
+.k-h.cur{opacity:1;outline:2px solid #ffffff55}
+.k-h.in{border-left-color:#14c08c}.k-h.out{border-left-color:#f29a2f}.k-h.dup{border-left-color:#4f78f0}.k-h.queued{border-left-color:#d8a21e}.k-h.err{border-left-color:#e5483f}
+.k-h img,.k-hdot{width:clamp(30px,4.4vh,48px);height:clamp(30px,4.4vh,48px);border-radius:10px;object-fit:cover;flex:none;background:#ffffff1f;display:grid;place-items:center;font-size:11px;font-weight:800}
+.k-htxt{min-width:0;line-height:1.2}
+.k-htxt b{display:block;font-size:clamp(11px,1.4vw,15px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-htxt small{display:block;font-size:clamp(9px,1.1vw,12px);color:#9fb4dc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (orientation:portrait),(max-width:820px){.k-hist{grid-template-columns:repeat(5,minmax(0,1fr))}.k-h{flex-direction:column;align-items:flex-start;gap:4px;padding:6px}.k-htxt{width:100%}}
+.k-res .k-name{font:800 clamp(26px,min(5.4vw,7.4vh),72px)/1.05 Poppins,sans-serif;letter-spacing:-1.5px;overflow-wrap:anywhere}
+.k-res .k-sub{font:700 clamp(16px,min(2.8vw,3.6vh),34px) Poppins,sans-serif;opacity:.92}
+.k-res .k-time{font:800 clamp(22px,min(4.4vw,6vh),56px) Poppins,sans-serif;font-variant-numeric:tabular-nums}
 .k-res .k-note{font-size:clamp(13px,1.8vw,20px);opacity:.85;max-width:34ch}
 .k-res.idle{color:#b7c9ea}
 .k-res.idle .k-name{font-size:clamp(26px,4.6vw,56px)}
@@ -55,3 +69,5 @@ body.kiosk #kiosk{display:grid}
 /* hide the normal page while in kiosk */
 body.kiosk .student-header,body.kiosk .student-wrap{visibility:hidden}
 body.kiosk #kiosk .student-header{visibility:visible}
+
+@media (orientation:portrait),(max-width:820px){.k-photowrap{width:clamp(80px,14vh,220px)}.k-res .k-name{font-size:clamp(24px,min(8vw,4.6vh),60px)}.k-res .k-time{font-size:clamp(20px,min(6vw,3.8vh),44px)}.k-res .k-kind{font-size:clamp(15px,2.2vh,28px)}.k-res{gap:6px;padding:12px}}
