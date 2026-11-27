@@ -329,6 +329,7 @@ async function checkAuthorization() {
     stopCamera();
     scannerMessage('Your attendance session is no longer authorized. Sign in again.',true);
   }
+  if(state.authorized&&state.operatorRole==='class_mayor')selfieGate();
 }
 // ===== Last 5 scans (shown under the result so a wrong scan can be spotted later) =====
 const RECENT_KEY='lsc_recent_scans_v1';
@@ -625,6 +626,67 @@ document.addEventListener('visibilitychange',()=>{
   }else if(!document.hidden&&!state.demo)checkAuthorization();
 });
 window.addEventListener('pagehide',stopCamera);
+
+// ===== Class mayor selfie check-in (once per day, when enabled by the LSC) =====
+const SELFIE_DAY_KEY='lsc_selfie_day',SELFIE_Q_KEY='lsc_selfie_queue';
+const phtDay=()=>new Date(Date.now()+8*3600e3).toISOString().slice(0,10);
+let selfieBusy=false;
+async function flushSelfieQueue(){
+  const q=readJSON(SELFIE_Q_KEY,null);if(!q)return;
+  try{const {error}=await client.rpc('lsc_submit_selfie',{p_image:q.image||null,p_reason:q.reason||null});
+    if(!error||!isNetworkError(error))localStorage.removeItem(SELFIE_Q_KEY);}catch{}
+}
+async function selfieGate(){
+  if(selfieBusy||state.demo)return;
+  try{if(localStorage.getItem(SELFIE_DAY_KEY)===phtDay()){flushSelfieQueue();return;}}catch{}
+  if(!navigator.onLine)return;
+  selfieBusy=true;
+  try{
+    const {data,error}=await client.rpc('lsc_selfie_needed');
+    if(error||data!==true){if(!error)try{localStorage.setItem(SELFIE_DAY_KEY,phtDay())}catch{}selfieBusy=false;return;}
+  }catch{selfieBusy=false;return;}
+  const wasCam=camera.mode==='camera';
+  stopCamera();
+  const ov=document.createElement('div');ov.id='selfieGate';
+  ov.style.cssText='position:fixed;inset:0;z-index:100000;background:#0b1220;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;text-align:center;font-family:Poppins,system-ui,sans-serif';
+  ov.innerHTML='<h2 style="margin:0">Class Mayor check-in</h2><p id="sgMsg" style="margin:0;max-width:340px">Take a selfie to confirm it is you opening attendance today.</p>'+
+   '<video id="sgVid" autoplay playsinline muted style="width:min(78vw,320px);aspect-ratio:3/4;object-fit:cover;border-radius:16px;background:#000;transform:scaleX(-1)"></video>'+
+   '<img id="sgImg" alt="Selfie preview" hidden style="width:min(78vw,320px);aspect-ratio:3/4;object-fit:cover;border-radius:16px">'+
+   '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button id="sgSnap" class="primary" type="button">Take selfie</button><button id="sgRetake" type="button" hidden>Retake</button><button id="sgUse" class="primary" type="button" hidden>Use this photo</button></div>'+
+   '<button id="sgSkip" type="button" hidden style="background:none;border:0;color:#9db4ff;text-decoration:underline">Camera not working? Continue with a reason</button>';
+  document.body.appendChild(ov);
+  const q=id=>ov.querySelector(id),msg=q('#sgMsg'),vid=q('#sgVid'),img=q('#sgImg');
+  let stream=null,jpeg=null;
+  const stopStream=()=>{try{stream&&stream.getTracks().forEach(t=>t.stop())}catch{}stream=null;};
+  const finish=async(image,reason)=>{
+    stopStream();
+    try{
+      const {error}=await client.rpc('lsc_submit_selfie',{p_image:image,p_reason:reason});
+      if(error&&isNetworkError(error))localStorage.setItem(SELFIE_Q_KEY,JSON.stringify({image,reason}));
+      else if(error){msg.textContent='Could not save: '+error.message;return;}
+    }catch{try{localStorage.setItem(SELFIE_Q_KEY,JSON.stringify({image,reason}))}catch{}}
+    try{localStorage.setItem(SELFIE_DAY_KEY,phtDay())}catch{}
+    ov.remove();selfieBusy=false;
+    if(wasCam)startCamera();
+  };
+  q('#sgSkip').onclick=()=>{const r=(prompt('Why can you not take a selfie? (required)')||'').trim();if(r)finish(null,r);};
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:640}},audio:false});
+    vid.srcObject=stream;
+  }catch{
+    msg.textContent='Camera is not available.';q('#sgSnap').hidden=true;q('#sgSkip').hidden=false;return;
+  }
+  q('#sgSkip').hidden=false;
+  q('#sgSnap').onclick=()=>{
+    if(!vid.videoWidth)return;
+    const w=360,h=Math.round(w*vid.videoHeight/vid.videoWidth),c=document.createElement('canvas');c.width=w;c.height=h;
+    const x=c.getContext('2d');x.translate(w,0);x.scale(-1,1);x.drawImage(vid,0,0,w,h);
+    jpeg=c.toDataURL('image/jpeg',.6);img.src=jpeg;
+    vid.hidden=true;img.hidden=false;q('#sgSnap').hidden=true;q('#sgRetake').hidden=false;q('#sgUse').hidden=false;
+  };
+  q('#sgRetake').onclick=()=>{jpeg=null;img.hidden=true;vid.hidden=false;q('#sgSnap').hidden=false;q('#sgRetake').hidden=true;q('#sgUse').hidden=true;};
+  q('#sgUse').onclick=()=>{if(jpeg)finish(jpeg,null);};
+}
 window.addEventListener('kiosk:enter',()=>{camera.mode='manual';selectAttendanceMethod('camera');updateClock();});
 window.addEventListener('kiosk:exit',()=>{selectAttendanceMethod('manual');});
 window.addEventListener('kiosk:id',e=>{if(!state.busy)void recordAttendance(null,e.detail);});

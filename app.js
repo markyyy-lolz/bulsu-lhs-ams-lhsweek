@@ -273,6 +273,8 @@ function settingsHTML(){
  '<label class="field check-field"><input type="checkbox" name="mayor_notifications"'+(d.mayor_notifications?' checked':'')+'> <span>Send class mayors a “who has not scanned in” reminder ('+(d.mayor_links||0)+' linked)</span></label>'+
  '<label class="field">Mayor reminder time<input type="time" name="mayor_reminder_time" value="'+esc(d.mayor_reminder_time||'08:30')+'" required></label>'+
  '<label class="field check-field"><input type="checkbox" name="public_stats"'+(d.public_stats?' checked':'')+'> <span>Show the public stats screen (<a href="./stats.html" target="_blank" rel="noopener">stats.html</a>) — counts per grade only, no names. Anyone with the link can see it while this is on.</span></label>'+
+ '<label class="field check-field"><input type="checkbox" name="mayor_selfie"'+(d.mayor_selfie?' checked':'')+'> <span>Class mayors must take a selfie once a day when they open the Attendance page. Photos are visible to LSC officials only and deleted after 7 days. Needs school approval (minors).</span></label>'+
+ '<div style="margin:-4px 0 10px"><button type="button" class="btn btn-secondary" data-act="mayorCheckins">View today\'s mayor check-ins</button></div>'+
  '<label class="field check-field"><input type="checkbox" name="parent_absent_alerts"'+(d.parent_absent_alerts?' checked':'')+'> <span>Tell linked parents when no Time IN is recorded yet ('+(d.student_links||0)+' linked chats)</span></label>'+
  '<label class="field">Parent alert time (PHT)<input type="time" name="parent_alert_time" value="'+esc(d.parent_alert_time||'08:00')+'" required></label>'+
  '<p class="muted small" style="margin:-6px 0 0">Off by default. Each parent gets one message a day, and a section where nobody has scanned in yet is skipped. Get the school’s approval of the wording first.</p>'+
@@ -298,7 +300,7 @@ function settingsHTML(){
 }
 async function saveSettings(form){
  const f=form.elements,g=n=>f[n].value;
- const p={lag_points:parseInt(g('lag_points'),10),late_cutoff:g('late_cutoff'),summary_time:g('summary_time'),eod_time:g('eod_time'),lag_start_hour:parseInt(g('lag_start_hour'),10),lag_end_hour:parseInt(g('lag_end_hour'),10),lag_interval:parseInt(g('lag_interval'),10),telegram_enabled:f.telegram_enabled.checked,student_notifications:f.student_notifications.checked,correction_alerts:f.correction_alerts.checked,mayor_notifications:f.mayor_notifications.checked,mayor_reminder_time:g('mayor_reminder_time'),parent_absent_alerts:f.parent_absent_alerts.checked,parent_alert_time:g('parent_alert_time'),public_stats:f.public_stats.checked};
+ const p={lag_points:parseInt(g('lag_points'),10),late_cutoff:g('late_cutoff'),summary_time:g('summary_time'),eod_time:g('eod_time'),lag_start_hour:parseInt(g('lag_start_hour'),10),lag_end_hour:parseInt(g('lag_end_hour'),10),lag_interval:parseInt(g('lag_interval'),10),telegram_enabled:f.telegram_enabled.checked,student_notifications:f.student_notifications.checked,correction_alerts:f.correction_alerts.checked,mayor_notifications:f.mayor_notifications.checked,mayor_reminder_time:g('mayor_reminder_time'),parent_absent_alerts:f.parent_absent_alerts.checked,parent_alert_time:g('parent_alert_time'),public_stats:f.public_stats.checked,mayor_selfie:f.mayor_selfie.checked};
  if(!(p.lag_points>=1&&p.lag_points<=50))return toast('Lagging threshold must be between 1 and 50.',true);
  if(p.lag_start_hour>=p.lag_end_hour)return toast('Lag alerts must stop after they start.',true);
  state.settings.busy=true;render();
@@ -501,6 +503,15 @@ function generateClassLists(){
  w.document.open();w.document.write(html);w.document.close();
 }
 
+async function showMayorCheckins(){
+ if(state.demo)return toast('Not available in demo mode.',true);
+ const r=await sb.rpc('lsc_selfie_list',{p_day:null});if(r.error)return toast(r.error.message,true);
+ const e=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ const t=v=>new Date(v).toLocaleTimeString('en-PH',{timeZone:'Asia/Manila',hour:'2-digit',minute:'2-digit'});
+ const cards=(r.data||[]).map(x=>'<div style="width:170px;border:1px solid #ccc;border-radius:10px;padding:8px;text-align:center;font-size:12px">'+(x.image&&/^data:image\/jpeg;base64,/.test(x.image)?'<img src="'+x.image+'" style="width:100%;border-radius:8px">':'<div style="height:120px;display:flex;align-items:center;justify-content:center;color:#b45309">No selfie<br>'+e(x.skip_reason)+'</div>')+'<b>'+e(x.class_label)+'</b><br>'+e(x.email)+'<br>'+t(x.taken_at)+'</div>').join('');
+ const w=window.open('','_blank');if(!w)return toast('Allow pop-ups to view check-ins.',true);
+ w.document.write('<!doctype html><title>Mayor check-ins</title><body style="font-family:system-ui;padding:16px"><h2>Class mayor check-ins today</h2><div style="display:flex;gap:10px;flex-wrap:wrap">'+(cards||'<p>No check-ins yet today.</p>')+'</div>');w.document.close();
+}
 async function downloadConsentLog(){
  if(state.demo)return toast('Not available in demo mode.',true);
  const r=await sb.rpc('lsc_consent_log');if(r.error)return toast(r.error.message,true);
@@ -953,6 +964,7 @@ document.addEventListener('click',async e=>{
   render();}
  if(act==='idcGenerate'){await generateIdCards();return;}
  if(act==='consentLog'){await downloadConsentLog();return;}
+ if(act==='mayorCheckins'){await showMayorCheckins();return;}
  if(act==='clGenerate'){generateClassLists();return;}
  if(act==='clTemplate'){downloadSexTemplate();return;}
  if(act==='refreshLive'){await loadLive();render();}
