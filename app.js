@@ -350,6 +350,8 @@ function idCardsHTML(){
  '<div class="card pad"><div class="section-title"><h3>Choose who to print</h3></div>'+
  '<div class="two-col" style="margin-top:0"><label class="field">Class<select id="idcScope">'+opts+'</select></label>'+
  '<label class="field">Or reprint one student (lost / damaged ID)<input id="idcOne" list="idcList" placeholder="Type Student ID or name" autocomplete="off"><datalist id="idcList">'+act.slice(0,1500).map(x=>'<option value="'+esc(x.student_id)+'">'+esc(x.full_name)+'</option>').join('')+'</datalist></label></div>'+
+ '<label class="field check-field" style="margin-top:14px"><input type="checkbox" id="idcReset"> <span><b>Reset Telegram codes</b> for this selection before generating. The Telegram QR on any previously printed card stops working, and only the new cards work.</span></label>'+
+ '<label class="field check-field"><input type="checkbox" id="idcUnlink"> <span>Also disconnect parents/students already linked (they must scan the new card to get alerts again). Leave off to keep current links.</span></label>'+
  '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center"><button type="button" class="btn" data-act="idcGenerate"'+(state.idc?.busy?' disabled':'')+'>'+(state.idc?.busy?'Preparing…':'Generate ID sheets')+'</button>'+(state.idc?.error?'<span style="color:#b3261e;font-weight:700">'+esc(state.idc.error)+'</span>':'')+'</div>'+
  '<p class="muted small" style="margin-top:12px">A new tab opens with the sheets. Press <b>Print</b> and set <b>Paper size: Legal/Custom 8.5 × 13 in</b>, <b>Margins: None</b>, <b>Scale: 100%</b>, and turn <b>Background graphics</b> on. Choose “Save as PDF” to get a file. Cut along the dotted lines. Each card’s Telegram QR is private to that student, so keep printed sheets with the LSC.</p></div>';
 }
@@ -369,9 +371,15 @@ async function generateIdCards(){
   if(state.demo){rows=state.students.filter(x=>x.active).slice(0,9).map(x=>({student_id:x.student_id,full_name:x.full_name,grade_level:x.grade_level,section:x.section,token:'demo00000000'}));}
   else{
    const args={p_grade:null,p_section:null,p_ids:null};
+   const doReset=!!document.getElementById('idcReset')?.checked,doUnlink=!!document.getElementById('idcUnlink')?.checked;
    if(one){const m=state.students.find(x=>x.student_id===one)||state.students.find(x=>x.full_name.toLowerCase()===one.toLowerCase());if(!m)throw new Error('No student found for “'+one+'”.');args.p_ids=[m.student_id];}
    else if(sel.startsWith('g:'))args.p_grade=sel.slice(2);
    else if(sel.startsWith('c:')){const [g,sec]=sel.slice(2).split('|');args.p_grade=g;args.p_section=sec;}
+   if(doReset){
+    const cnt=args.p_ids?1:state.students.filter(x=>x.active&&(!args.p_grade||x.grade_level===args.p_grade)&&(!args.p_section||x.section===args.p_section)).length;
+    if(!confirm('Reset the Telegram codes of '+cnt+' student'+(cnt===1?'':'s')+'?\n\nTheir old printed Telegram QR codes will stop working.'+(doUnlink?'\nEveryone already linked to them will ALSO be disconnected.':''))){try{w.close()}catch(_){}state.idc={busy:false,error:null};render();return;}
+    const rr=await sb.rpc('lsc_reset_telegram_codes',{...args,p_unlink:doUnlink});if(rr.error)throw rr.error;
+   }
    const r=await sb.rpc('lsc_id_card_data',args);if(r.error)throw r.error;rows=r.data||[];
   }
   if(!rows.length)throw new Error('No students match that choice.');
