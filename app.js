@@ -13,7 +13,7 @@ const state = {
 };
 let clearResultTimer = null;
 let lastAnimatedPage = null;
-const iconPaths=Object.freeze({"overview":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/>","students":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>","classes":"<path d=\"M4 22V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16\"/><path d=\"M2 22h20M9 22v-6h6v6M8 9h.01M16 9h.01M8 13h.01M16 13h.01\"/>","officials":"<circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2\"/><path d=\"m16 8 2 2 4-4\"/>","records":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M8 2v4M16 2v4M3 10h18m-13 6 2 2 5-5\"/>","security":"<rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/><circle cx=\"12\" cy=\"16\" r=\"1\"/><path d=\"M12 17v2\"/>","kiosk":"<path d=\"M7 3H5a2 2 0 0 0-2 2v2m14-4h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M3 17v2a2 2 0 0 0 2 2h2M4 12h16\"/>","logout":"<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"m16 17 5-5-5-5M21 12H9\"/>","external":"<path d=\"M13 5h6v6M19 5l-9 9\"/><path d=\"M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6\"/>","movie":"<rect x=\"2\" y=\"3\" width=\"20\" height=\"18\" rx=\"2\"/><path d=\"M7 3v18M17 3v18M2 8h5M2 16h5M17 8h5M17 16h5\"/>","corrections":"<path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z\"/>","close":"<path d=\"M18 6 6 18M6 6l12 12\"/>","menu":"<path d=\"M4 6h16M4 12h16M4 18h16\"/>"});
+const iconPaths=Object.freeze({"idcards":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"16\" rx=\"2.5\"/><circle cx=\"9\" cy=\"11\" r=\"2.2\"/><path d=\"M5.5 17c.6-2 2-3 3.5-3s2.9 1 3.5 3M15 9.5h3.5M15 13h3.5\"/>","overview":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/>","students":"<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>","classes":"<path d=\"M4 22V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16\"/><path d=\"M2 22h20M9 22v-6h6v6M8 9h.01M16 9h.01M8 13h.01M16 13h.01\"/>","officials":"<circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2\"/><path d=\"m16 8 2 2 4-4\"/>","records":"<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M8 2v4M16 2v4M3 10h18m-13 6 2 2 5-5\"/>","security":"<rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/><circle cx=\"12\" cy=\"16\" r=\"1\"/><path d=\"M12 17v2\"/>","kiosk":"<path d=\"M7 3H5a2 2 0 0 0-2 2v2m14-4h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M3 17v2a2 2 0 0 0 2 2h2M4 12h16\"/>","logout":"<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><path d=\"m16 17 5-5-5-5M21 12H9\"/>","external":"<path d=\"M13 5h6v6M19 5l-9 9\"/><path d=\"M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6\"/>","movie":"<rect x=\"2\" y=\"3\" width=\"20\" height=\"18\" rx=\"2\"/><path d=\"M7 3v18M17 3v18M2 8h5M2 16h5M17 8h5M17 16h5\"/>","corrections":"<path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z\"/>","close":"<path d=\"M18 6 6 18M6 6l12 12\"/>","menu":"<path d=\"M4 6h16M4 12h16M4 18h16\"/>"});
 function navIcon(name){return '<svg class="outline-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+(iconPaths[name]||iconPaths.overview)+'</svg>';}
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function todayPH(){
@@ -124,12 +124,12 @@ function loginHTML(){
 function sidebar(){
   let menu=[['overview','Dashboard'],['records','Attendance Records'],['security','Account Security']];
   if(state.role==='class_mayor'){menu.splice(1,0,['masterlist','Class Masterlist'],['corrections','Corrections']);}
-  if(state.role==='official'){menu.splice(1,0,['live','Live Dashboard'],['students','Student Directory'],['classes','Classes'],['schoolyears','School Year Management'],['officials','Role Assignments'],['corrections','Correction Requests'],['settings','Admin Settings']);}
+  if(state.role==='official'){menu.splice(1,0,['live','Live Dashboard'],['students','Student Directory'],['classes','Classes'],['schoolyears','School Year Management'],['officials','Role Assignments'],['idcards','ID Cards'],['corrections','Correction Requests'],['settings','Admin Settings']);}
   return '<aside id="lsc-sidebar" class="sidebar'+(state.mobileNav?' open':'')+'" aria-label="Workspace navigation"><button type="button" class="lsc-mobile-close" data-act="closeMenu" aria-label="Close navigation menu">'+navIcon('close')+'</button><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+navIcon(v[0])+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">'+navIcon('kiosk')+'</span>Student Attendance<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./movie.html"><span class="nav-ico">'+navIcon('movie')+'</span>Movie Booth POS<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'<a class="nav-btn" href="./reserve.html"><span class="nav-ico">'+navIcon('movie')+'</span>Online Movie Booking<span class="nav-external">'+navIcon('external')+'</span></a>'+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">'+navIcon('logout')+'<span>Sign out</span></button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
 }
-function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',live:'Live Dashboard',settings:'Admin Settings',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',schoolyears:'School Year Management',officials:'Role Assignments',security:'Account Security',corrections:'Corrections'})[state.page]||'Dashboard';}
+function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',live:'Live Dashboard',settings:'Admin Settings',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',schoolyears:'School Year Management',officials:'Role Assignments',security:'Account Security',corrections:'Corrections',idcards:'ID Cards'})[state.page]||'Dashboard';}
 function appHTML(){
-  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='live'?liveHTML():state.page==='settings'?settingsHTML():state.page==='masterlist'?masterlistHTML():state.page==='corrections'?correctionsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='schoolyears'?schoolYearsHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():overviewHTML())+'</div></main></div>';
+  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='live'?liveHTML():state.page==='settings'?settingsHTML():state.page==='masterlist'?masterlistHTML():state.page==='corrections'?correctionsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='schoolyears'?schoolYearsHTML():state.page==='officials'?officialsHTML():state.page==='idcards'?idCardsHTML():state.page==='security'?securityHTML():overviewHTML())+'</div></main></div>';
 }
 function header(head,sub,extra=''){return '<div class="page-header"><div><div class="eyebrow" style="margin-bottom:8px">LSC ATTENDANCE MONITOR</div><h1>'+head+'</h1><p>'+sub+'</p></div>'+extra+'</div>';}
 function metrics(){
@@ -336,6 +336,71 @@ async function loadCorrections(){
 function corrDesc(c){
  if(c.kind==='REMOVE')return 'Remove '+esc(c.event_type||'')+' scan'+(c.event_recorded_at?' at '+esc(timePH(c.event_recorded_at)):'')+' · '+esc(c.event_date);
  return (c.kind==='ADD_IN'?'Add Time IN':'Add Time OUT')+' at '+esc(c.event_time)+' · '+esc(c.event_date);
+}
+
+// ===== ID card generator (8.5 x 13 in, portrait, one-sided, 9 per sheet) =====
+function idCardsHTML(){
+ if(state.role!=='official')return '<div class="notice">Only LSC Officials can print ID cards.</div>';
+ const act=state.students.filter(x=>x.active);
+ const grades=[...new Set(act.map(x=>x.grade_level))].sort((a,b)=>parseInt(a.replace(/\D/g,''))-parseInt(b.replace(/\D/g,''))||a.localeCompare(b));
+ const classes=[...new Set(act.map(x=>x.grade_level+'|'+x.section))].sort((a,b)=>parseInt(a.replace(/\D/g,''))-parseInt(b.replace(/\D/g,''))||a.localeCompare(b));
+ const opts='<option value="all">All students ('+act.length+')</option>'+grades.map(g=>'<option value="g:'+esc(g)+'">All '+esc(g)+' ('+act.filter(x=>x.grade_level===g).length+')</option>').join('')+
+  classes.map(c=>{const [g,sec]=c.split('|');return '<option value="c:'+esc(c)+'">'+esc(g)+' · '+esc(sec)+' ('+act.filter(x=>x.grade_level===g&&x.section===sec).length+')</option>';}).join('');
+ return header('ID Cards','Print Student ID cards on 8.5 × 13 in paper: portrait, one-sided, 9 cards per sheet, with the attendance QR and the Telegram QR on the front.')+
+ '<div class="card pad"><div class="section-title"><h3>Choose who to print</h3></div>'+
+ '<div class="two-col" style="margin-top:0"><label class="field">Class<select id="idcScope">'+opts+'</select></label>'+
+ '<label class="field">Or reprint one student (lost / damaged ID)<input id="idcOne" list="idcList" placeholder="Type Student ID or name" autocomplete="off"><datalist id="idcList">'+act.slice(0,1500).map(x=>'<option value="'+esc(x.student_id)+'">'+esc(x.full_name)+'</option>').join('')+'</datalist></label></div>'+
+ '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center"><button type="button" class="btn" data-act="idcGenerate"'+(state.idc?.busy?' disabled':'')+'>'+(state.idc?.busy?'Preparing…':'Generate ID sheets')+'</button>'+(state.idc?.error?'<span style="color:#b3261e;font-weight:700">'+esc(state.idc.error)+'</span>':'')+'</div>'+
+ '<p class="muted small" style="margin-top:12px">A new tab opens with the sheets. Press <b>Print</b> and set <b>Paper size: Legal/Custom 8.5 × 13 in</b>, <b>Margins: None</b>, <b>Scale: 100%</b>, and turn <b>Background graphics</b> on. Choose “Save as PDF” to get a file. Cut along the dotted lines. Each card’s Telegram QR is private to that student, so keep printed sheets with the LSC.</p></div>';
+}
+function qrSvg(text,mod){
+ const q=qrcode(0,'M');q.addData(String(text));q.make();const n=q.getModuleCount(),b=1;let d='';
+ for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))d+='M'+(c+b)+' '+(r+b)+'h1v1h-1z';
+ return '<svg viewBox="0 0 '+(n+2*b)+' '+(n+2*b)+'" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#fff"/><path d="'+d+'" fill="#000"/></svg>';
+}
+async function generateIdCards(){
+ const sel=document.getElementById('idcScope')?.value||'all',one=(document.getElementById('idcOne')?.value||'').trim();
+ const w=window.open('about:blank','_blank');
+ if(!w){state.idc={busy:false,error:'Pop-up blocked. Allow pop-ups for this site, then try again.'};render();return;}
+ w.document.write('<title>Preparing ID cards…</title><body style="font-family:system-ui;padding:40px">Preparing ID cards…</body>');
+ state.idc={busy:true,error:null};render();
+ try{
+  let rows;
+  if(state.demo){rows=state.students.filter(x=>x.active).slice(0,9).map(x=>({student_id:x.student_id,full_name:x.full_name,grade_level:x.grade_level,section:x.section,token:'demo00000000'}));}
+  else{
+   const args={p_grade:null,p_section:null,p_ids:null};
+   if(one){const m=state.students.find(x=>x.student_id===one)||state.students.find(x=>x.full_name.toLowerCase()===one.toLowerCase());if(!m)throw new Error('No student found for “'+one+'”.');args.p_ids=[m.student_id];}
+   else if(sel.startsWith('g:'))args.p_grade=sel.slice(2);
+   else if(sel.startsWith('c:')){const [g,sec]=sel.slice(2).split('|');args.p_grade=g;args.p_section=sec;}
+   const r=await sb.rpc('lsc_id_card_data',args);if(r.error)throw r.error;rows=r.data||[];
+  }
+  if(!rows.length)throw new Error('No students match that choice.');
+  if(!window.qrcode){const m=await import('https://esm.sh/qrcode-generator@1.4.4');window.qrcode=m.default||m;}
+  const crest=await fetch('./assets/lsc-crest-transparent.png').then(r=>r.blob()).then(b=>new Promise(ok=>{const f=new FileReader();f.onload=()=>ok(f.result);f.onerror=()=>ok('');f.readAsDataURL(b)})).catch(()=>'');
+  const cards=rows.map(r=>{
+   const name=String(r.full_name||''),i=name.indexOf(','),last=(i<0?name:name.slice(0,i)).trim().toUpperCase(),first=i<0?'':name.slice(i+1).trim();
+   return '<div class="card"><div class="hd"><div class="cr"><img src="'+crest+'" alt=""></div><div class="ht"><b>BULSU LABORATORY<br>HIGH SCHOOL</b><span>LHS WEEK | ATTENDANCE PASS</span></div></div><div class="gold"></div>'+
+    '<div class="nm"><div class="ln">'+esc(last)+'</div><div class="fn">'+esc(first)+'</div><div class="meta">'+esc(r.grade_level)+' - '+esc(r.section)+' &nbsp;|&nbsp; '+esc(r.student_id)+'</div></div>'+
+    '<div class="qa">'+qrSvg(r.student_id)+'</div><div class="sc">SCAN TO CHECK IN</div><div class="dv"></div>'+
+    '<div class="tg"><div class="qt">'+(r.token?qrSvg('https://t.me/lhslscbot?start=L_'+r.token):'')+'</div><div class="tt"><b>TELEGRAM ALERTS</b>(optional) Parent/student:<br>scan, press START.<br>The bot replies with the<br>name above. Wrong name?<br>Stop. @lhslscbot</div></div>'+
+    '<div class="ft">If found, return to the LSC Office, BulSU Laboratory High School.</div></div>';
+  });
+  const sheets=[];for(let k=0;k<cards.length;k+=9)sheets.push('<section class="sheet">'+cards.slice(k,k+9).join('')+'</section>');
+  const css='@page{size:8.5in 13in;margin:0}*{box-sizing:border-box}body{margin:0;background:#dfe5ef;font-family:Poppins,system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+   '.bar{position:sticky;top:0;z-index:9;display:flex;gap:12px;align-items:center;justify-content:center;padding:12px;background:#0d1b33;color:#fff;font-size:14px}.bar button{background:#e3a21a;border:0;border-radius:10px;padding:10px 20px;font:700 14px Poppins,sans-serif;cursor:pointer}'+
+   '.sheet{width:8.5in;height:13in;margin:16px auto;background:#fff;display:grid;grid-template-columns:repeat(3,54mm);grid-template-rows:repeat(3,85.6mm);justify-content:space-evenly;align-content:space-evenly;page-break-after:always;break-after:page;overflow:hidden}'+
+   '@media print{body{background:#fff}.bar{display:none}.sheet{margin:0}.sheet:last-child{page-break-after:auto;break-after:auto}}'+
+   '.card{position:relative;width:54mm;height:85.6mm;border:.3mm dashed #9aa7bf;border-radius:3mm;overflow:hidden;background:#fff;text-align:center}'+
+   '.hd{background:#1f3a6b;height:14mm;display:flex;align-items:center;gap:2mm;padding:0 2.6mm;text-align:left;color:#fff}.cr{width:7.4mm;height:10.2mm;background:#fff;border-radius:1.5mm;display:grid;place-items:center;flex:none}.cr img{width:5.4mm;height:8.4mm;object-fit:contain}'+
+   '.ht b{display:block;font-size:6.6pt;line-height:1.35;font-weight:700}.ht span{display:block;font-size:4.5pt;color:#dce6f7;margin-top:.6mm}.gold{height:1mm;background:#e3a21a}'+
+   '.nm{padding:2.4mm 3mm 0}.ln{font-weight:700;font-size:12pt;line-height:1.15;color:#000;white-space:nowrap;overflow:hidden}.fn{font-size:8.2pt;color:#000;margin-top:.4mm;white-space:nowrap;overflow:hidden}.meta{font-weight:700;font-size:7pt;color:#1f3a6b;margin-top:1.2mm}'+
+   '.qa{width:27mm;height:27mm;margin:1.6mm auto 0}.qa svg,.qt svg{width:100%;height:100%;display:block}.sc{font-weight:700;font-size:5.4pt;color:#555;margin-top:.8mm}'+
+   '.dv{border-top:.3mm dotted #c9d3e6;margin:1.6mm 3mm 0}.tg{display:flex;gap:2mm;padding:1.2mm 3mm 0;text-align:left}.qt{width:17mm;height:17mm;flex:none}.tt{font-size:4.3pt;line-height:1.55;color:#444}.tt b{display:block;font-size:4.9pt;color:#1f3a6b;margin-bottom:.4mm}'+
+   '.ft{position:absolute;left:0;right:0;bottom:0;background:#eef3fb;height:4.2mm;display:flex;align-items:center;justify-content:center;font-size:3.9pt;color:#555}';
+  const html='<!doctype html><html><head><meta charset="utf-8"><title>LHS ID Cards ('+rows.length+')</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet"><style>'+css+'</style></head><body><div class="bar"><span>'+rows.length+' card'+(rows.length===1?'':'s')+' · '+sheets.length+' sheet'+(sheets.length===1?'':'s')+' · 8.5 × 13 in, margins None, scale 100%, background graphics ON</span><button id="pb">Print / Save as PDF</button></div>'+sheets.join('')+'<script>document.getElementById("pb").onclick=function(){window.print()};<\/script></body></html>';
+  w.document.open();w.document.write(html);w.document.close();
+  state.idc={busy:false,error:null};render();
+ }catch(e){try{w.close()}catch(_){}state.idc={busy:false,error:e.message||'Could not prepare the ID cards.'};render();}
 }
 function correctionsHTML(){
  const isOff=state.role==='official',C=state.corr,list=[...(C.data||[])].sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1));
@@ -777,6 +842,7 @@ document.addEventListener('click',async e=>{
   try{if(!state.demo){const r=await sb.rpc('lsc_telegram_set_active',{p_chat_id:Number(chat),p_active:on});if(r.error)throw r.error;}
    const sub=state.settings.data.subscribers.find(x=>String(x.chat_id)===chat);if(sub)sub.active=on;toast(on?'Subscriber restored.':'Subscriber removed.');}catch(err){toast('Could not update: '+(err.message||err),true);}
   render();}
+ if(act==='idcGenerate'){await generateIdCards();return;}
  if(act==='refreshLive'){await loadLive();render();}
  if(act==='tgLink'){await makeTgLink();render();}
  if(act==='corrLoadEvents')await corrLoadEvents();
@@ -831,7 +897,7 @@ root.addEventListener('input',e=>{
 });
 window.addEventListener('hashchange',async()=>{
  const page=location.hash.slice(1);
- if(['overview','students','live','settings','corrections','masterlist','records','classes','schoolyears','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='live')await loadLive();if(page==='settings')await loadSettings();if(page==='corrections')await loadCorrections();render();}
+ if(['overview','students','live','settings','corrections','masterlist','records','classes','schoolyears','officials','idcards','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='live')await loadLive();if(page==='settings')await loadSettings();if(page==='corrections')await loadCorrections();render();}
 });
 setInterval(async()=>{if(state.page==='live'&&state.user&&!document.hidden){await loadLive();if(state.page==='live')render();}},30000);
 setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=stampPH()+' PHT';},15000);
