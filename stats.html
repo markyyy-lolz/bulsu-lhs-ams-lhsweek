@@ -1,0 +1,83 @@
+<!doctype html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d1b33"><meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="./assets/lsc-glass-logo.png?v=2">
+<title>LHS Week Attendance | Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d1b33;--card:#152645;--ink:#fff;--mut:#9fb4dc;--green:#2fd49c;--gold:#f0b13a;--blue:#6f93ff;--red:#ff7a72}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Poppins,system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;gap:16px;padding:clamp(12px,2vh,22px) clamp(16px,3vw,40px);background:#101f3b;border-bottom:1px solid #ffffff1a}
+header img{height:clamp(40px,7vh,64px);width:auto}
+header h1{margin:0;font-size:clamp(18px,3.2vw,40px);font-weight:800;letter-spacing:-.5px;line-height:1.1}
+header small{display:block;font-size:clamp(10px,1.3vw,15px);letter-spacing:2px;color:var(--mut);font-weight:600;margin-top:4px}
+.clock{margin-left:auto;text-align:right;font-variant-numeric:tabular-nums}
+.clock b{display:block;font-size:clamp(26px,5vw,64px);font-weight:800;line-height:1}
+.clock span{font-size:clamp(11px,1.5vw,18px);color:var(--mut)}
+main{flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.3fr);gap:clamp(12px,2vw,28px);padding:clamp(12px,2.2vw,32px)}
+@media (orientation:portrait),(max-width:900px){main{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);overflow:auto}body{overflow:auto}}
+.hero{min-height:0;background:var(--card);border-radius:28px;padding:clamp(18px,3vw,44px);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:clamp(8px,2vh,22px)}
+.ring{--p:0;width:min(100%,36vh,420px);aspect-ratio:1/1;border-radius:50%;background:conic-gradient(var(--green) calc(var(--p)*1%),#ffffff1c 0);display:grid;place-items:center;transition:--p .6s}
+.ring>div{width:80%;aspect-ratio:1/1;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring b{font-size:clamp(40px,min(8vw,11vh),120px);font-weight:800;line-height:1;letter-spacing:-4px}
+.ring b sup{font-size:.45em;letter-spacing:0;vertical-align:top;margin-left:4px}
+.ring span{font-size:clamp(11px,min(1.6vw,2.4vh),20px);color:var(--mut);font-weight:600;letter-spacing:2px;margin-top:6px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(8px,1.4vw,18px);width:100%}
+.kpi{background:#ffffff0f;border-radius:18px;padding:clamp(10px,1.6vw,22px) 8px}
+.kpi b{display:block;font-size:clamp(24px,4.4vw,58px);font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi span{font-size:clamp(10px,1.3vw,16px);color:var(--mut);font-weight:600;letter-spacing:1px}
+.kpi.late b{color:var(--gold)}.kpi.in b{color:var(--blue)}.kpi.pr b{color:var(--green)}
+.grades{min-height:0;background:var(--card);border-radius:28px;padding:clamp(18px,3vw,40px);display:flex;flex-direction:column;justify-content:space-evenly;gap:clamp(10px,2vh,24px)}
+.g .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
+.g .name{font-size:clamp(18px,min(3vw,5vh),38px);font-weight:700}
+.g .num{font-size:clamp(14px,2.2vw,28px);color:var(--mut);font-variant-numeric:tabular-nums;font-weight:600}
+.g .num b{color:#fff;font-size:1.25em}
+.bar{height:clamp(14px,3vh,34px);background:#ffffff1c;border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#1fb98a,var(--green));border-radius:99px;transition:width .8s}
+footer{padding:8px 20px 12px;text-align:center;color:var(--mut);font-size:clamp(10px,1.2vw,14px)}
+footer.stale{color:var(--red);font-weight:700}
+.msg{margin:auto;text-align:center;font-size:clamp(20px,3vw,36px);color:var(--mut);padding:40px}
+@property --p{syntax:'<number>';inherits:false;initial-value:0}
+</style></head><body>
+<header><img src="./assets/lsc-glass-logo.png?v=2" alt=""><div><h1>LHS Week Attendance</h1><small>BULSU LABORATORY HIGH SCHOOL · LIVE</small></div><div class="clock"><b id="clk">--:--:--</b><span id="dt"></span></div></header>
+<div id="root" class="msg" style="flex:1">Loading…</div>
+<footer id="foot"></footer>
+<script>
+const URL_='https://rfxzbuocxersgbshczbj.supabase.co/rest/v1/rpc/lsc_public_stats',KEY='sb_publishable_CR-CJKna_rcjQi7gg1CZGQ__DnXI6Lb';
+const $=s=>document.querySelector(s);
+const tf=new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const df=new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',weekday:'long',month:'long',day:'numeric'});
+let last=0,built=false;
+setInterval(()=>{const n=new Date();$('#clk').textContent=tf.format(n);$('#dt').textContent=df.format(n)+' · PHT';
+  const f=$('#foot'),age=(Date.now()-last)/1000;
+  if(!last){return}
+  f.className=age>45?'stale':'';f.textContent=age>45?'Connection lost — numbers may be out of date (last update '+tf.format(new Date(last))+')':'Updated '+tf.format(new Date(last))+' · counts only, no names are shown';
+},1000);
+const pct=(a,b)=>b?Math.round(a*100/b):0;
+function build(d){
+  const root=$('#root');root.className='';root.style.cssText='display:contents';
+  root.innerHTML='<main><section class="hero"><div class="ring" id="ring"><div><b id="pct">0<sup>%</sup></b><span>PRESENT TODAY</span></div></div><div class="kpis"><div class="kpi pr"><b id="kp">0</b><span id="kpl">PRESENT</span></div><div class="kpi in"><b id="ki">0</b><span>INSIDE NOW</span></div><div class="kpi late"><b id="kl">0</b><span>LATE</span></div></div></section><section class="grades" id="gr"></section></main>';
+  built=true;
+}
+function render(d){
+  if(!built)build(d);
+  $('#ring').style.setProperty('--p',pct(d.present,d.total));
+  $('#pct').innerHTML=pct(d.present,d.total)+'<sup>%</sup>';
+  $('#kp').textContent=d.present;$('#kpl').textContent='PRESENT OF '+d.total;$('#ki').textContent=d.inside;$('#kl').textContent=d.late;
+  const gr=$('#gr');
+  gr.innerHTML=d.grades.map((g,i)=>'<div class="g"><div class="row"><span class="name">'+g.grade.replace(/[<>&]/g,'')+'</span><span class="num"><b>'+pct(g.present,g.total)+'%</b> · '+g.present+' of '+g.total+'</span></div><div class="bar"><i data-w="'+pct(g.present,g.total)+'"></i></div></div>').join('');
+  requestAnimationFrame(()=>gr.querySelectorAll('i').forEach(i=>i.style.width=i.dataset.w+'%'));
+}
+async function load(){
+  try{
+    const r=await fetch(URL_,{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'},body:'{}',cache:'no-store'});
+    if(!r.ok)throw new Error(r.status);
+    const d=await r.json();last=Date.now();
+    if(!d.enabled){built=false;const root=$('#root');root.className='msg';root.style.cssText='flex:1';root.textContent='The live attendance screen is not turned on right now.';return}
+    render(d);
+  }catch(e){if(!last)$('#root').textContent='Cannot load live numbers. Retrying…';}
+}
+load();setInterval(load,10000);
+</script></body></html>
