@@ -9,6 +9,7 @@ const state = {
   students: [], logs: [], classes: [], assignments: [], classId: null, lastResult: null, query: '', recordDate: todayPH(),
   busy: false, mobileNav: false, loginMode:'email', otpSent:false, otpEmail:'', showPasswordSetup:false,
   live:{data:null,error:null,at:null,busy:false},corr:{data:[],error:null,busy:false},tgLink:null,settings:{data:null,error:null,busy:false},
+  schoolYears:[],activeSchoolYearId:null,activeSchoolYearLabel:'',recordSchoolYearId:null,yearPreview:null,
 };
 let clearResultTimer = null;
 let lastAnimatedPage = null;
@@ -56,15 +57,31 @@ async function verifySession(){
   state.user=session.user;state.role=role.role;state.classId=role.class_id; await loadData();render();
 }
 async function loadData(){
-  if(state.demo)return;
-  const [s,l,c,a]=await Promise.all([
-    sb.from('lsc_students').select('id,student_id,full_name,grade_level,section,class_id,active,id_origin,created_at').order('full_name',{ascending:true}).limit(2000),
-    sb.from('lsc_attendance_events').select('id,student_id,class_id,event_type,event_date,recorded_at,recorded_by,recorded_by_email,recorded_by_role,lsc_students(student_id,full_name,grade_level,section)').eq('event_date',state.recordDate).order('recorded_at',{ascending:false}).limit(1000),
-    sb.from('lsc_classes').select('id,grade_level,section').order('grade_level').order('section'),
-    state.role==='official'?sb.rpc('lsc_list_roles'):Promise.resolve({data:[],error:null})
-  ]);
-  if(s.error || l.error || c.error || a.error){toast(s.error?.message || l.error?.message || c.error?.message || a.error?.message || 'Unable to load data.',true);return;}
-  state.students=s.data || [];state.logs=l.data || [];state.classes=c.data||[];state.assignments=a.data||[];
+ if(state.demo)return;
+ const meta=await sb.rpc('lsc_active_school_year');
+ if(meta.error){toast(meta.error.message||'Unable to load the active school year.',true);return;}
+ state.activeSchoolYearId=meta.data?.id||null;
+ state.activeSchoolYearLabel=meta.data?.label||'No active school year';
+ if(!state.recordSchoolYearId)state.recordSchoolYearId=state.activeSchoolYearId;
+ if(state.role==='official'){
+  const years=await sb.rpc('lsc_school_year_list');
+  if(years.error){toast(years.error.message||'Unable to load school year history.',true);return;}
+  state.schoolYears=years.data?.years||[];
+  state.activeSchoolYearId=years.data?.active_year_id||state.activeSchoolYearId;
+ }
+ const noYear='00000000-0000-0000-0000-000000000000';
+ const studentQuery=sb.from('lsc_students').select('id,student_id,full_name,grade_level,section,class_id,school_year_id,active,id_origin,created_at').order('full_name',{ascending:true}).limit(2000);
+ if(state.role==='official')studentQuery.eq('school_year_id',state.activeSchoolYearId||noYear);
+ else if(state.classId)studentQuery.eq('class_id',state.classId);
+ else studentQuery.eq('id',noYear);
+ const logQuery=sb.from('lsc_attendance_events').select('id,student_id,class_id,school_year_id,student_number_snapshot,student_name_snapshot,grade_level_snapshot,section_snapshot,event_type,event_date,recorded_at,recorded_by,recorded_by_email,recorded_by_role,lsc_students(student_id,full_name,grade_level,section)').eq('event_date',state.recordDate).eq('school_year_id',state.recordSchoolYearId||state.activeSchoolYearId||noYear).order('recorded_at',{ascending:false}).limit(1000);
+ const classQuery=sb.from('lsc_classes').select('id,grade_level,section,school_year_id').order('grade_level').order('section');
+ if(state.role==='official')classQuery.eq('school_year_id',state.activeSchoolYearId||noYear);
+ else if(state.classId)classQuery.eq('id',state.classId);
+ else classQuery.eq('id',noYear);
+ const [s,l,c,a]=await Promise.all([studentQuery,logQuery,classQuery,state.role==='official'?sb.rpc('lsc_list_roles'):Promise.resolve({data:[],error:null})]);
+ if(s.error||l.error||c.error||a.error){toast(s.error?.message||l.error?.message||c.error?.message||a.error?.message||'Unable to load data.',true);return;}
+ state.students=s.data||[];state.logs=l.data||[];state.classes=c.data||[];state.assignments=a.data||[];
 }
 function brand(){return '<img src="./assets/lsc-glass-logo.png?v=2" class="lsc-logo" alt="LSC official crest"><span><span class="brand-title" style="display:block">Attendance System</span><span class="brand-sub">BULSU LABORATORY HIGH SCHOOL</span></span>';}
 function loginHTML(){
@@ -107,12 +124,12 @@ function loginHTML(){
 function sidebar(){
   let menu=[['overview','Dashboard'],['records','Attendance Records'],['security','Account Security']];
   if(state.role==='class_mayor'){menu.splice(1,0,['masterlist','Class Masterlist'],['corrections','Corrections']);}
-  if(state.role==='official'){menu.splice(1,0,['live','Live Dashboard'],['students','Student Directory'],['classes','Classes'],['officials','Role Assignments'],['corrections','Correction Requests'],['settings','Admin Settings']);}
+  if(state.role==='official'){menu.splice(1,0,['live','Live Dashboard'],['students','Student Directory'],['classes','Classes'],['schoolyears','School Year Management'],['officials','Role Assignments'],['corrections','Correction Requests'],['settings','Admin Settings']);}
   return '<aside id="lsc-sidebar" class="sidebar'+(state.mobileNav?' open':'')+'" aria-label="Workspace navigation"><button type="button" class="lsc-mobile-close" data-act="closeMenu" aria-label="Close navigation menu">'+navIcon('close')+'</button><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+navIcon(v[0])+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">'+navIcon('kiosk')+'</span>Student Attendance<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./movie.html"><span class="nav-ico">'+navIcon('movie')+'</span>Movie Booth POS<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'<a class="nav-btn" href="./reserve.html"><span class="nav-ico">'+navIcon('movie')+'</span>Online Movie Booking<span class="nav-external">'+navIcon('external')+'</span></a>'+'<a class="nav-btn" href="./operations.html"><span class="nav-ico">'+navIcon('overview')+'</span>Event Command Center<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./operations.html#attendance"><span class="nav-ico">'+navIcon('officials')+'</span>Volunteer Manager<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">'+navIcon('logout')+'<span>Sign out</span></button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
 }
-function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',live:'Live Dashboard',settings:'Admin Settings',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',officials:'Role Assignments',security:'Account Security',corrections:'Corrections'})[state.page]||'Dashboard';}
+function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',live:'Live Dashboard',settings:'Admin Settings',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',schoolyears:'School Year Management',officials:'Role Assignments',security:'Account Security',corrections:'Corrections'})[state.page]||'Dashboard';}
 function appHTML(){
-  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='live'?liveHTML():state.page==='settings'?settingsHTML():state.page==='masterlist'?masterlistHTML():state.page==='corrections'?correctionsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():overviewHTML())+'</div></main></div>';
+  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='live'?liveHTML():state.page==='settings'?settingsHTML():state.page==='masterlist'?masterlistHTML():state.page==='corrections'?correctionsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='schoolyears'?schoolYearsHTML():state.page==='officials'?officialsHTML():state.page==='security'?securityHTML():overviewHTML())+'</div></main></div>';
 }
 function header(head,sub,extra=''){return '<div class="page-header"><div><div class="eyebrow" style="margin-bottom:8px">LSC ATTENDANCE MONITOR</div><h1>'+head+'</h1><p>'+sub+'</p></div>'+extra+'</div>';}
 function metrics(){
@@ -137,7 +154,13 @@ function kioskHTML(){
   '<div class="kiosk-layout"><section class="card kiosk-main"><div class="kiosk-icon">▣</div><h2>Student ID Entry</h2><p>Type or scan your Student ID, then press Enter.</p><form id="scanForm"><label for="studentID" class="hidden">Student ID</label><input id="studentID" class="id-input mono" name="studentID" type="text" inputmode="numeric" pattern="[0-9]{7,12}" maxlength="12" autocomplete="off" placeholder="2023••••••" aria-label="Student ID" required><div class="keypad">'+['1','2','3','4','5','6','7','8','9','Clear','0','⌫'].map(x=>'<button type="button" class="key '+(isNaN(Number(x))?'alt':'')+'" data-key="'+esc(x)+'">'+x+'</button>').join('')+'</div><button class="btn btn-record" id="scanBtn" type="submit"'+(state.busy?' disabled':'')+'>'+(state.busy?'Recording…':'Record Attendance →')+'</button></form>'+result+'<p class="tiny" style="color:#8b98ae;margin-top:25px">The next valid entry alternates between Time IN and Time OUT. A repeat within 45 seconds does not create a new record.</p></section>'+
   '<aside class="card kiosk-side"><h3>How it works</h3><div class="info"><div class="bubble">01</div><div><strong>Enter your Student ID</strong><p>Use the keyboard, touchscreen keypad, or a compatible scanner that types an ID.</p></div></div><div class="info"><div class="bubble">02</div><div><strong>Automatic detection</strong><p>The system finds your previous event for the current Philippine date and determines IN or OUT.</p></div></div><div class="info"><div class="bubble">03</div><div><strong>Instant confirmation</strong><p>Your event and database-recorded time appear here.</p></div></div><div class="notice warn">Attendance is recorded under the signed-in staff account. Keep this device supervised to prevent another student from entering someone else’s ID.</div></aside></div>';
 }
-function getStudent(log){return log.lsc_students||state.students.find(s=>s.id===log.student_id)||{};}
+function getStudent(log){
+ const linked=log.lsc_students||state.students.find(s=>s.id===log.student_id)||{};
+ return {...linked,student_id:log.student_number_snapshot||linked.student_id||'',
+  full_name:log.student_name_snapshot||linked.full_name||'',
+  grade_level:log.grade_level_snapshot||linked.grade_level||'',
+  section:log.section_snapshot||linked.section||''};
+}
 function recorderLabel(log) {
  const role=log.recorded_by_role==='class_mayor'?'Class Mayor':log.recorded_by_role==='official'?'LSC Official':'Role not captured';
  return {email:log.recorded_by_email||log.recorded_by||'Not available',role};
@@ -158,11 +181,13 @@ function logTable(rows,compact=false){
 function recordsHTML(){
  const q=state.query.trim().toLowerCase();
  const rows=state.logs.filter(x=>{let s=getStudent(x);return !q||(s.full_name||'').toLowerCase().includes(q)||(s.student_id||'').includes(q);});
- return header('Attendance Records','Search daily arrivals and departures and export a report.', '<button class="btn btn-secondary" data-act="refresh">↻ Refresh</button>')+
- '<div class="card pad"><form id="filterForm" class="toolbar"><label class="field">School date (PHT)<input type="date" name="date" id="dateField" value="'+esc(state.recordDate)+'" required></label><label class="field search">Search student<input type="search" name="search" id="recordSearch" placeholder="Student ID or name" value="'+esc(state.query)+'"></label><button type="submit" class="btn">Apply</button><button type="button" data-act="export" class="btn btn-secondary">↓ Export CSV</button></form><div class="section-title"><h3>Attendance Log</h3><span class="muted small">'+rows.length+' displayed · up to 1,000 records per date</span></div>'+logTable(rows)+'</div>';
+ const yearField=state.role==='official'?'<label class="field">School year<select name="school_year_id">'+state.schoolYears.map(y=>'<option value="'+esc(y.id)+'"'+(y.id===state.recordSchoolYearId?' selected':'')+'>'+esc(y.label)+' · '+esc(y.status)+'</option>').join('')+'</select></label>':'';
+ return header('Attendance Records','Review daily attendance by date and school year. Historical records use saved student and class details.', '<button class="btn btn-secondary" data-act="refresh">↻ Refresh</button>')+
+ '<div class="card pad"><form id="filterForm" class="toolbar">'+yearField+'<label class="field">School date (PHT)<input type="date" name="date" id="dateField" value="'+esc(state.recordDate)+'" required></label><label class="field search">Search student<input type="search" name="search" id="recordSearch" placeholder="Student ID or name" value="'+esc(state.query)+'"></label><button type="submit" class="btn">Apply</button><button type="button" data-act="export" class="btn btn-secondary">↓ Export CSV</button></form><div class="section-title"><h3>Attendance Log</h3><span class="muted small">'+rows.length+' displayed · up to 1,000 records per date</span></div>'+logTable(rows)+'</div>';
 }
 function masterlistHTML(){
  if(state.role!=='class_mayor')return '<div class="notice">This page is for Class Mayors. LSC Officials can use the Student Directory.</div>';
+ if(!state.classId)return header('Class Masterlist','Your Class Mayor account needs a class assignment for the active school year.')+'<div class="notice warn">Your previous year assignment has been cleared. Ask an LSC Official to assign your account to your new class before using the masterlist or attendance terminal.</div>';
  const cls=state.classes.find(c=>c.id===state.classId)||state.classes[0]||{};
  const title=cls.grade_level?(/^grade/i.test(cls.grade_level)?cls.grade_level:'Grade '+cls.grade_level)+' · '+cls.section:'Your class';
  const q=state.query.toLowerCase().trim();
@@ -383,6 +408,51 @@ function studentsHTML(){
  '<td><button class="linkbtn" data-act="editStudent" data-id="'+esc(s.id)+'">Review / Edit</button></td></tr>').join('')+'</tbody></table></div>'+
  (rows.length?'':'<div class="empty">No matching students.</div>')+'</div>';
 }
+function schoolYearsHTML(){
+ if(state.role!=='official')return '<div class="notice">LSC Official access required.</div>';
+ const active=state.schoolYears.find(y=>y.status==='active'),preview=state.yearPreview;
+ const dateRange=y=>(y.starts_on||y.ends_on)?esc(y.starts_on||'—')+' → '+esc(y.ends_on||'—'):'Dates not set';
+ const badge=y=>'<span class="badge '+(y.status==='active'?'':y.status==='draft'?'out':'off')+'">'+esc(y.status.toUpperCase())+'</span>';
+ const yearRows=state.schoolYears.map(y=>'<tr><td><strong>'+esc(y.label)+'</strong></td><td>'+dateRange(y)+'</td><td>'+badge(y)+'</td><td>'+Number(y.active_students||0)+' / '+Number(y.student_count||0)+'</td><td>'+Number(y.class_count||0)+'</td><td>'+Number(y.attendance_events||0)+'</td><td>'+(y.status==='draft'?'<button class="linkbtn" data-act="previewSchoolYear" data-id="'+esc(y.id)+'">Preview rollover</button>':'—')+'</td></tr>').join('');
+ return header('School Year Management','Create the next academic year, review promotions, and keep each year’s roster and attendance history.', '<button class="btn btn-secondary" data-act="refreshSchoolYears">↻ Refresh</button>')+
+ '<div class="card pad" style="margin-bottom:18px"><div class="eyebrow">CURRENT SCHOOL YEAR</div><div class="section-title" style="margin-top:8px"><h2>'+esc(active?.label||'No active school year')+'</h2>'+badge(active||{status:'closed'})+'</div><p class="muted small">'+(active?dateRange(active):'Create a school year draft and activate it after checking the transition preview.')+'</p><div class="toolbar" style="margin-top:18px"><span class="tag">'+Number(active?.active_students||0)+' active students</span><span class="tag">'+Number(active?.class_count||0)+' classes</span><span class="tag">'+Number(active?.attendance_events||0)+' saved attendance events</span></div></div>'+
+ '<div class="two-col" style="margin-top:0;grid-template-columns:1fr 1.35fr;align-items:start"><div class="card pad"><div class="section-title"><h3>Create School Year</h3></div><form id="schoolYearForm" class="stack"><label class="field">School year label<input name="label" required maxlength="30" placeholder="2027-2028" pattern="[0-9]{4}-[0-9]{4}"></label><div class="field-row"><label class="field">Start date<input type="date" name="starts_on" required></label><label class="field">End date<input type="date" name="ends_on" required></label></div><button class="btn" type="submit">+ Create Draft Year</button></form><div class="notice" style="margin-top:18px">Creating a draft does not change attendance or student enrollment. You can preview the rollover before activating it.</div></div>'+
+ '<div class="card pad"><div class="section-title"><h3>School Year History</h3><span class="muted small">'+state.schoolYears.length+' year(s)</span></div><div class="table-wrap"><table class="table"><thead><tr><th>School Year</th><th>Dates</th><th>Status</th><th>Active / Total</th><th>Classes</th><th>Events</th><th>Action</th></tr></thead><tbody>'+yearRows+'</tbody></table></div>'+(state.schoolYears.length?'':'<div class="empty">No school years registered.</div>')+'</div></div>'+
+ (preview?'<div class="card pad" style="margin-top:18px"><div class="section-title"><div><div class="eyebrow">ROLLOVER PREVIEW</div><h2 style="margin-top:5px">'+esc(preview.target_year?.label||'Selected year')+'</h2></div><span class="badge out">DRAFT · NOT ACTIVE</span></div><p class="muted small">Current: '+esc(preview.current_year?.label||'—')+' → Next: '+esc(preview.target_year?.label||'—')+'</p><div class="stats" style="margin-top:18px">'+[['Students in current roster',preview.student_count],['Active students',preview.active_students],['Students advancing grades',preview.students_to_promote],['Grade 10 completers',preview.grade_10_completers],['Classes to create',preview.classes_to_create],['Incoming Grade 7 section templates',preview.incoming_grade_7_sections],['Class Mayor assignments to reset',preview.class_mayor_assignments_to_reset],['Attendance volunteer permissions to disable',preview.attendance_volunteers_to_disable]].map(x=>'<div class="stat"><div class="stat-label">'+esc(x[0])+'</div><div class="stat-num">'+Number(x[1]||0)+'</div></div>').join('')+'</div>'+(preview.unmapped_students?'<div class="notice warn" style="margin-top:18px">'+Number(preview.unmapped_students)+' student(s) are not assigned to a class in the current year. Fix the roster before activation.</div>':'<div class="notice" style="margin-top:18px">No unassigned students detected. Grade 7–9 students advance one grade; Grade 10 completers are archived as inactive; new Grade 7 sections are created from the current Grade 7 section names. Class Mayor assignments are cleared for reassignment, and temporary attendance volunteer access is disabled.</div>')+'<div class="notice warn" style="margin-top:12px">Starting the year closes the current year, updates student enrollments, and cannot be undone from this screen. Existing attendance events and archived year rosters are retained.</div><div class="form-actions" style="margin-top:18px"><button type="button" class="btn btn-secondary" data-act="clearYearPreview">Close Preview</button><button type="button" class="btn" data-act="startSchoolYear" data-id="'+esc(preview.target_year?.id||'')+'" '+(preview.unmapped_students?'disabled':'')+'>Activate '+esc(preview.target_year?.label||'Next Year')+'</button></div></div>':'')+
+ '<div class="notice" style="margin-top:18px"><strong>Rollover rules:</strong> Student IDs and portraits are retained. Attendance events keep the student name, grade, section, and school year recorded at the time. Existing classes are copied into the new year with their portrait folder settings; Grade 7–9 students advance, Grade 10 completers are deactivated, and Grade 7 section templates are recreated without student assignments.</div>';
+}
+async function createSchoolYear(form){
+ if(state.role!=='official'||state.demo)return toast('Use a signed-in LSC Official account to manage school years.',true);
+ const label=form.elements.label.value.trim(),starts_on=form.elements.starts_on.value,ends_on=form.elements.ends_on.value;
+ const btn=form.querySelector('button[type=submit]');btn.disabled=true;
+ try{
+  if(!/^\d{4}-\d{4}$/.test(label))throw new Error('Use a label like 2027-2028.');
+  if(!starts_on||!ends_on||ends_on<starts_on)throw new Error('Enter a valid start and end date.');
+  const {data,error}=await sb.rpc('lsc_school_year_create',{p_label:label,p_starts_on:starts_on,p_ends_on:ends_on});
+  if(error)throw error;
+  state.yearPreview=null;await loadData();render();toast('Draft school year '+label+' created.');
+ }catch(e){toast(e.message||'Unable to create school year.',true);}
+ finally{btn.disabled=false;}
+}
+async function previewSchoolYear(id){
+ try{const {data,error}=await sb.rpc('lsc_school_year_preview',{p_year_id:id});if(error)throw error;state.yearPreview=data;render();}
+ catch(e){toast(e.message||'Unable to preview this school year.',true);}
+}
+async function startSchoolYear(id){
+ if(state.role!=='official'||state.demo)return toast('LSC Official access required.',true);
+ const year=state.schoolYears.find(y=>y.id===id);
+ if(!year||year.status!=='draft')return toast('Select a draft school year.',true);
+ if(!state.yearPreview||state.yearPreview.target_year?.id!==id)return toast('Preview the selected year first.',true);
+ if(state.yearPreview.unmapped_students>0)return toast('Resolve unassigned students before activation.',true);
+ const warning='Activate school year '+year.label+'?\n\nThis closes '+(state.yearPreview.current_year?.label||'the current year')+', promotes continuing students, archives Grade 10 completers, clears Class Mayor assignments and disables attendance volunteer permissions. Existing attendance is preserved.\n\nThis action cannot be undone from the dashboard.';
+ if(!confirm(warning))return;
+ const btn=document.querySelector('[data-act="startSchoolYear"]');if(btn)btn.disabled=true;
+ try{
+  const {data,error}=await sb.rpc('lsc_school_year_start',{p_year_id:id});if(error)throw error;
+  state.yearPreview=null;state.recordSchoolYearId=null;await loadData();render();
+  toast('School year '+data.active_year+' is now active. '+data.promoted_students+' student profiles advanced.');
+ }catch(e){toast(e.message||'Unable to activate the school year.',true);if(btn)btn.disabled=false;}
+}
 function passwordSetupReminder(){
   return '<div class="notice" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">'+
     '<span><strong>Email verified.</strong> You can now set a backup password to use when email verification is unavailable. This is optional, not two-factor authentication.</span>'+
@@ -566,7 +636,7 @@ async function saveStudent(form){
  const checked=form.elements.verified.checked;
  const value={
   student_id:form.elements.student_id.value.trim(),full_name:form.elements.full_name.value.trim(),
-  class_id:cls.id,grade_level:cls.grade_level,section:cls.section,
+  class_id:cls.id,grade_level:cls.grade_level,section:cls.section,school_year_id:existing?.school_year_id||state.activeSchoolYearId,
   active:form.elements.active.value==='true',
   id_origin:checked?'official_verified':(existing?.id_origin==='generated_pending_verification'?'generated_pending_verification':'official_verified')
  };
@@ -591,7 +661,7 @@ async function saveStudent(form){
 }
 async function createClass(form){
  if(state.role!=='official')return;
- const value={grade_level:form.elements.grade_level.value.trim(),section:form.elements.section.value.trim()};
+ const value={grade_level:form.elements.grade_level.value.trim(),section:form.elements.section.value.trim(),school_year_id:state.activeSchoolYearId};
  try{
   if(!value.grade_level||!value.section)throw new Error('Enter both grade level and section.');
   if(state.demo){
@@ -634,9 +704,9 @@ function toCsvCell(value){let x=String(value??'');if(/^[=+\-@\t\r]/.test(x))x="'
 function exportCsv(){
  if(!state.logs.length){toast('No attendance entries to export.');return;}
  const q=state.query.trim().toLowerCase(), rows=state.logs.filter(l=>{const s=getStudent(l);return !q||(s.student_id||'').includes(q)||(s.full_name||'').toLowerCase().includes(q);});
- const body=[['Student ID','Full Name','Grade Level','Section','Date','Event','Time PHT','Recorded By Email','Recorded By Role','Recorder User ID'],...rows.map(l=>{const s=getStudent(l);return [s.student_id,s.full_name,s.grade_level,s.section,l.event_date,l.event_type,timePH(l.recorded_at),l.recorded_by_email||'',l.recorded_by_role||'Legacy (not captured)',l.recorded_by||''];})];
+ const body=[['School Year','Student ID','Full Name','Grade Level','Section','Date','Event','Time PHT','Recorded By Email','Recorded By Role','Recorder User ID'],...rows.map(l=>{const s=getStudent(l),year=state.schoolYears.find(y=>y.id===l.school_year_id);return [year?.label||state.activeSchoolYearLabel,s.student_id,s.full_name,s.grade_level,s.section,l.event_date,l.event_type,timePH(l.recorded_at),l.recorded_by_email||'',l.recorded_by_role||'Legacy (not captured)',l.recorded_by||''];})];
  const csv='\uFEFF'+body.map(row=>row.map(toCsvCell).join(',')).join('\r\n');
- const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='LSC-Attendance-'+state.recordDate+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='LSC-Attendance-'+(state.schoolYears.find(y=>y.id===state.recordSchoolYearId)?.label||state.recordDate)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 root.addEventListener('submit',async e=>{
  if(e.target.id==='sendEmailForm'){e.preventDefault();await sendEmailOtp(e.target.elements.email.value);}
@@ -646,14 +716,15 @@ root.addEventListener('submit',async e=>{
  if(e.target.id==='scanForm'){e.preventDefault();await scan();}
  if(e.target.id==='studentForm'){e.preventDefault();await saveStudent(e.target);}
  if(e.target.id==='classForm'){e.preventDefault();await createClass(e.target);}
+ if(e.target.id==='schoolYearForm'){e.preventDefault();await createSchoolYear(e.target);}
  if(e.target.id==='roleForm'){e.preventDefault();await assignRole(e.target);}
  if(e.target.id==='settingsForm'){e.preventDefault();await saveSettings(e.target);}
  if(e.target.id==='corrForm'){e.preventDefault();await submitCorrection(e.target);}
- if(e.target.id==='filterForm'){e.preventDefault();state.recordDate=e.target.elements.date.value||todayPH();state.query=e.target.elements.search.value.trim();await loadData();render();}
+ if(e.target.id==='filterForm'){e.preventDefault();state.recordDate=e.target.elements.date.value||todayPH();state.query=e.target.elements.search.value.trim();state.recordSchoolYearId=e.target.elements.school_year_id?.value||state.activeSchoolYearId;await loadData();render();}
 });
 document.addEventListener('click',async e=>{
  const nav=e.target.closest('[data-nav]');
- if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if(state.page==='live')await loadLive();if(state.page==='settings')await loadSettings();if(state.page==='corrections')await loadCorrections();if(state.page==='overview'&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
+ if(nav){state.page=nav.dataset.nav;state.mobileNav=false;state.query='';if(state.page==='live')await loadLive();if(state.page==='settings')await loadSettings();if(state.page==='corrections')await loadCorrections();if(state.page==='schoolyears')await loadData();if(state.page==='overview'&&state.recordDate!==todayPH()){state.recordDate=todayPH();await loadData();}location.hash=state.page;render();return;}
  const key=e.target.closest('[data-key]');
  if(key){const input=document.getElementById('studentID');if(!input)return;const value=key.dataset.key;if(value==='Clear')input.value='';else if(value==='⌫')input.value=input.value.slice(0,-1);else input.value=(input.value+value).slice(0,12);input.focus();return;}
  const b=e.target.closest('[data-act]');if(!b)return;
@@ -695,6 +766,10 @@ document.addEventListener('click',async e=>{
   document.querySelector('.hamb')?.setAttribute('aria-expanded','false');
  }
  if(act==='refresh'){await loadData();render();toast('Attendance refreshed.');}
+ if(act==='refreshSchoolYears'){await loadData();render();toast('School years refreshed.');}
+ if(act==='previewSchoolYear')await previewSchoolYear(b.dataset.id);
+ if(act==='startSchoolYear')await startSchoolYear(b.dataset.id);
+ if(act==='clearYearPreview'){state.yearPreview=null;render();}
  if(act==='export')exportCsv();
  if(act==='addStudent')studentModal(null);
  if(act==='editStudent')studentModal(state.students.find(s=>s.id===b.dataset.id));
@@ -721,9 +796,9 @@ root.addEventListener('input',e=>{
 });
 window.addEventListener('hashchange',async()=>{
  const page=location.hash.slice(1);
- if(['overview','students','live','settings','corrections','masterlist','records','classes','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='live')await loadLive();if(page==='settings')await loadSettings();if(page==='corrections')await loadCorrections();render();}
+ if(['overview','students','live','settings','corrections','masterlist','records','classes','schoolyears','officials','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='live')await loadLive();if(page==='settings')await loadSettings();if(page==='corrections')await loadCorrections();render();}
 });
 setInterval(async()=>{if(state.page==='live'&&state.user&&!document.hidden){await loadLive();if(state.page==='live')render();}},30000);
 setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=stampPH()+' PHT';},15000);
-state.page=['overview','students','live','settings','masterlist','records','classes','officials','security'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
+state.page=['overview','students','live','settings','masterlist','records','classes','schoolyears','officials','security'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
 verifySession().catch(e=>{root.innerHTML=loginHTML();toast('Could not connect to the attendance service: '+e.message,true);});
