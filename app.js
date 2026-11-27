@@ -293,7 +293,10 @@ function settingsHTML(){
  '<div class="card pad"><div class="section-title"><h3>Telegram Subscribers</h3><span class="muted small">'+subs.filter(x=>x.active).length+' active</span></div>'+
  (subs.length?'<div class="table-wrap"><table class="table"><thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead><tbody>'+
  subs.map(x=>'<tr><td>'+esc(x.label||'(no name)')+'</td><td><span class="badge '+(x.active?'':'off')+'">'+(x.active?'Subscribed':'Removed')+'</span></td><td><button type="button" class="linkbtn" data-act="tgActive" data-id="'+esc(x.chat_id)+'" data-active="'+(x.active?'0':'1')+'">'+(x.active?'Remove':'Restore')+'</button></td></tr>').join('')+'</tbody></table></div>':'<div class="empty">Nobody has joined yet.</div>')+
- '</div></div>';
+ '</div></div>'+
+ '<div class="card pad" style="margin-top:18px"><div class="section-title"><h3>Parent consent records</h3></div>'+
+ '<p class="muted small" style="margin-top:0">When a parent or student links Telegram from the ID card, the bot shows a privacy notice and links only after they tap “I agree”. The agreement date and notice version are saved. Links made before this was added show no consent date.</p>'+
+ '<div style="margin-top:12px"><button type="button" class="btn btn-secondary" data-act="consentLog">Download consent log (CSV)</button></div></div>';
 }
 async function saveSettings(form){
  const f=form.elements,g=n=>f[n].value;
@@ -498,6 +501,16 @@ function generateClassLists(){
   '.ft{position:absolute;left:13mm;right:13mm;bottom:7mm;display:flex;justify-content:space-between;font-size:7.5pt;color:#555;border-top:.3mm solid #c9d3e6;padding-top:2mm}';
  const html='<!doctype html><html><head><meta charset="utf-8"><title>LHS Class Lists</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet"><style>'+css+'</style></head><body><div class="bar"><span>'+keys.length+' class'+(keys.length===1?'':'es')+' · '+pages.length+' page'+(pages.length===1?'':'s')+' · 8.5 × 13 in, margins None'+(anyUnset?' · <b style="color:#ffb4ae">'+anyUnset+' student(s) have no sex recorded</b>':'')+'</span><button id="pb">Print / Save as PDF</button></div>'+pages.join('')+'<script>document.getElementById("pb").onclick=function(){window.print()};<\/script></body></html>';
  w.document.open();w.document.write(html);w.document.close();
+}
+
+async function downloadConsentLog(){
+ if(state.demo)return toast('Not available in demo mode.',true);
+ const r=await sb.rpc('lsc_consent_log');if(r.error)return toast(r.error.message,true);
+ const f=v=>v?new Date(v).toLocaleString('en-PH',{timeZone:'Asia/Manila'}):'';
+ const rows=(r.data||[]).map(x=>[x.student_id,x.full_name,x.grade_level,x.section,x.chat_label,x.consent_at?f(x.consent_at):'(linked before consent tracking)',x.consent_version||'',x.withdrawn_at?f(x.withdrawn_at):'',x.active?'Linked':'Not linked'].map(csvEsc).join(','));
+ const csv='student_id,student_name,grade,section,telegram_name,consent_agreed_at,notice_version,withdrawn_at,status\r\n'+rows.join('\r\n')+'\r\n';
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv'}));a.download='LSC-telegram-consent-log.csv';document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+ toast(rows.length+' record'+(rows.length===1?'':'s')+' downloaded.');
 }
 function correctionsHTML(){
  const isOff=state.role==='official',C=state.corr,list=[...(C.data||[])].sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1));
@@ -941,6 +954,7 @@ document.addEventListener('click',async e=>{
    const sub=state.settings.data.subscribers.find(x=>String(x.chat_id)===chat);if(sub)sub.active=on;toast(on?'Subscriber restored.':'Subscriber removed.');}catch(err){toast('Could not update: '+(err.message||err),true);}
   render();}
  if(act==='idcGenerate'){await generateIdCards();return;}
+ if(act==='consentLog'){await downloadConsentLog();return;}
  if(act==='clGenerate'){generateClassLists();return;}
  if(act==='clTemplate'){downloadSexTemplate();return;}
  if(act==='refreshLive'){await loadLive();render();}
