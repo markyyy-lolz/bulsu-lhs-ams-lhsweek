@@ -296,7 +296,7 @@ function settingsHTML(){
  '</div></div>'+
  '<div class="card pad" style="margin-top:18px"><div class="section-title"><h3>Parent consent records</h3></div>'+
  '<p class="muted small" style="margin-top:0">When a parent or student links Telegram from the ID card, the bot shows a privacy notice and links only after they tap “I agree”. The agreement date and notice version are saved. Links made before this was added show no consent date.</p>'+
- '<div style="margin-top:12px"><button type="button" class="btn btn-secondary" data-act="consentLog">Download consent log (CSV)</button></div></div>';
+ '<div style="margin-top:12px"><button type="button" class="btn btn-secondary" data-act="consentLog">Download consent log (CSV)</button> <button type="button" class="btn btn-secondary" data-act="linkedChats">View linked chats</button></div></div>';
 }
 async function saveSettings(form){
  const f=form.elements,g=n=>f[n].value;
@@ -511,6 +511,16 @@ async function showMayorCheckins(){
  const cards=(r.data||[]).map(x=>'<div style="width:170px;border:1px solid #ccc;border-radius:10px;padding:8px;text-align:center;font-size:12px">'+(x.image&&/^data:image\/jpeg;base64,/.test(x.image)?'<img src="'+x.image+'" style="width:100%;border-radius:8px">':'<div style="height:120px;display:flex;align-items:center;justify-content:center;color:#b45309">No selfie<br>'+e(x.skip_reason)+'</div>')+'<b>'+e(x.class_label)+'</b><br>'+e(x.email)+'<br>'+t(x.taken_at)+'</div>').join('');
  const w=window.open('','_blank');if(!w)return toast('Allow pop-ups to view check-ins.',true);
  w.document.write('<!doctype html><title>Mayor check-ins</title><body style="font-family:system-ui;padding:16px"><h2>Class mayor check-ins today</h2><div style="display:flex;gap:10px;flex-wrap:wrap">'+(cards||'<p>No check-ins yet today.</p>')+'</div>');w.document.close();
+}
+async function showLinkedChats(){
+ if(state.demo)return toast('Not available in demo mode.',true);
+ const r=await sb.rpc('lsc_consent_log');if(r.error)return toast(r.error.message,true);
+ const e=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ const by={};(r.data||[]).filter(x=>x.active).forEach(x=>{(by[x.student_id]=by[x.student_id]||{n:x.full_name,g:x.grade_level+' · '+x.section,c:[]}).c.push(x.chat_label||'(no name)');});
+ const rows=Object.entries(by).sort((a,b)=>b[1].c.length-a[1].c.length||a[1].n.localeCompare(b[1].n));
+ const chats=rows.reduce((n,x)=>n+x[1].c.length,0);
+ const w=window.open('','_blank');if(!w)return toast('Allow pop-ups to view linked chats.',true);
+ w.document.write('<!doctype html><title>Linked chats</title><body style="font-family:system-ui;padding:16px"><h2>Linked Telegram chats</h2><p>'+rows.length+' students · '+chats+' active chats</p><table border="1" cellpadding="6" style="border-collapse:collapse;font-size:13px"><tr><th>Student</th><th>ID</th><th>Class</th><th>Chats</th><th>Telegram accounts</th></tr>'+rows.map(([id,x])=>'<tr><td>'+e(x.n)+'</td><td>'+e(id)+'</td><td>'+e(x.g)+'</td><td align="center">'+x.c.length+'</td><td>'+x.c.map(e).join(', ')+'</td></tr>').join('')+'</table>');w.document.close();
 }
 async function downloadConsentLog(){
  if(state.demo)return toast('Not available in demo mode.',true);
@@ -964,6 +974,7 @@ document.addEventListener('click',async e=>{
   render();}
  if(act==='idcGenerate'){await generateIdCards();return;}
  if(act==='consentLog'){await downloadConsentLog();return;}
+ if(act==='linkedChats'){await showLinkedChats();return;}
  if(act==='mayorCheckins'){await showMayorCheckins();return;}
  if(act==='clGenerate'){generateClassLists();return;}
  if(act==='clTemplate'){downloadSexTemplate();return;}
