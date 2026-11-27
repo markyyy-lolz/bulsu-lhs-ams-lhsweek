@@ -143,7 +143,7 @@ async function startCamera(){
     camera.scanner=reader;
     if(scannerPlaceholder)scannerPlaceholder.hidden=true;
     await reader.start({facingMode:'environment'},
-      {fps:10,qrbox:{width:210,height:180}},
+      {fps:10,qrbox:document.body.classList.contains('kiosk')?((w,h)=>{const q=Math.floor(Math.min(w,h)*.75);return{width:q,height:q}}):{width:210,height:180}},
       raw=>{void onCameraScan(raw);},()=>{});
     if(generation!==camera.generation||camera.mode!=='camera'){
       try{await reader.stop()}catch(e){}
@@ -199,6 +199,7 @@ function updateClock() {
   const date=new Date();
   $('#clockTime').textContent=formatTime(date);
   $('#clockDate').textContent=date.toLocaleDateString('en-PH',{timeZone:'Asia/Manila',weekday:'short',month:'short',day:'numeric',year:'numeric'})+' · PHT';
+  window.lscKiosk?.tick({ready:state.demo||state.authorized,demo:state.demo,label:state.operatorRole==='class_mayor'?'Class Mayor':state.operatorRole==='attendance_volunteer'?'Volunteer':state.operatorRole==='official'?'LSC Official':'Station ready',offline:!navigator.onLine,queued:getQueue().length});
 }
 function updateStation() {
   if(state.demo) {
@@ -349,6 +350,13 @@ function appendMessage(type,title,lines) {
   metadata.style.whiteSpace='pre-line';
   card.append(small,heading,metadata);
   confirmation.append(card);
+  if(window.lscKiosk?.isOn()){
+    const kind=type==='ERROR'?'err':type==='QUEUED'?'queued':type==='DUPLICATE'?'dup':'out';
+    const named=kind==='out'||kind==='dup';
+    window.lscKiosk.signal({kind,name:named?String(lines[0]||title).split(' · ')[0]:title,
+      sub:named?String(lines[1]||'').trim():'',time:named?String(lines[2]||'').split(' · ')[0]:'',
+      note:named?(kind==='dup'?'No new record was added.':''):lines[0]||'',id:named?String(lines[0]||'').split(' · ')[1]:null});
+  }
   if(state.resetTimer)clearTimeout(state.resetTimer);
   if(type!=='ERROR')state.resetTimer=setTimeout(()=>{
     confirmation.replaceChildren();
@@ -447,6 +455,7 @@ function appendArrivalCard(result,studentId) {
   layout.append(frame,details);
   card.append(eyebrow,layout);
   confirmation.append(card);
+  window.lscKiosk?.signal({kind:'in',id:result.student_id||studentId,name:result.full_name||'Student',sub:sectionName||'',time:formatTime(result.recorded_at)});
   if(state.resetTimer)clearTimeout(state.resetTimer);
   state.resetTimer=setTimeout(()=>{
     if(card.isConnected)confirmation.replaceChildren();
@@ -509,7 +518,7 @@ async function recordAttendance(event=null,scannedId=null) {
     if(status==='SUCCESS'&&result.event_type==='IN'){
       const arrivalCard=appendArrivalCard(result,id);
       void loadStudentPhotoUrl(result.student_id||id).then(url=>{
-        if(url)attachArrivalPhoto(arrivalCard,url,result.full_name);
+        if(url){attachArrivalPhoto(arrivalCard,url,result.full_name);window.lscKiosk?.photo(url,result.student_id||id);}
       });
     }else{
       appendMessage(status==='DUPLICATE'?'DUPLICATE':result.event_type,
@@ -581,6 +590,9 @@ document.addEventListener('visibilitychange',()=>{
   }else if(!document.hidden&&!state.demo)checkAuthorization();
 });
 window.addEventListener('pagehide',stopCamera);
+window.addEventListener('kiosk:enter',()=>{camera.mode='manual';selectAttendanceMethod('camera');updateClock();});
+window.addEventListener('kiosk:exit',()=>{selectAttendanceMethod('manual');});
+window.addEventListener('kiosk:id',e=>{if(!state.busy)void recordAttendance(null,e.detail);});
 updateClock();setInterval(updateClock,1000);
 // Expiring or revoked approval is always checked again by the database for every entry.
 setInterval(()=>{if(!document.hidden&&!state.demo&&!state.busy)checkAuthorization()},120000);
