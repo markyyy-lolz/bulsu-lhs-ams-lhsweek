@@ -9,7 +9,7 @@ const state = {
   students: [], logs: [], classes: [], assignments: [], classId: null, lastResult: null, query: '', recordDate: todayPH(),
   busy: false, mobileNav: false, loginMode:'email', otpSent:false, otpEmail:'', showPasswordSetup:false,
   live:{data:null,error:null,at:null,busy:false},corr:{data:[],error:null,busy:false},tgLink:null,settings:{data:null,error:null,busy:false},
-  schoolYears:[],activeSchoolYearId:null,activeSchoolYearLabel:'',recordSchoolYearId:null,yearPreview:null,
+  schoolYears:[],activeSchoolYearId:null,activeSchoolYearLabel:'',recordSchoolYearId:null,yearPreview:null,yearRoster:null,
 };
 let clearResultTimer = null;
 let lastAnimatedPage = null;
@@ -413,12 +413,13 @@ function schoolYearsHTML(){
  const active=state.schoolYears.find(y=>y.status==='active'),preview=state.yearPreview;
  const dateRange=y=>(y.starts_on||y.ends_on)?esc(y.starts_on||'—')+' → '+esc(y.ends_on||'—'):'Dates not set';
  const badge=y=>'<span class="badge '+(y.status==='active'?'':y.status==='draft'?'out':'off')+'">'+esc(y.status.toUpperCase())+'</span>';
- const yearRows=state.schoolYears.map(y=>'<tr><td><strong>'+esc(y.label)+'</strong></td><td>'+dateRange(y)+'</td><td>'+badge(y)+'</td><td>'+Number(y.active_students||0)+' / '+Number(y.student_count||0)+'</td><td>'+Number(y.class_count||0)+'</td><td>'+Number(y.attendance_events||0)+'</td><td>'+(y.status==='draft'?'<button class="linkbtn" data-act="previewSchoolYear" data-id="'+esc(y.id)+'">Preview rollover</button>':'—')+'</td></tr>').join('');
+ const yearRows=state.schoolYears.map(y=>'<tr><td><strong>'+esc(y.label)+'</strong></td><td>'+dateRange(y)+'</td><td>'+badge(y)+'</td><td>'+Number(y.active_students||0)+' / '+Number(y.student_count||0)+'</td><td>'+Number(y.class_count||0)+'</td><td>'+Number(y.attendance_events||0)+'</td><td>'+'<button class="linkbtn" data-act="viewSchoolYearRoster" data-id="'+esc(y.id)+'">View roster</button> '+(y.status==='draft'?'<button class="linkbtn" data-act="previewSchoolYear" data-id="'+esc(y.id)+'">Preview rollover</button>':'')+'</td></tr>').join('');
  return header('School Year Management','Create the next academic year, review promotions, and keep each year’s roster and attendance history.', '<button class="btn btn-secondary" data-act="refreshSchoolYears">↻ Refresh</button>')+
  '<div class="card pad" style="margin-bottom:18px"><div class="eyebrow">CURRENT SCHOOL YEAR</div><div class="section-title" style="margin-top:8px"><h2>'+esc(active?.label||'No active school year')+'</h2>'+badge(active||{status:'closed'})+'</div><p class="muted small">'+(active?dateRange(active):'Create a school year draft and activate it after checking the transition preview.')+'</p><div class="toolbar" style="margin-top:18px"><span class="tag">'+Number(active?.active_students||0)+' active students</span><span class="tag">'+Number(active?.class_count||0)+' classes</span><span class="tag">'+Number(active?.attendance_events||0)+' saved attendance events</span></div></div>'+
  '<div class="two-col" style="margin-top:0;grid-template-columns:1fr 1.35fr;align-items:start"><div class="card pad"><div class="section-title"><h3>Create School Year</h3></div><form id="schoolYearForm" class="stack"><label class="field">School year label<input name="label" required maxlength="30" placeholder="2027-2028" pattern="[0-9]{4}-[0-9]{4}"></label><div class="field-row"><label class="field">Start date<input type="date" name="starts_on" required></label><label class="field">End date<input type="date" name="ends_on" required></label></div><button class="btn" type="submit">+ Create Draft Year</button></form><div class="notice" style="margin-top:18px">Creating a draft does not change attendance or student enrollment. You can preview the rollover before activating it.</div></div>'+
  '<div class="card pad"><div class="section-title"><h3>School Year History</h3><span class="muted small">'+state.schoolYears.length+' year(s)</span></div><div class="table-wrap"><table class="table"><thead><tr><th>School Year</th><th>Dates</th><th>Status</th><th>Active / Total</th><th>Classes</th><th>Events</th><th>Action</th></tr></thead><tbody>'+yearRows+'</tbody></table></div>'+(state.schoolYears.length?'':'<div class="empty">No school years registered.</div>')+'</div></div>'+
  (preview?'<div class="card pad" style="margin-top:18px"><div class="section-title"><div><div class="eyebrow">ROLLOVER PREVIEW</div><h2 style="margin-top:5px">'+esc(preview.target_year?.label||'Selected year')+'</h2></div><span class="badge out">DRAFT · NOT ACTIVE</span></div><p class="muted small">Current: '+esc(preview.current_year?.label||'—')+' → Next: '+esc(preview.target_year?.label||'—')+'</p><div class="stats" style="margin-top:18px">'+[['Students in current roster',preview.student_count],['Active students',preview.active_students],['Students advancing grades',preview.students_to_promote],['Grade 10 completers',preview.grade_10_completers],['Classes to create',preview.classes_to_create],['Incoming Grade 7 section templates',preview.incoming_grade_7_sections],['Class Mayor assignments to reset',preview.class_mayor_assignments_to_reset],['Attendance volunteer permissions to disable',preview.attendance_volunteers_to_disable]].map(x=>'<div class="stat"><div class="stat-label">'+esc(x[0])+'</div><div class="stat-num">'+Number(x[1]||0)+'</div></div>').join('')+'</div>'+(preview.unmapped_students?'<div class="notice warn" style="margin-top:18px">'+Number(preview.unmapped_students)+' student(s) are not assigned to a class in the current year. Fix the roster before activation.</div>':'<div class="notice" style="margin-top:18px">No unassigned students detected. Grade 7–9 students advance one grade; Grade 10 completers are archived as inactive; new Grade 7 sections are created from the current Grade 7 section names. Class Mayor assignments are cleared for reassignment, and temporary attendance volunteer access is disabled.</div>')+'<div class="notice warn" style="margin-top:12px">Starting the year closes the current year, updates student enrollments, and cannot be undone from this screen. Existing attendance events and archived year rosters are retained.</div><div class="form-actions" style="margin-top:18px"><button type="button" class="btn btn-secondary" data-act="clearYearPreview">Close Preview</button><button type="button" class="btn" data-act="startSchoolYear" data-id="'+esc(preview.target_year?.id||'')+'" '+(preview.unmapped_students?'disabled':'')+'>Activate '+esc(preview.target_year?.label||'Next Year')+'</button></div></div>':'')+
+ (state.yearRoster?'<div class="card pad" style="margin-top:18px"><div class="section-title"><div><div class="eyebrow">ARCHIVED YEAR ROSTER</div><h2 style="margin-top:5px">'+esc(state.yearRoster.school_year?.label||'Selected Year')+'</h2><p class="muted small">'+state.yearRoster.roster.length+' saved enrollment record(s) · read only</p></div><div class="form-actions"><button type="button" class="btn btn-secondary" data-act="closeYearRoster">Close</button><button type="button" class="btn btn-secondary" data-act="exportYearRoster">↓ Export CSV</button></div></div><div class="table-wrap"><table class="table"><thead><tr><th>Student ID</th><th>Full Name</th><th>Grade</th><th>Section</th><th>Status</th></tr></thead><tbody>'+state.yearRoster.roster.map(e=>'<tr><td class="mono strong">'+esc(e.student_number)+'</td><td>'+esc(e.full_name)+'</td><td>'+esc(e.grade_level)+'</td><td>'+esc(e.section)+'</td><td><span class="badge '+(e.active?'':'off')+'">'+(e.active?'Active at year close':'Inactive')+'</span></td></tr>').join('')+'</tbody></table></div></div>':'')+
  '<div class="notice" style="margin-top:18px"><strong>Rollover rules:</strong> Student IDs and portraits are retained. Attendance events keep the student name, grade, section, and school year recorded at the time. Existing classes are copied into the new year with their portrait folder settings; Grade 7–9 students advance, Grade 10 completers are deactivated, and Grade 7 section templates are recreated without student assignments.</div>';
 }
 async function createSchoolYear(form){
@@ -433,6 +434,22 @@ async function createSchoolYear(form){
   state.yearPreview=null;await loadData();render();toast('Draft school year '+label+' created.');
  }catch(e){toast(e.message||'Unable to create school year.',true);}
  finally{btn.disabled=false;}
+}
+async function loadSchoolYearRoster(id){
+ try{
+  const {data,error}=await sb.rpc('lsc_school_year_roster',{p_year_id:id});
+  if(error)throw error;
+  state.yearRoster=data;render();
+ }catch(e){toast(e.message||'Unable to load the saved year roster.',true);}
+}
+function exportSchoolYearRoster(){
+ if(!state.yearRoster?.roster?.length)return toast('No roster entries to export.',true);
+ const rows=[['School Year','Student ID','Full Name','Grade Level','Section','Active at Year Close'],
+  ...state.yearRoster.roster.map(r=>[state.yearRoster.school_year?.label||'',r.student_number,r.full_name,r.grade_level,r.section,r.active?'Yes':'No'])];
+ const csv='\\uFEFF'+rows.map(row=>row.map(toCsvCell).join(',')).join('\\r\\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+ a.download='LSC-Roster-'+(state.yearRoster.school_year?.label||'School-Year')+'.csv';a.click();
+ setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 async function previewSchoolYear(id){
  try{const {data,error}=await sb.rpc('lsc_school_year_preview',{p_year_id:id});if(error)throw error;state.yearPreview=data;render();}
@@ -768,6 +785,9 @@ document.addEventListener('click',async e=>{
  if(act==='refresh'){await loadData();render();toast('Attendance refreshed.');}
  if(act==='refreshSchoolYears'){await loadData();render();toast('School years refreshed.');}
  if(act==='previewSchoolYear')await previewSchoolYear(b.dataset.id);
+ if(act==='viewSchoolYearRoster')await loadSchoolYearRoster(b.dataset.id);
+ if(act==='closeYearRoster'){state.yearRoster=null;render();}
+ if(act==='exportYearRoster')exportSchoolYearRoster();
  if(act==='startSchoolYear')await startSchoolYear(b.dataset.id);
  if(act==='clearYearPreview'){state.yearPreview=null;render();}
  if(act==='export')exportCsv();
