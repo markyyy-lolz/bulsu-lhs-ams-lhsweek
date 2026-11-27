@@ -330,6 +330,36 @@ async function checkAuthorization() {
     scannerMessage('Your attendance session is no longer authorized. Sign in again.',true);
   }
 }
+// ===== Last 5 scans (shown under the result so a wrong scan can be spotted later) =====
+const RECENT_KEY='lsc_recent_scans_v1';
+let recentScans=(()=>{try{const a=JSON.parse(sessionStorage.getItem(RECENT_KEY));return Array.isArray(a)?a.slice(0,5):[]}catch{return []}})();
+const recentBox=document.createElement('div');
+recentBox.id='recentScans';recentBox.hidden=true;
+confirmation.parentNode.insertBefore(recentBox,confirmation.nextSibling);
+const RK={in:['TIME IN','in'],out:['TIME OUT','out'],dup:['ALREADY SCANNED','dup'],queued:['SAVED OFFLINE','queued'],err:['NOT RECORDED','err']};
+function renderRecent(){
+  recentBox.replaceChildren();recentBox.hidden=!recentScans.length;
+  if(!recentScans.length)return;
+  const h=document.createElement('div');h.className='recent-title';h.textContent='LAST '+recentScans.length+' SCAN'+(recentScans.length===1?'':'S');
+  recentBox.append(h);
+  recentScans.forEach(x=>{
+    const row=document.createElement('div');row.className='recent-row '+(RK[x.kind]?.[1]||'');
+    const tag=document.createElement('span');tag.className='recent-tag';tag.textContent=RK[x.kind]?.[0]||'';
+    const who=document.createElement('span');who.className='recent-who';
+    const n=document.createElement('b');n.textContent=x.name||'';
+    const m=document.createElement('small');m.textContent=[x.sub,x.id].filter(Boolean).join(' · ');
+    who.append(n,m);
+    const t=document.createElement('time');t.textContent=x.time||'';
+    row.append(tag,who,t);recentBox.append(row);
+  });
+}
+function pushRecent(o){
+  recentScans.unshift({kind:o.kind,name:o.name||'',sub:o.sub||'',id:o.id||'',time:o.time||''});
+  recentScans=recentScans.slice(0,5);
+  try{sessionStorage.setItem(RECENT_KEY,JSON.stringify(recentScans))}catch{}
+  renderRecent();
+}
+renderRecent();
 function appendMessage(type,title,lines) {
   if(state.resetTimer)clearTimeout(state.resetTimer);
   releaseArrivalPhotoUrl();
@@ -350,12 +380,14 @@ function appendMessage(type,title,lines) {
   metadata.style.whiteSpace='pre-line';
   card.append(small,heading,metadata);
   confirmation.append(card);
-  if(window.lscKiosk?.isOn()){
+  {
     const kind=type==='ERROR'?'err':type==='QUEUED'?'queued':type==='DUPLICATE'?'dup':'out';
     const named=kind==='out'||kind==='dup';
-    window.lscKiosk.signal({kind,name:named?String(lines[0]||title).split(' · ')[0]:title,
+    const sig={kind,name:named?String(lines[0]||title).split(' · ')[0]:title,
       sub:named?String(lines[1]||'').trim():'',time:named?String(lines[2]||'').split(' · ')[0]:'',
-      note:named?(kind==='dup'?'No new record was added.':''):lines[0]||'',id:named?String(lines[0]||'').split(' · ')[1]:null});
+      note:named?(kind==='dup'?'No new record was added.':''):lines[0]||'',id:named?String(lines[0]||'').split(' · ')[1]:null};
+    window.lscKiosk?.isOn()&&window.lscKiosk.signal(sig);
+    pushRecent(kind==='queued'?{...sig,name:String(lines[0]||'Saved offline'),time:formatTime(Date.now())}:kind==='err'?{...sig,name:title,sub:lines[0]||''}:sig);
   }
   if(state.resetTimer)clearTimeout(state.resetTimer);
   if(type!=='ERROR')state.resetTimer=setTimeout(()=>{
@@ -455,7 +487,7 @@ function appendArrivalCard(result,studentId) {
   layout.append(frame,details);
   card.append(eyebrow,layout);
   confirmation.append(card);
-  window.lscKiosk?.signal({kind:'in',id:result.student_id||studentId,name:result.full_name||'Student',sub:sectionName||'',time:formatTime(result.recorded_at)});
+  {const sig={kind:'in',id:result.student_id||studentId,name:result.full_name||'Student',sub:sectionName||'',time:formatTime(result.recorded_at)};window.lscKiosk?.signal(sig);pushRecent(sig);}
   if(state.resetTimer)clearTimeout(state.resetTimer);
   state.resetTimer=setTimeout(()=>{
     if(card.isConnected)confirmation.replaceChildren();
