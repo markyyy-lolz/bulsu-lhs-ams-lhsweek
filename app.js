@@ -70,7 +70,7 @@ async function loadData(){
   state.activeSchoolYearId=years.data?.active_year_id||state.activeSchoolYearId;
  }
  const noYear='00000000-0000-0000-0000-000000000000';
- const studentQuery=sb.from('lsc_students').select('id,student_id,full_name,grade_level,section,class_id,school_year_id,active,id_origin,created_at').order('full_name',{ascending:true}).limit(2000);
+ const studentQuery=sb.from('lsc_students').select('id,student_id,full_name,grade_level,section,class_id,school_year_id,active,id_origin,created_at,sex').order('full_name',{ascending:true}).limit(2000);
  if(state.role==='official')studentQuery.eq('school_year_id',state.activeSchoolYearId||noYear);
  else if(state.classId)studentQuery.eq('class_id',state.classId);
  else studentQuery.eq('id',noYear);
@@ -124,12 +124,12 @@ function loginHTML(){
 function sidebar(){
   let menu=[['overview','Dashboard'],['records','Attendance Records'],['security','Account Security']];
   if(state.role==='class_mayor'){menu.splice(1,0,['masterlist','Class Masterlist'],['corrections','Corrections']);}
-  if(state.role==='official'){menu.splice(1,0,['live','Live Dashboard'],['students','Student Directory'],['classes','Classes'],['schoolyears','School Year Management'],['officials','Role Assignments'],['idcards','ID Cards'],['corrections','Correction Requests'],['settings','Admin Settings']);}
+  if(state.role==='official'){menu.splice(1,0,['live','Live Dashboard'],['students','Student Directory'],['classes','Classes'],['schoolyears','School Year Management'],['officials','Role Assignments'],['idcards','ID Cards'],['classlists','Class Lists'],['corrections','Correction Requests'],['settings','Admin Settings']);}
   return '<aside id="lsc-sidebar" class="sidebar'+(state.mobileNav?' open':'')+'" aria-label="Workspace navigation"><button type="button" class="lsc-mobile-close" data-act="closeMenu" aria-label="Close navigation menu">'+navIcon('close')+'</button><div class="brand">'+brand()+'</div><div><div class="nav-section">WORKSPACE</div><nav class="nav">'+menu.map(v=>'<button class="nav-btn '+(state.page===v[0]?'active':'')+'" data-nav="'+v[0]+'"><span class="nav-ico">'+navIcon(v[0])+'</span>'+v[1]+'</button>').join('')+'<a class="nav-btn" href="./student.html"><span class="nav-ico">'+navIcon('kiosk')+'</span>Student Attendance<span class="nav-external">'+navIcon('external')+'</span></a>'+(state.role==='official'?'<a class="nav-btn" href="./movie.html"><span class="nav-ico">'+navIcon('movie')+'</span>Movie Booth POS<span class="nav-external">'+navIcon('external')+'</span></a>':'')+'<a class="nav-btn" href="./reserve.html"><span class="nav-ico">'+navIcon('movie')+'</span>Online Movie Booking<span class="nav-external">'+navIcon('external')+'</span></a>'+'</nav></div><div class="sidebar-foot"><div class="small">Signed in as</div><div style="font-size:12px;font-weight:800;margin:5px 0;word-break:break-word">'+esc(state.user?.email || 'Demo Administrator')+'</div><div class="small">'+(state.demo?'PREVIEW MODE':state.role==='class_mayor'?'CLASS MAYOR':'LSC OFFICIAL')+'</div><button class="side-signout" data-act="logout">'+navIcon('logout')+'<span>Sign out</span></button><div class="small" style="margin-top:25px">Powered by Azure&lt;3 · School approval required</div></div></aside>';
 }
-function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',live:'Live Dashboard',settings:'Admin Settings',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',schoolyears:'School Year Management',officials:'Role Assignments',security:'Account Security',corrections:'Corrections',idcards:'ID Cards'})[state.page]||'Dashboard';}
+function titleFor(){return ({overview:'Dashboard',kiosk:'Attendance Kiosk',students:'Student Directory',live:'Live Dashboard',settings:'Admin Settings',masterlist:'Class Masterlist',records:'Attendance Records',classes:'Classes',schoolyears:'School Year Management',officials:'Role Assignments',security:'Account Security',corrections:'Corrections',idcards:'ID Cards',classlists:'Class Lists'})[state.page]||'Dashboard';}
 function appHTML(){
-  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='live'?liveHTML():state.page==='settings'?settingsHTML():state.page==='masterlist'?masterlistHTML():state.page==='corrections'?correctionsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='schoolyears'?schoolYearsHTML():state.page==='officials'?officialsHTML():state.page==='idcards'?idCardsHTML():state.page==='security'?securityHTML():overviewHTML())+'</div></main></div>';
+  return '<div class="shell"><div class="lsc-nav-backdrop" data-act="closeMenu" aria-hidden="true"></div>'+sidebar()+'<main class="main"><header class="top"><div class="top-left"><button class="hamb" data-act="menu" aria-label="Open navigation menu" aria-controls="lsc-sidebar" aria-expanded="'+(state.mobileNav?'true':'false')+'">'+navIcon('menu')+'</button><div class="top-title">'+titleFor()+'</div></div><span class="top-time mono" id="clock">'+esc(stampPH())+' PHT</span><span class="tag"><span class="dot"></span>'+(state.demo?'DEMO SESSION':state.role==='official'?'LSC OFFICIAL':'CLASS MAYOR')+'</span></header><div class="content">'+(state.page==='overview'?overviewHTML():state.page==='students'?studentsHTML():state.page==='live'?liveHTML():state.page==='settings'?settingsHTML():state.page==='masterlist'?masterlistHTML():state.page==='corrections'?correctionsHTML():state.page==='records'?recordsHTML():state.page==='classes'?classesHTML():state.page==='schoolyears'?schoolYearsHTML():state.page==='officials'?officialsHTML():state.page==='idcards'?idCardsHTML():state.page==='classlists'?classListsHTML():state.page==='security'?securityHTML():overviewHTML())+'</div></main></div>';
 }
 function header(head,sub,extra=''){return '<div class="page-header"><div><div class="eyebrow" style="margin-bottom:8px">LSC ATTENDANCE MONITOR</div><h1>'+head+'</h1><p>'+sub+'</p></div>'+extra+'</div>';}
 function metrics(){
@@ -245,7 +245,7 @@ function liveHTML(){
  rows.map(x=>'<tr class="'+(lagging(x)?'lv-lag':'')+'"><td>'+esc(x.grade_level)+'</td><td>'+esc(x.section)+'</td><td class="mono">'+x.present+' / '+x.total+'</td><td class="mono strong">'+x.pct.toFixed(1)+'%</td><td style="min-width:140px">'+bar(x.pct,lagging(x)?'warn':'')+'</td><td>'+(x.total===0?'<span class="badge off">No students</span>':lagging(x)?'<span class="badge out">Lagging</span>':'<span class="badge">On track</span>')+'</td></tr>').join('')+'</tbody></table></div>'+
  '<p class="muted small" style="margin-top:12px">Last updated '+esc(L.at?timePH(L.at):'—')+' PHT. “Present” means the student has at least one Time IN today; “lagging” means a section is more than '+lagPts+' percentage points below the school-wide rate.</p></div>';
 }
-const DEMO_SETTINGS={lag_points:10,late_cutoff:'07:30',summary_time:'09:00',eod_time:'16:00',lag_start_hour:8,lag_end_hour:11,lag_interval:30,telegram_enabled:true,student_notifications:true,student_links:0,mayor_notifications:true,mayor_reminder_time:'08:30',parent_absent_alerts:false,public_stats:false,parent_alert_time:'08:00',correction_alerts:true,official_links:0,mayor_links:0,join_code:'DEMO1234',subscribers:[{chat_id:1,label:'Demo Developer',role:'developer',active:true,joined_at:new Date().toISOString()}]};
+const DEMO_SETTINGS={lag_points:10,late_cutoff:'07:30',summary_time:'09:00',eod_time:'16:00',lag_start_hour:8,lag_end_hour:11,lag_interval:30,telegram_enabled:true,student_notifications:true,student_links:0,mayor_notifications:true,mayor_reminder_time:'08:30',parent_absent_alerts:false,public_stats:false,parent_digest:false,parent_digest_time:'17:30',parent_alert_time:'08:00',correction_alerts:true,official_links:0,mayor_links:0,join_code:'DEMO1234',subscribers:[{chat_id:1,label:'Demo Developer',role:'developer',active:true,joined_at:new Date().toISOString()}]};
 async function loadSettings(){
  if(state.role!=='official')return;
  if(state.demo){if(!state.settings.data)state.settings={data:JSON.parse(JSON.stringify(DEMO_SETTINGS)),error:null,busy:false};return;}
@@ -275,6 +275,8 @@ function settingsHTML(){
  '<label class="field check-field"><input type="checkbox" name="public_stats"'+(d.public_stats?' checked':'')+'> <span>Show the public stats screen (<a href="./stats.html" target="_blank" rel="noopener">stats.html</a>) — counts per grade only, no names. Anyone with the link can see it while this is on.</span></label>'+
  '<label class="field check-field"><input type="checkbox" name="parent_absent_alerts"'+(d.parent_absent_alerts?' checked':'')+'> <span>Tell linked parents when no Time IN is recorded yet ('+(d.student_links||0)+' linked chats)</span></label>'+
  '<label class="field">Parent alert time (PHT)<input type="time" name="parent_alert_time" value="'+esc(d.parent_alert_time||'08:00')+'" required></label>'+
+ '<label class="field check-field"><input type="checkbox" name="parent_digest"'+(d.parent_digest?' checked':'')+'> <span><b>Daily digest instead of one message per scan.</b> Linked parents get one message a day with the student’s Time IN and Time OUT (siblings in one message). Needs “Notify students/parents” on.</span></label>'+
+ '<label class="field">Daily digest time (PHT)<input type="time" name="parent_digest_time" value="'+esc(d.parent_digest_time||'17:30')+'" required></label>'+
  '<p class="muted small" style="margin:-6px 0 0">Off by default. Each parent gets one message a day, and a section where nobody has scanned in yet is skipped. Get the school’s approval of the wording first.</p>'+
  '<div class="set-grid"><label class="field">Morning summary<input type="time" name="summary_time" value="'+esc(d.summary_time)+'" required></label>'+
  '<label class="field">End-of-day report<input type="time" name="eod_time" value="'+esc(d.eod_time)+'" required></label>'+
@@ -295,7 +297,7 @@ function settingsHTML(){
 }
 async function saveSettings(form){
  const f=form.elements,g=n=>f[n].value;
- const p={lag_points:parseInt(g('lag_points'),10),late_cutoff:g('late_cutoff'),summary_time:g('summary_time'),eod_time:g('eod_time'),lag_start_hour:parseInt(g('lag_start_hour'),10),lag_end_hour:parseInt(g('lag_end_hour'),10),lag_interval:parseInt(g('lag_interval'),10),telegram_enabled:f.telegram_enabled.checked,student_notifications:f.student_notifications.checked,correction_alerts:f.correction_alerts.checked,mayor_notifications:f.mayor_notifications.checked,mayor_reminder_time:g('mayor_reminder_time'),parent_absent_alerts:f.parent_absent_alerts.checked,parent_alert_time:g('parent_alert_time'),public_stats:f.public_stats.checked};
+ const p={lag_points:parseInt(g('lag_points'),10),late_cutoff:g('late_cutoff'),summary_time:g('summary_time'),eod_time:g('eod_time'),lag_start_hour:parseInt(g('lag_start_hour'),10),lag_end_hour:parseInt(g('lag_end_hour'),10),lag_interval:parseInt(g('lag_interval'),10),telegram_enabled:f.telegram_enabled.checked,student_notifications:f.student_notifications.checked,correction_alerts:f.correction_alerts.checked,mayor_notifications:f.mayor_notifications.checked,mayor_reminder_time:g('mayor_reminder_time'),parent_absent_alerts:f.parent_absent_alerts.checked,parent_alert_time:g('parent_alert_time'),public_stats:f.public_stats.checked,parent_digest:f.parent_digest.checked,parent_digest_time:g('parent_digest_time')};
  if(!(p.lag_points>=1&&p.lag_points<=50))return toast('Lagging threshold must be between 1 and 50.',true);
  if(p.lag_start_hour>=p.lag_end_hour)return toast('Lag alerts must stop after they start.',true);
  state.settings.busy=true;render();
@@ -409,6 +411,93 @@ async function generateIdCards(){
   w.document.open();w.document.write(html);w.document.close();
   state.idc={busy:false,error:null};render();
  }catch(e){try{w.close()}catch(_){}state.idc={busy:false,error:e.message||'Could not prepare the ID cards.'};render();}
+}
+
+// ===== Class lists (PDF): boys on the LEFT, girls on the RIGHT =====
+const gnum=g=>parseInt(String(g).replace(/\D/g,''),10)||0;
+function classListScopeOptions(act){
+ const grades=[...new Set(act.map(x=>x.grade_level))].sort((a,b)=>gnum(a)-gnum(b)||a.localeCompare(b));
+ const classes=[...new Set(act.map(x=>x.grade_level+'|'+x.section))].sort((a,b)=>gnum(a)-gnum(b)||a.localeCompare(b));
+ return '<option value="all">All classes ('+classes.length+')</option>'+grades.map(g=>'<option value="g:'+esc(g)+'">All '+esc(g)+'</option>').join('')+
+  classes.map(c=>{const [g,sec]=c.split('|');return '<option value="c:'+esc(c)+'">'+esc(g)+' · '+esc(sec)+'</option>';}).join('');
+}
+function classListsHTML(){
+ if(state.role!=='official')return '<div class="notice">Only LSC Officials can export class lists.</div>';
+ const act=state.students.filter(x=>x.active),m=act.filter(x=>x.sex==='M').length,f=act.filter(x=>x.sex==='F').length,u=act.length-m-f;
+ return header('Class Lists','Export each class as a PDF page with the boys on the left and the girls on the right.')+
+ '<div class="card pad"><div class="section-title"><h3>Export class lists</h3></div>'+
+ '<div class="two-col" style="margin-top:0"><label class="field">Which classes<select id="clScope">'+classListScopeOptions(act)+'</select></label></div>'+
+ '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center"><button type="button" class="btn" data-act="clGenerate">Generate class list PDF</button></div>'+
+ '<p class="muted small" style="margin-top:12px">A new tab opens. Press <b>Print / Save as PDF</b> (paper 8.5 × 13 in, margins None, background graphics on).</p></div>'+
+ '<div class="card pad" style="margin-top:18px"><div class="section-title"><h3>Boys / girls data</h3><span class="muted small">'+m+' boys · '+f+' girls · <b style="color:'+(u?'#b3261e':'#159c79')+'">'+u+' not set</b></span></div>'+
+ '<p class="muted small" style="margin-top:0">The system never guesses sex from a name. Students with no sex set are listed separately at the bottom of their class page. To fill it in quickly: download the template, fill the <b>sex</b> column with <b>M</b> or <b>F</b> (Boy/Girl also work), save as CSV, then upload it. You can also set it one by one under Student Directory → Review / Edit.</p>'+
+ '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px"><button type="button" class="btn btn-secondary" data-act="clTemplate">Download template (CSV)</button>'+
+ '<label class="btn btn-secondary" style="cursor:pointer">Upload filled CSV<input type="file" id="clFile" accept=".csv,text/csv" hidden></label><span id="clMsg" class="muted small"></span></div></div>';
+}
+function csvEsc(v){v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function downloadSexTemplate(){
+ const rows=state.students.filter(x=>x.active).sort((a,b)=>gnum(a.grade_level)-gnum(b.grade_level)||a.section.localeCompare(b.section)||a.full_name.localeCompare(b.full_name));
+ const csv='student_id,full_name,grade,section,sex\r\n'+rows.map(x=>[x.student_id,x.full_name,x.grade_level,x.section,x.sex||''].map(csvEsc).join(',')).join('\r\n')+'\r\n';
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv'}));a.download='LSC-student-sex-template.csv';document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+function parseCsv(t){
+ const out=[];let row=[],cur='',q=false;t=t.replace(/^﻿/,'');
+ for(let i=0;i<t.length;i++){const c=t[i];
+  if(q){if(c==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}
+  else if(c==='"')q=true;else if(c===','){row.push(cur);cur='';}
+  else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cur);cur='';if(row.some(x=>x.trim()))out.push(row);row=[];}
+  else cur+=c;}
+ row.push(cur);if(row.some(x=>x.trim()))out.push(row);return out;
+}
+async function importSexCsv(file){
+ const msg=document.getElementById('clMsg'),say=t=>{if(msg)msg.textContent=t;};
+ try{
+  const rows=parseCsv(await file.text());if(rows.length<2)throw new Error('The file has no rows.');
+  const head=rows[0].map(h=>h.trim().toLowerCase().replace(/\s+/g,'_')),ci=head.indexOf('student_id'),si=head.findIndex(h=>h==='sex'||h==='gender');
+  if(ci<0||si<0)throw new Error('The file needs “student_id” and “sex” columns (use the template).');
+  const payload=rows.slice(1).map(r=>({student_id:(r[ci]||'').trim(),sex:(r[si]||'').trim()})).filter(x=>x.student_id&&x.sex);
+  if(!payload.length)throw new Error('No rows with a sex value were found.');
+  if(state.demo){say('Demo mode: nothing was saved.');return;}
+  let upd=0,skip=0;
+  for(let i=0;i<payload.length;i+=300){say('Saving '+Math.min(i+300,payload.length)+' of '+payload.length+'…');const r=await sb.rpc('lsc_set_student_sex',{p_rows:payload.slice(i,i+300)});if(r.error)throw r.error;upd+=r.data.updated;skip+=r.data.skipped;}
+  await loadData();render();
+  const m2=document.getElementById('clMsg');if(m2)m2.textContent='Saved '+upd+' students'+(skip?' · '+skip+' rows skipped (unknown ID or sex value)':'')+'.';
+ }catch(e){say(e.message||'Could not read that file.');}
+}
+function generateClassLists(){
+ const sel=document.getElementById('clScope')?.value||'all';
+ const w=window.open('about:blank','_blank');
+ if(!w){toast('Pop-up blocked. Allow pop-ups for this site, then try again.',true);return;}
+ const act=state.students.filter(x=>x.active);
+ let keys=[...new Set(act.map(x=>x.grade_level+'|'+x.section))].sort((a,b)=>gnum(a)-gnum(b)||a.localeCompare(b));
+ if(sel.startsWith('g:'))keys=keys.filter(k=>k.split('|')[0]===sel.slice(2));else if(sel.startsWith('c:'))keys=keys.filter(k=>k===sel.slice(2));
+ if(!keys.length){try{w.close()}catch(_){}return toast('No students in that selection.',true);}
+ const nm=x=>{const n=String(x.full_name||''),i=n.indexOf(',');return i<0?'<b>'+esc(n.toUpperCase())+'</b>':'<b>'+esc(n.slice(0,i).trim().toUpperCase())+'</b>, '+esc(n.slice(i+1).trim());};
+ const li=(x,i)=>'<li><span class="n">'+(i+1)+'.</span><span class="nm">'+nm(x)+'</span><span class="id">'+esc(x.student_id)+'</span></li>';
+ const PER=40,pages=[],today=new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',dateStyle:'long'}).format(new Date());
+ let anyUnset=0;
+ keys.forEach(k=>{
+  const [g,sec]=k.split('|'),cls=state.classes.find(c=>c.grade_level===g&&c.section===sec),all=act.filter(x=>x.grade_level===g&&x.section===sec).sort((a,b)=>a.full_name.toUpperCase().localeCompare(b.full_name.toUpperCase()));
+  const boys=all.filter(x=>x.sex==='M'),girls=all.filter(x=>x.sex==='F'),unk=all.filter(x=>x.sex!=='M'&&x.sex!=='F');anyUnset+=unk.length;
+  const n=Math.max(1,Math.ceil(Math.max(boys.length,girls.length)/PER)),head='<div class="hd"><div><div class="sch">BULACAN STATE UNIVERSITY · LABORATORY HIGH SCHOOL</div><div class="ttl">CLASS LIST</div></div><div class="cl"><b>'+esc(g)+' · '+esc(sec)+'</b><span>'+esc(state.activeSchoolYearLabel||'')+(cls?.adviser_name?' · Adviser: '+esc(cls.adviser_name):'')+'</span></div></div>';
+  for(let p=0;p<n;p++){
+   const bs=boys.slice(p*PER,(p+1)*PER),gs=girls.slice(p*PER,(p+1)*PER),last=p===n-1;
+   pages.push('<section class="pg">'+head+'<div class="cols"><div class="col"><h3 class="b">BOYS <small>('+boys.length+')</small></h3><ol>'+bs.map((x,i)=>li(x,p*PER+i)).join('')+'</ol></div><div class="col"><h3 class="g">GIRLS <small>('+girls.length+')</small></h3><ol>'+gs.map((x,i)=>li(x,p*PER+i)).join('')+'</ol></div></div>'+
+    (last&&unk.length?'<div class="unk"><h3>NO SEX RECORDED <small>('+unk.length+') — set it under Class Lists / Student Directory</small></h3><ul>'+unk.map(x=>'<li><span class="nm">'+nm(x)+'</span><span class="id">'+esc(x.student_id)+'</span></li>').join('')+'</ul></div>':'')+
+    '<div class="ft"><span>Boys '+boys.length+' · Girls '+girls.length+(unk.length?' · Not set '+unk.length:'')+' · <b>Total '+all.length+'</b></span><span>Printed '+esc(today)+(n>1?' · page '+(p+1)+' of '+n:'')+'</span></div></section>');
+  }
+ });
+ const css='@page{size:8.5in 13in;margin:0}*{box-sizing:border-box}body{margin:0;background:#dfe5ef;font-family:Poppins,system-ui,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+  '.bar{position:sticky;top:0;z-index:9;display:flex;gap:12px;align-items:center;justify-content:center;padding:12px;background:#0d1b33;color:#fff;font-size:14px}.bar button{background:#e3a21a;border:0;border-radius:10px;padding:10px 20px;font:700 14px Poppins,sans-serif;cursor:pointer}'+
+  '.pg{position:relative;width:8.5in;height:13in;margin:16px auto;background:#fff;padding:14mm 13mm 16mm;page-break-after:always;break-after:page;overflow:hidden}'+
+  '@media print{body{background:#fff}.bar{display:none}.pg{margin:0}.pg:last-child{page-break-after:auto;break-after:auto}}'+
+  '.hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:.8mm solid #1f3a6b;padding-bottom:3mm;margin-bottom:4mm}.sch{font-size:7.5pt;font-weight:600;letter-spacing:.6px;color:#1f3a6b}.ttl{font-size:17pt;font-weight:800;letter-spacing:1px}.cl{text-align:right}.cl b{display:block;font-size:15pt;color:#1f3a6b}.cl span{font-size:8pt;color:#555}'+
+  '.cols{display:grid;grid-template-columns:1fr 1fr;gap:6mm}h3{margin:0 0 2mm;font-size:10pt;letter-spacing:1.5px;padding:1.6mm 2.4mm;border-radius:1.2mm;color:#fff}h3 small{font-weight:500;letter-spacing:0}.b{background:#2f5fbf}.g{background:#c0407b}'+
+  'ol,ul{list-style:none;margin:0;padding:0}li{display:flex;align-items:baseline;gap:1.6mm;height:6.05mm;border-bottom:.2mm solid #e3e8f1;font-size:8.6pt;white-space:nowrap}li .n{width:6mm;text-align:right;color:#777;flex:none}li .nm{flex:1;overflow:hidden;text-overflow:ellipsis}li .id{font-size:6.6pt;color:#8a94a8;flex:none}'+
+  '.unk{margin-top:5mm;padding:2.5mm;border:.4mm dashed #b3261e;border-radius:1.5mm}.unk h3{background:none;color:#b3261e;padding:0 0 1.5mm;font-size:8.5pt}.unk ul{columns:2;column-gap:6mm}.unk li{height:5.2mm;font-size:8pt}'+
+  '.ft{position:absolute;left:13mm;right:13mm;bottom:7mm;display:flex;justify-content:space-between;font-size:7.5pt;color:#555;border-top:.3mm solid #c9d3e6;padding-top:2mm}';
+ const html='<!doctype html><html><head><meta charset="utf-8"><title>LHS Class Lists</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet"><style>'+css+'</style></head><body><div class="bar"><span>'+keys.length+' class'+(keys.length===1?'':'es')+' · '+pages.length+' page'+(pages.length===1?'':'s')+' · 8.5 × 13 in, margins None'+(anyUnset?' · <b style="color:#ffb4ae">'+anyUnset+' student(s) have no sex recorded</b>':'')+'</span><button id="pb">Print / Save as PDF</button></div>'+pages.join('')+'<script>document.getElementById("pb").onclick=function(){window.print()};<\/script></body></html>';
+ w.document.open();w.document.write(html);w.document.close();
 }
 function correctionsHTML(){
  const isOff=state.role==='official',C=state.corr,list=[...(C.data||[])].sort((a,b)=>(a.status==='pending'?0:1)-(b.status==='pending'?0:1));
@@ -724,6 +813,7 @@ function studentModal(student){
  '<label class="field">Student ID<input name="student_id" type="text" pattern="[0-9]{7,12}" maxlength="12" inputmode="numeric" required value="'+esc(student?.student_id||'')+'"></label>'+
  '<label class="field">Full Name<input name="full_name" required minlength="2" maxlength="160" value="'+esc(student?.full_name||'')+'"></label>'+
  '<label class="field">Class / Section<select name="class_id" required><option value="">Select class…</option>'+options+'</select></label>'+
+ '<label class="field">Sex (for boys / girls class lists)<select name="sex"><option value="">Not set</option><option value="M"'+(student?.sex==='M'?' selected':'')+'>Boy</option><option value="F"'+(student?.sex==='F'?' selected':'')+'>Girl</option></select></label>'+
  '<label class="field">Enrollment status<select name="active"><option value="false"'+(!student||!student.active?' selected':'')+'>Inactive / Pending</option><option value="true"'+(student?.active?' selected':'')+'>Active — enable attendance</option></select></label>'+
  '<label class="field" style="display:flex;align-items:flex-start;gap:10px;font-weight:600"><input type="checkbox" name="verified" style="width:18px;height:18px;margin:0;flex-shrink:0"'+(student?.id_origin==='official_verified'?' checked':'')+'><span>I have checked the student’s official ID against an authorized school record. The ID above is correct.</span></label></div>'+
  '<div class="form-actions"><button type="button" class="btn btn-secondary" data-act="closeModal">Cancel</button><button type="submit" class="btn" id="saveStudentBtn">Save Student</button></div></form></div>';
@@ -741,7 +831,7 @@ async function saveStudent(form){
  const value={
   student_id:form.elements.student_id.value.trim(),full_name:form.elements.full_name.value.trim(),
   class_id:cls.id,grade_level:cls.grade_level,section:cls.section,school_year_id:existing?.school_year_id||state.activeSchoolYearId,
-  active:form.elements.active.value==='true',
+  active:form.elements.active.value==='true',sex:form.elements.sex.value||null,
   id_origin:checked?'official_verified':(existing?.id_origin==='generated_pending_verification'?'generated_pending_verification':'official_verified')
  };
  const btn=document.getElementById('saveStudentBtn');btn.disabled=true;
@@ -851,6 +941,8 @@ document.addEventListener('click',async e=>{
    const sub=state.settings.data.subscribers.find(x=>String(x.chat_id)===chat);if(sub)sub.active=on;toast(on?'Subscriber restored.':'Subscriber removed.');}catch(err){toast('Could not update: '+(err.message||err),true);}
   render();}
  if(act==='idcGenerate'){await generateIdCards();return;}
+ if(act==='clGenerate'){generateClassLists();return;}
+ if(act==='clTemplate'){downloadSexTemplate();return;}
  if(act==='refreshLive'){await loadLive();render();}
  if(act==='tgLink'){await makeTgLink();render();}
  if(act==='corrLoadEvents')await corrLoadEvents();
@@ -894,7 +986,7 @@ document.addEventListener('keydown',e=>{
   document.querySelector('.hamb')?.focus();
  }
 });
-root.addEventListener('change',e=>{if(e.target.id==='corrKind'){const rm=e.target.value==='REMOVE';document.getElementById('corrTimeWrap').hidden=rm;document.getElementById('corrEventWrap').hidden=!rm;document.getElementById('corrLoadBtn').hidden=!rm;const t=document.querySelector('#corrForm [name=time]');if(t)t.required=!rm;}if(e.target.id==='roleSelect'){const wrap=document.getElementById('roleClassWrap');if(wrap){wrap.hidden=e.target.value==='official';document.getElementById('roleClassSelect').required=e.target.value==='class_mayor';}}});
+root.addEventListener('change',e=>{if(e.target.id==='clFile'&&e.target.files?.[0]){const f=e.target.files[0];e.target.value='';void importSexCsv(f);return;}if(e.target.id==='corrKind'){const rm=e.target.value==='REMOVE';document.getElementById('corrTimeWrap').hidden=rm;document.getElementById('corrEventWrap').hidden=!rm;document.getElementById('corrLoadBtn').hidden=!rm;const t=document.querySelector('#corrForm [name=time]');if(t)t.required=!rm;}if(e.target.id==='roleSelect'){const wrap=document.getElementById('roleClassWrap');if(wrap){wrap.hidden=e.target.value==='official';document.getElementById('roleClassSelect').required=e.target.value==='class_mayor';}}});
 root.addEventListener('input',e=>{
  if(e.target.id==='studentSearch'){
   state.query=e.target.value;
@@ -905,7 +997,7 @@ root.addEventListener('input',e=>{
 });
 window.addEventListener('hashchange',async()=>{
  const page=location.hash.slice(1);
- if(['overview','students','live','settings','corrections','masterlist','records','classes','schoolyears','officials','idcards','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='live')await loadLive();if(page==='settings')await loadSettings();if(page==='corrections')await loadCorrections();render();}
+ if(['overview','students','live','settings','corrections','masterlist','records','classes','schoolyears','officials','idcards','classlists','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='live')await loadLive();if(page==='settings')await loadSettings();if(page==='corrections')await loadCorrections();render();}
 });
 setInterval(async()=>{if(state.page==='live'&&state.user&&!document.hidden){await loadLive();if(state.page==='live')render();}},30000);
 setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=stampPH()+' PHT';},15000);
