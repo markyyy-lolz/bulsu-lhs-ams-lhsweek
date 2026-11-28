@@ -647,44 +647,96 @@ async function selfieGate(){
   }catch{selfieBusy=false;return;}
   const wasCam=camera.mode==='camera';
   stopCamera();
+  if(!document.getElementById('sgStyle')){
+    const st=document.createElement('style');st.id='sgStyle';
+    st.textContent=`
+#selfieGate{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto;font-family:Poppins,system-ui,sans-serif;color:#172a47;background:radial-gradient(900px 600px at 15% 0%,#cfe0ff 0,transparent 60%),radial-gradient(800px 600px at 100% 100%,#d9f3ec 0,transparent 55%),#e9f0fa}
+#selfieGate .sg-card{width:min(100%,400px);background:rgba(255,255,255,.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.85);border-radius:28px;box-shadow:0 24px 70px rgba(36,66,117,.18);padding:22px 20px 20px;text-align:center}
+#selfieGate .sg-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px}
+#selfieGate .sg-brand img{width:38px;height:38px;object-fit:contain}
+#selfieGate .sg-brand b{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#315ec8}
+#selfieGate h2{margin:6px 0 2px;font-size:22px;line-height:1.2}
+#selfieGate .sg-who{display:inline-block;margin:6px 0 2px;padding:4px 12px;border-radius:99px;background:#e6edfb;color:#193a68;font-size:12.5px;font-weight:600}
+#selfieGate .sg-sub{margin:8px 0 14px;font-size:13px;color:#62728f}
+#selfieGate .sg-frame{position:relative;width:min(72vw,270px);aspect-ratio:1;margin:0 auto 14px;border-radius:50%;padding:6px;background:conic-gradient(from 200deg,#315ec8,#12a37f,#315ec8);box-shadow:0 10px 30px rgba(49,94,200,.28)}
+#selfieGate .sg-frame>video,#selfieGate .sg-frame>img{width:100%;height:100%;object-fit:cover;border-radius:50%;background:#0d1b33;display:block}
+#selfieGate video{transform:scaleX(-1)}
+#selfieGate .sg-count{position:absolute;inset:6px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:84px;font-weight:700;color:#fff;background:rgba(13,27,51,.45)}
+#selfieGate .sg-flash{position:absolute;inset:6px;border-radius:50%;background:#fff;opacity:0;pointer-events:none}
+#selfieGate .sg-flash.on{animation:sgf .35s ease-out}
+@keyframes sgf{0%{opacity:.95}100%{opacity:0}}
+#selfieGate .sg-tips{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:0 0 14px;font-size:11.5px;color:#4a5b7a}
+#selfieGate .sg-tips span{background:#f1f5fc;border-radius:99px;padding:3px 10px}
+#selfieGate .sg-actions{display:flex;gap:10px}
+#selfieGate .sg-actions button{flex:1;min-height:50px;border-radius:16px;border:1px solid #cfd9ee;background:#fff;color:#193a68;font:600 15px Poppins,system-ui,sans-serif;cursor:pointer}
+#selfieGate .sg-actions button.sg-main{border:0;color:#fff;background:linear-gradient(135deg,#315ec8,#264aa3);box-shadow:0 8px 20px rgba(49,94,200,.32)}
+#selfieGate .sg-actions button.sg-ok{background:linear-gradient(135deg,#12a37f,#087f63);box-shadow:0 8px 20px rgba(8,127,99,.3)}
+#selfieGate .sg-actions button:disabled{opacity:.55}
+#selfieGate [hidden]{display:none!important}
+#selfieGate .sg-skip{margin-top:12px;background:none;border:0;color:#315ec8;font:500 12.5px Poppins,system-ui,sans-serif;text-decoration:underline;cursor:pointer}
+#selfieGate .sg-priv{margin:12px 0 0;font-size:11px;color:#7a88a3}
+#selfieGate .sg-reason{width:100%;min-height:70px;border:1px solid #cfd9ee;border-radius:14px;padding:10px;font:14px Poppins,system-ui,sans-serif;margin-top:4px}`;
+    document.head.appendChild(st);
+  }
   const ov=document.createElement('div');ov.id='selfieGate';
-  ov.style.cssText='position:fixed;inset:0;z-index:100000;background:#0b1220;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;text-align:center;font-family:Poppins,system-ui,sans-serif';
-  ov.innerHTML='<h2 style="margin:0">Class Mayor check-in</h2><p id="sgMsg" style="margin:0;max-width:340px">Take a selfie to confirm it is you opening attendance today.</p>'+
-   '<video id="sgVid" autoplay playsinline muted style="width:min(78vw,320px);aspect-ratio:3/4;object-fit:cover;border-radius:16px;background:#000;transform:scaleX(-1)"></video>'+
-   '<img id="sgImg" alt="Selfie preview" hidden style="width:min(78vw,320px);aspect-ratio:3/4;object-fit:cover;border-radius:16px">'+
-   '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button id="sgSnap" class="primary" type="button">Take selfie</button><button id="sgRetake" type="button" hidden>Retake</button><button id="sgUse" class="primary" type="button" hidden>Use this photo</button></div>'+
-   '<button id="sgSkip" type="button" hidden style="background:none;border:0;color:#9db4ff;text-decoration:underline">Camera not working? Continue with a reason</button>';
+  const who=(state.operatorClass||'')+(state.operatorEmail?(state.operatorClass?' · ':'')+state.operatorEmail:'');
+  const esc2=v=>String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  ov.innerHTML='<div class="sg-card"><div class="sg-brand"><img src="./assets/lsc-crest-transparent.png" alt=""><b>LSC Attendance</b></div>'+
+   '<h2 id="sgTitle">Confirm it\'s you</h2>'+(who?'<div class="sg-who">'+esc2(who)+'</div>':'')+
+   '<p class="sg-sub" id="sgMsg">Take a quick selfie before opening attendance.</p>'+
+   '<div class="sg-frame"><video id="sgVid" autoplay playsinline muted></video><img id="sgImg" alt="Selfie preview" hidden><div class="sg-count" id="sgCount"></div><div class="sg-flash" id="sgFlash"></div></div>'+
+   '<div class="sg-tips" id="sgTips"><span>Face the camera</span><span>Good lighting</span><span>No mask or cap</span></div>'+
+   '<div id="sgReasonBox" hidden><textarea class="sg-reason" id="sgReason" maxlength="200" placeholder="Why can\'t you take a selfie?"></textarea></div>'+
+   '<div class="sg-actions"><button id="sgSnap" class="sg-main" type="button">Take selfie</button><button id="sgRetake" type="button" hidden>Retake</button><button id="sgUse" class="sg-main sg-ok" type="button" hidden>Use this photo</button><button id="sgReasonGo" class="sg-main" type="button" hidden>Continue</button></div>'+
+   '<button id="sgSkip" class="sg-skip" type="button" hidden>Camera not working? Continue with a reason</button>'+
+   '<p class="sg-priv">Your photo is seen by LSC officials only and deleted after 7 days.</p></div>';
   document.body.appendChild(ov);
   const q=id=>ov.querySelector(id),msg=q('#sgMsg'),vid=q('#sgVid'),img=q('#sgImg');
-  let stream=null,jpeg=null;
+  let stream=null,jpeg=null,busy=false;
   const stopStream=()=>{try{stream&&stream.getTracks().forEach(t=>t.stop())}catch{}stream=null;};
   const finish=async(image,reason)=>{
+    if(busy)return;busy=true;
+    q('#sgUse').disabled=true;q('#sgReasonGo').disabled=true;msg.textContent='Saving…';
     stopStream();
     try{
       const {error}=await client.rpc('lsc_submit_selfie',{p_image:image,p_reason:reason});
       if(error&&isNetworkError(error))localStorage.setItem(SELFIE_Q_KEY,JSON.stringify({image,reason}));
-      else if(error){msg.textContent='Could not save: '+error.message;return;}
+      else if(error){msg.textContent='Could not save: '+error.message;busy=false;q('#sgUse').disabled=false;q('#sgReasonGo').disabled=false;return;}
     }catch{try{localStorage.setItem(SELFIE_Q_KEY,JSON.stringify({image,reason}))}catch{}}
-    try{localStorage.setItem(SELFIE_DAY_KEY,phtDay())}catch{}
+    try{sessionStorage.setItem(SELFIE_DAY_KEY,'1')}catch{}
+    q('#sgTitle').textContent='Thank you!';msg.textContent='Check-in recorded. Opening attendance…';
+    await new Promise(r=>setTimeout(r,700));
     ov.remove();selfieBusy=false;
     if(wasCam)startCamera();
   };
-  q('#sgSkip').onclick=()=>{const r=(prompt('Why can you not take a selfie? (required)')||'').trim();if(r)finish(null,r);};
+  const showReason=()=>{
+    stopStream();q('#sgTitle').textContent='Continue without selfie';msg.textContent='Tell the LSC why. Officials will see this.';
+    ov.querySelector('.sg-frame').hidden=true;q('#sgTips').hidden=true;q('#sgReasonBox').hidden=false;
+    q('#sgSnap').hidden=true;q('#sgRetake').hidden=true;q('#sgUse').hidden=true;q('#sgSkip').hidden=true;q('#sgReasonGo').hidden=false;
+  };
+  q('#sgSkip').onclick=showReason;
+  q('#sgReasonGo').onclick=()=>{const r=q('#sgReason').value.trim();if(r.length<3){msg.textContent='Please write a short reason.';return;}finish(null,r);};
   try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:640}},audio:false});
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:720},height:{ideal:720}},audio:false});
     vid.srcObject=stream;
   }catch{
-    msg.textContent='Camera is not available.';q('#sgSnap').hidden=true;q('#sgSkip').hidden=false;return;
+    msg.textContent='Camera is blocked or not available. Allow camera access, or continue with a reason.';q('#sgSnap').hidden=true;q('#sgSkip').hidden=false;return;
   }
   q('#sgSkip').hidden=false;
-  q('#sgSnap').onclick=()=>{
-    if(!vid.videoWidth)return;
-    const w=360,h=Math.round(w*vid.videoHeight/vid.videoWidth),c=document.createElement('canvas');c.width=w;c.height=h;
+  const shoot=()=>{
+    const w=420,h=Math.round(w*vid.videoHeight/vid.videoWidth),c=document.createElement('canvas');c.width=w;c.height=h;
     const x=c.getContext('2d');x.translate(w,0);x.scale(-1,1);x.drawImage(vid,0,0,w,h);
     jpeg=c.toDataURL('image/jpeg',.6);img.src=jpeg;
-    vid.hidden=true;img.hidden=false;q('#sgSnap').hidden=true;q('#sgRetake').hidden=false;q('#sgUse').hidden=false;
+    q('#sgFlash').classList.add('on');
+    vid.hidden=true;img.hidden=false;q('#sgTips').hidden=true;q('#sgSnap').hidden=true;q('#sgSkip').hidden=true;
+    q('#sgRetake').hidden=false;q('#sgUse').hidden=false;q('#sgTitle').textContent='Looks good?';msg.textContent='Make sure your face is clearly visible.';
   };
-  q('#sgRetake').onclick=()=>{jpeg=null;img.hidden=true;vid.hidden=false;q('#sgSnap').hidden=false;q('#sgRetake').hidden=true;q('#sgUse').hidden=true;};
+  q('#sgSnap').onclick=()=>{
+    if(!vid.videoWidth){msg.textContent='Camera is still starting… try again.';return;}
+    q('#sgSnap').disabled=true;const cd=q('#sgCount');cd.style.display='flex';let n=3;cd.textContent=n;
+    const t=setInterval(()=>{n--;if(n>0)cd.textContent=n;else{clearInterval(t);cd.style.display='none';q('#sgSnap').disabled=false;shoot();}},700);
+  };
+  q('#sgRetake').onclick=()=>{jpeg=null;img.hidden=true;vid.hidden=false;q('#sgTips').hidden=false;q('#sgSnap').hidden=false;q('#sgSkip').hidden=false;q('#sgRetake').hidden=true;q('#sgUse').hidden=true;q('#sgTitle').textContent='Confirm it\'s you';msg.textContent='Take a quick selfie before opening attendance.';};
   q('#sgUse').onclick=()=>{if(jpeg)finish(jpeg,null);};
 }
 window.addEventListener('kiosk:enter',()=>{camera.mode='manual';selectAttendanceMethod('camera');updateClock();});
