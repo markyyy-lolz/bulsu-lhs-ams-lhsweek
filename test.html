@@ -27,11 +27,11 @@ ul{margin:6px 0 0;padding-left:18px;font-size:14px}li{margin:4px 0}.bad-li{color
 </style></head><body>
 <div class="banner">TEST MODE — nothing is recorded. No Time IN / Time OUT is saved here.</div>
 <div class="wrap">
- <div class="brand"><img src="./assets/lsc-crest-transparent.png" alt=""><div><b>ID Test &amp; Practice</b><small>LSC Attendance · for class mayors</small></div></div>
- <div class="card" id="authCard"><p id="authMsg">Checking your sign-in…</p><a id="loginLink" href="./login.html" hidden><button class="p" type="button">Sign in</button></a></div>
+ <div class="brand"><img src="./assets/lsc-crest-transparent.png" alt=""><div><b>ID Test &amp; Practice</b><small>LSC Attendance · students &amp; class mayors</small></div></div>
+ <div class="card" id="authCard"><p id="authMsg">Loading…</p></div>
  <div id="app" hidden>
   <div class="card">
-   <h2>Check a student ID</h2>
+   <h2>Check a student ID</h2><p class="muted" id="modeNote"></p>
    <p class="muted">Scan the QR on the student ID, or type the number. This shows if the ID works and whose photo comes up.</p>
    <form id="f" class="row"><input id="sid" inputmode="numeric" maxlength="12" placeholder="Student ID" autocomplete="off"><button class="p" type="submit">Check</button></form>
    <div class="row" style="margin-top:8px"><button id="camBtn" type="button" style="flex:1">📷 Scan with camera</button></div>
@@ -49,7 +49,7 @@ ul{margin:6px 0 0;padding-left:18px;font-size:14px}li{margin:4px 0}.bad-li{color
   <div class="card">
    <h2>Mayor reminders</h2>
    <ul>
-    <li>Open the Attendance page and take the selfie first.</li>
+    <li>Students: if your ID does not work, tell your class mayor or the LSC.</li><li>Class mayors: open the Attendance page and take the selfie first.</li>
     <li>Scan each ID once. Holding the same ID in view will not make an accidental Time OUT.</li>
     <li>The same student scanned again within 45 seconds is ignored (ALREADY SCANNED).</li>
     <li>"Not available" means the ID is wrong or not in your class. Tell the LSC.</li>
