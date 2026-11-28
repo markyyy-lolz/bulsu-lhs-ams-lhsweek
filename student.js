@@ -639,12 +639,17 @@ async function flushSelfieQueue(){
 async function selfieGate(){
   if(selfieBusy||state.demo)return;
   try{if(sessionStorage.getItem(SELFIE_DAY_KEY)==='1'){flushSelfieQueue();return;}}catch{}
-  if(!navigator.onLine)return;
   selfieBusy=true;
-  try{
-    const {data,error}=await client.rpc('lsc_selfie_needed');
-    if(error||data!==true){selfieBusy=false;return;}
-  }catch{selfieBusy=false;return;}
+  // Fail closed: if the server cannot be reached, fall back to the last known "required" answer.
+  let required=false;
+  try{required=localStorage.getItem('lsc_selfie_req')==='1'}catch{}
+  if(navigator.onLine){
+    try{
+      const {data,error}=await client.rpc('lsc_selfie_needed');
+      if(!error){required=data===true;try{localStorage.setItem('lsc_selfie_req',required?'1':'0')}catch{}}
+    }catch{}
+  }
+  if(!required){selfieBusy=false;return;}
   const wasCam=camera.mode==='camera';
   stopCamera();
   if(!document.getElementById('sgStyle')){
@@ -745,6 +750,7 @@ window.addEventListener('kiosk:id',e=>{if(!state.busy)void recordAttendance(null
 updateClock();setInterval(updateClock,1000);
 // Expiring or revoked approval is always checked again by the database for every entry.
 setInterval(()=>{if(!document.hidden&&!state.demo&&!state.busy)checkAuthorization()},120000);
+try{if(readJSON(AUTH_KEY,null)?.role==='class_mayor'&&localStorage.getItem('lsc_selfie_req')==='1')selfieGate();}catch{}
 updateStation();checkAuthorization().then(()=>studentInput.focus());
 renderSyncBar();if(navigator.onLine)setTimeout(flushQueue,2500);
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
