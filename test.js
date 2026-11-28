@@ -2,7 +2,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.95.0';
 const URL_='https://rfxzbuocxersgbshczbj.supabase.co',KEY='sb_publishable_CR-CJKna_rcjQi7gg1CZGQ__DnXI6Lb';
 const client=createClient(URL_,KEY);
 const $=id=>document.getElementById(id);
-const DRILL=5;
 const st={seen:new Set(),ok:0,bad:0,probs:[],busy:false,reader:null,photoUrl:null,mode:'public',recent:[]};
 const idInput=$('studentID'),btn=$('recordButton'),conf=$('confirmation');
 function idFromScan(raw){const v=String(raw||'').trim();if(/^[0-9]{7,12}$/.test(v))return v;const m=v.match(/^(?:STUDENT[_ -]?ID|ID)[:= ]\s*([0-9]{7,12})$/i);return m?m[1]:null;}
@@ -50,13 +49,6 @@ function recent(kind,name,sub,id){
   box.append(el('div','recent-title','LAST 5 CHECKS'));
   st.recent.forEach(r=>{const row=el('div','recent-row '+(r.kind==='ok'?'in':r.kind==='warn'?'queued':'err'));row.append(el('span','recent-tag',r.kind==='ok'?'ID WORKS':r.kind==='warn'?'NOT YET':'NOT WORKING'));const w=el('div','recent-who');w.append(el('b','',r.name),el('small','',r.sub));row.append(w,el('time','',r.t));box.append(row);});
 }
-function tally(){
-  const n=Math.min(st.seen.size,DRILL);$('bar').style.width=(n/DRILL*100)+'%';
-  $('drill').textContent=n>=DRILL?'🎉 Drill complete! You know how to check IDs.':n+' / '+DRILL+' checked. Check 5 different students to finish.';
-  $('tally').textContent='Checked '+st.seen.size+' · Working '+st.ok+' · Problems '+st.bad;
-  $('probs').innerHTML='';st.probs.forEach(p=>{const d=document.createElement('div');d.textContent='• '+p;$('probs').append(d);});
-  $('copyProbs').hidden=!st.probs.length;
-}
 async function check(id){
   if(st.busy)return;st.busy=true;btn.disabled=true;
   if(st.photoUrl){URL.revokeObjectURL(st.photoUrl);st.photoUrl=null;}
@@ -72,7 +64,6 @@ async function check(id){
       if(first){st.bad++;st.probs.push(id+': '+(REASONS[d.status]||d.status));}
       showBad(d.status,d);recent(['INACTIVE','NOT_ACTIVE'].includes(d.status)?'warn':'err',id,REASONS[d.status]||d.status);
     }
-    tally();
   }catch(e){showBad('ERROR');}
   st.busy=false;sync();
 }
@@ -97,6 +88,3 @@ function method(m){
 $('manualMethodButton').onclick=()=>method('manual');$('cameraMethodButton').onclick=()=>method('camera');
 $('restartCameraButton').onclick=()=>{$('restartCameraButton').hidden=true;$('cameraStatus').classList.remove('failed');startCam();};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&st.reader){stopCam();}});
-$('copyProbs').onclick=()=>{navigator.clipboard?.writeText(st.probs.join('\n'));$('copyProbs').textContent='Copied ✓';setTimeout(()=>$('copyProbs').textContent='Copy problem list',1500);};
-$('resetDrill').onclick=()=>{st.seen.clear();st.ok=0;st.bad=0;st.probs=[];st.recent=[];$('recentScans').replaceChildren();conf.replaceChildren();tally();};
-tally();
