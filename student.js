@@ -638,12 +638,12 @@ async function flushSelfieQueue(){
 }
 async function selfieGate(){
   if(selfieBusy||state.demo)return;
-  try{if(localStorage.getItem(SELFIE_DAY_KEY)===phtDay()){flushSelfieQueue();return;}}catch{}
+  try{if(sessionStorage.getItem(SELFIE_DAY_KEY)==='1'){flushSelfieQueue();return;}}catch{}
   if(!navigator.onLine)return;
   selfieBusy=true;
   try{
     const {data,error}=await client.rpc('lsc_selfie_needed');
-    if(error||data!==true){if(!error)try{localStorage.setItem(SELFIE_DAY_KEY,phtDay())}catch{}selfieBusy=false;return;}
+    if(error||data!==true){selfieBusy=false;return;}
   }catch{selfieBusy=false;return;}
   const wasCam=camera.mode==='camera';
   stopCamera();
