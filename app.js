@@ -522,10 +522,11 @@ async function showLinkedChats(){
  if(state.demo)return toast('Not available in demo mode.',true);
  const r=await sb.rpc('lsc_consent_log');if(r.error)return toast(r.error.message,true);
  const e=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
- const by={};(r.data||[]).filter(x=>x.active).forEach(x=>{(by[x.student_id]=by[x.student_id]||{n:x.full_name,g:x.grade_level+' · '+x.section,c:[]}).c.push(x.chat_label||'(no name)');});
+ const by={};(r.data||[]).filter(x=>x.active).forEach(x=>{(by[x.student_id]=by[x.student_id]||{n:x.full_name,g:x.grade_level+' · '+x.section,c:[]}).c.push({l:x.chat_label||'(no name)',at:x.linked_at,ca:x.consent_at,v:x.consent_version});});
  const rows=Object.entries(by).sort((a,b)=>b[1].c.length-a[1].c.length||a[1].n.localeCompare(b[1].n));
  const chats=rows.reduce((n,x)=>n+x[1].c.length,0);
- showPanel('Linked Telegram chats','<p>'+rows.length+' students · '+chats+' active chats</p><div style="overflow-x:auto"><table border="1" cellpadding="6" style="border-collapse:collapse;font-size:13px"><tr><th>Student</th><th>Class</th><th>Chats</th><th>Telegram accounts</th></tr>'+rows.map(([id,x])=>'<tr><td>'+e(x.n)+'<br><small>'+e(id)+'</small></td><td>'+e(x.g)+'</td><td align="center">'+x.c.length+'</td><td>'+x.c.map(e).join(', ')+'</td></tr>').join('')+'</table></div>');
+ const fd=v=>v?new Date(v).toLocaleString('en-PH',{timeZone:'Asia/Manila',dateStyle:'medium',timeStyle:'short'}):'';
+ showPanel('Linked Telegram chats','<p>'+rows.length+' students · '+chats+' active chats</p><div style="overflow-x:auto"><table border="1" cellpadding="6" style="border-collapse:collapse;font-size:13px"><tr><th>Student</th><th>Class</th><th>Chats</th><th>Telegram account (name · @username if any)</th></tr>'+rows.map(([id,x])=>'<tr><td>'+e(x.n)+'<br><small>'+e(id)+'</small></td><td>'+e(x.g)+'</td><td align="center">'+x.c.length+'</td><td>'+x.c.map(k=>e(k.l)+'<br><small>Linked '+e(fd(k.at))+' · '+(k.ca?'✅ Agreed '+e(fd(k.ca)):'⚠️ No consent record (linked before tracking)')+'</small>').join('<hr style="margin:4px 0;border:0;border-top:1px solid #ddd">')+'</td></tr>').join('')+'</table></div>');
 }
 async function downloadConsentLog(){
  if(state.demo)return toast('Not available in demo mode.',true);
