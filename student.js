@@ -638,18 +638,18 @@ async function flushSelfieQueue(){
 }
 async function selfieGate(){
   if(selfieBusy||state.demo)return;
-  try{if(localStorage.getItem(SELFIE_DAY_KEY)===phtDay()){flushSelfieQueue();return;}}catch{}
+  try{if(sessionStorage.getItem(SELFIE_DAY_KEY)==='1'){flushSelfieQueue();return;}}catch{}
   if(!navigator.onLine)return;
   selfieBusy=true;
   try{
     const {data,error}=await client.rpc('lsc_selfie_needed');
-    if(error||data!==true){if(!error)try{localStorage.setItem(SELFIE_DAY_KEY,phtDay())}catch{}selfieBusy=false;return;}
+    if(error||data!==true){selfieBusy=false;return;}
   }catch{selfieBusy=false;return;}
   const wasCam=camera.mode==='camera';
   stopCamera();
   const ov=document.createElement('div');ov.id='selfieGate';
   ov.style.cssText='position:fixed;inset:0;z-index:100000;background:#0b1220;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;text-align:center;font-family:Poppins,system-ui,sans-serif';
-  ov.innerHTML='<h2 style="margin:0">Class Mayor check-in</h2><p id="sgMsg" style="margin:0;max-width:340px">Take a selfie to confirm it is you opening attendance today.</p>'+
+  ov.innerHTML='<h2 style="margin:0">Class Mayor check-in</h2><p id="sgMsg" style="margin:0;max-width:340px">Take a selfie to confirm it is you opening attendance.</p>'+
    '<video id="sgVid" autoplay playsinline muted style="width:min(78vw,320px);aspect-ratio:3/4;object-fit:cover;border-radius:16px;background:#000;transform:scaleX(-1)"></video>'+
    '<img id="sgImg" alt="Selfie preview" hidden style="width:min(78vw,320px);aspect-ratio:3/4;object-fit:cover;border-radius:16px">'+
    '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button id="sgSnap" class="primary" type="button">Take selfie</button><button id="sgRetake" type="button" hidden>Retake</button><button id="sgUse" class="primary" type="button" hidden>Use this photo</button></div>'+
@@ -665,7 +665,7 @@ async function selfieGate(){
       if(error&&isNetworkError(error))localStorage.setItem(SELFIE_Q_KEY,JSON.stringify({image,reason}));
       else if(error){msg.textContent='Could not save: '+error.message;return;}
     }catch{try{localStorage.setItem(SELFIE_Q_KEY,JSON.stringify({image,reason}))}catch{}}
-    try{localStorage.setItem(SELFIE_DAY_KEY,phtDay())}catch{}
+    try{sessionStorage.setItem(SELFIE_DAY_KEY,'1')}catch{}
     ov.remove();selfieBusy=false;
     if(wasCam)startCamera();
   };
