@@ -503,14 +503,20 @@ function generateClassLists(){
  w.document.open();w.document.write(html);w.document.close();
 }
 
+function showPanel(title,html){
+ const o=document.createElement('div');
+ o.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(15,28,52,.55);display:flex;align-items:flex-end;justify-content:center;padding:0';
+ o.innerHTML='<div style="background:#fff;width:min(100%,900px);max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px 28px;box-shadow:0 -10px 40px rgba(0,0,0,.25)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0;font-size:19px">'+title+'</h2><button type="button" style="border:0;background:#e6edfb;border-radius:12px;padding:8px 16px;font:600 14px system-ui;color:#193a68">Close</button></div>'+html+'</div>';
+ o.addEventListener('click',e=>{if(e.target===o||e.target.tagName==='BUTTON')o.remove();});
+ document.body.appendChild(o);
+}
 async function showMayorCheckins(){
  if(state.demo)return toast('Not available in demo mode.',true);
  const r=await sb.rpc('lsc_selfie_list',{p_day:null});if(r.error)return toast(r.error.message,true);
  const e=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
  const t=v=>new Date(v).toLocaleTimeString('en-PH',{timeZone:'Asia/Manila',hour:'2-digit',minute:'2-digit'});
  const cards=(r.data||[]).map(x=>'<div style="width:170px;border:1px solid #ccc;border-radius:10px;padding:8px;text-align:center;font-size:12px">'+(x.image&&/^data:image\/jpeg;base64,/.test(x.image)?'<img src="'+x.image+'" style="width:100%;border-radius:8px">':'<div style="height:120px;display:flex;align-items:center;justify-content:center;color:#b45309">No selfie<br>'+e(x.skip_reason)+'</div>')+'<b>'+e(x.class_label)+'</b><br>'+e(x.email)+'<br>'+t(x.taken_at)+'</div>').join('');
- const w=window.open('','_blank');if(!w)return toast('Allow pop-ups to view check-ins.',true);
- w.document.write('<!doctype html><title>Mayor check-ins</title><body style="font-family:system-ui;padding:16px"><h2>Class mayor check-ins today</h2><div style="display:flex;gap:10px;flex-wrap:wrap">'+(cards||'<p>No check-ins yet today.</p>')+'</div>');w.document.close();
+ showPanel('Class mayor check-ins today','<div style="display:flex;gap:10px;flex-wrap:wrap">'+(cards||'<p>No check-ins yet today.</p>')+'</div>');
 }
 async function showLinkedChats(){
  if(state.demo)return toast('Not available in demo mode.',true);
@@ -519,8 +525,7 @@ async function showLinkedChats(){
  const by={};(r.data||[]).filter(x=>x.active).forEach(x=>{(by[x.student_id]=by[x.student_id]||{n:x.full_name,g:x.grade_level+' · '+x.section,c:[]}).c.push(x.chat_label||'(no name)');});
  const rows=Object.entries(by).sort((a,b)=>b[1].c.length-a[1].c.length||a[1].n.localeCompare(b[1].n));
  const chats=rows.reduce((n,x)=>n+x[1].c.length,0);
- const w=window.open('','_blank');if(!w)return toast('Allow pop-ups to view linked chats.',true);
- w.document.write('<!doctype html><title>Linked chats</title><body style="font-family:system-ui;padding:16px"><h2>Linked Telegram chats</h2><p>'+rows.length+' students · '+chats+' active chats</p><table border="1" cellpadding="6" style="border-collapse:collapse;font-size:13px"><tr><th>Student</th><th>ID</th><th>Class</th><th>Chats</th><th>Telegram accounts</th></tr>'+rows.map(([id,x])=>'<tr><td>'+e(x.n)+'</td><td>'+e(id)+'</td><td>'+e(x.g)+'</td><td align="center">'+x.c.length+'</td><td>'+x.c.map(e).join(', ')+'</td></tr>').join('')+'</table>');w.document.close();
+ showPanel('Linked Telegram chats','<p>'+rows.length+' students · '+chats+' active chats</p><div style="overflow-x:auto"><table border="1" cellpadding="6" style="border-collapse:collapse;font-size:13px"><tr><th>Student</th><th>Class</th><th>Chats</th><th>Telegram accounts</th></tr>'+rows.map(([id,x])=>'<tr><td>'+e(x.n)+'<br><small>'+e(id)+'</small></td><td>'+e(x.g)+'</td><td align="center">'+x.c.length+'</td><td>'+x.c.map(e).join(', ')+'</td></tr>').join('')+'</table></div>');
 }
 async function downloadConsentLog(){
  if(state.demo)return toast('Not available in demo mode.',true);
