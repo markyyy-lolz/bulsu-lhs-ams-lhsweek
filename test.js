@@ -6,16 +6,18 @@ const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const DRILL=5;
 const st={seen:new Set(),ok:0,bad:0,probs:[],busy:false,reader:null,photoUrl:null};
 function idFromScan(raw){const v=String(raw||'').trim();if(/^[0-9]{7,12}$/.test(v))return v;const m=v.match(/^(?:STUDENT[_ -]?ID|ID)[:= ]\s*([0-9]{7,12})$/i);return m?m[1]:null;}
+let MODE='public';
 async function auth(){
+  $('authCard').hidden=true;$('app').hidden=false;
   try{
     const {data:{user}}=await client.auth.getUser();
-    if(!user)throw new Error('none');
-    const {data,error}=await client.rpc('lsc_attendance_access');
-    if(error||!data?.authorized)throw new Error('no');
-    $('authCard').hidden=true;$('app').hidden=false;
-  }catch{
-    $('authMsg').textContent='Sign in as a Class Mayor or LSC Official (on this same browser) to use the ID test.';$('loginLink').hidden=false;
-  }
+    if(user){const {data,error}=await client.rpc('lsc_attendance_access');if(!error&&data?.authorized){MODE='operator';$('modeNote').textContent='Signed in: you see full details for your class.';return;}}
+  }catch{}
+  $('modeNote').textContent='No sign-in needed. Name is partly hidden for privacy.';
+}
+async function publicCheck(id){
+  const r=await fetch(URL_+'/functions/v1/lsc-id-check',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify({student_id:id}),cache:'no-store'});
+  return await r.json().catch(()=>({status:'ERROR'}));
 }
 async function photo(id){
   try{
@@ -33,23 +35,25 @@ function tally(){
   $('probs').innerHTML=st.probs.map(p=>'<li class="bad-li">'+esc(p)+'</li>').join('');
   $('copy').hidden=!st.probs.length;
 }
-const REASONS={NOT_AVAILABLE:'Not available — ID is wrong or not in your class',INVALID_FORMAT:'Not a valid Student ID',INACTIVE:'Not activated yet (waiting for school verification)',NO_CLASS:'No class assigned'};
+const REASONS={OFF:'The ID check is not open right now. Ask your class mayor or the LSC.',RATE_LIMITED:'Too many tries. Please wait 10 minutes.',NOT_FOUND:'ID not found — check the number or tell the LSC',ERROR:'Something went wrong. Try again.',NOT_ACTIVE:'ID found but not activated yet (waiting for school verification)',NOT_AVAILABLE:'Not available — ID is wrong or not in your class',INVALID_FORMAT:'Not a valid Student ID',INACTIVE:'Not activated yet (waiting for school verification)',NO_CLASS:'No class assigned'};
 async function check(id){
   if(st.busy)return;st.busy=true;
   const card=$('resCard'),res=$('res');card.hidden=false;res.innerHTML='<p class="muted">Checking…</p>';
   if(st.photoUrl){URL.revokeObjectURL(st.photoUrl);st.photoUrl=null;}
   try{
-    const {data,error}=await client.rpc('lsc_check_student_id',{p_student_id:id});
-    if(error)throw error;
+    let data;
+    if(MODE==='operator'){const r=await client.rpc('lsc_check_student_id',{p_student_id:id});if(r.error)throw r.error;data=r.data;}
+    else data=await publicCheck(id);
     const first=!st.seen.has(id);st.seen.add(id);
     if(data.status==='VALID'){
       if(first)st.ok++;
-      res.innerHTML='<div class="res ok"><div class="big" style="color:var(--green)">✅ ID works</div><div id="phw"><div class="ph empty">Loading photo…</div></div><div class="nm">'+esc(data.full_name)+'</div><div>'+esc(data.grade_level)+' · '+esc(data.section)+'</div><div class="muted">'+esc(data.student_id)+'</div><p class="muted" style="margin-top:8px">A real scan now would record <b>Time '+esc(data.next_event)+'</b>. (Nothing was recorded.)</p></div>';
-      photo(id).then(u=>{const w=$('phw');if(!w)return;if(u){st.photoUrl=u;w.innerHTML='<img class="ph" alt="Student photo" src="'+u+'">';}else w.innerHTML='<div class="ph empty">No photo on file</div>';});
+      const pub=MODE==='public';
+      res.innerHTML='<div class="res ok"><div class="big" style="color:var(--green)">✅ ID works</div><div id="phw">'+(pub?(data.photo?'<img class="ph" alt="Student photo" src="'+esc(data.photo)+'">':(data.photo_enabled?'<div class="ph empty">No photo on file</div>':'')):'<div class="ph empty">Loading photo…</div>')+'</div><div class="nm">'+esc(pub?data.masked_name:data.full_name)+'</div><div>'+esc(data.grade_level)+' · '+esc(data.section)+'</div>'+(pub?'':'<div class="muted">'+esc(data.student_id)+'</div><p class="muted" style="margin-top:8px">A real scan now would record <b>Time '+esc(data.next_event)+'</b>. (Nothing was recorded.)</p>')+(pub?'<p class="muted" style="margin-top:8px">Your ID is working. (Nothing was recorded.)</p>':'')+'</div>';
+      if(!pub)photo(id).then(u=>{const w=$('phw');if(!w)return;if(u){st.photoUrl=u;w.innerHTML='<img class="ph" alt="Student photo" src="'+u+'">';}else w.innerHTML='<div class="ph empty">No photo on file</div>';});
     }else{
       if(first){st.bad++;st.probs.push(id+' — '+(REASONS[data.status]||data.status)+(data.full_name?' ('+data.full_name+')':''));}
-      const warn=data.status==='INACTIVE';
-      res.innerHTML='<div class="res '+(warn?'warn':'bad')+'"><div class="big" style="color:'+(warn?'var(--orange)':'var(--red)')+'">'+(warn?'⚠️ Not working yet':'❌ ID does not work')+'</div>'+(data.full_name?'<div class="nm">'+esc(data.full_name)+'</div><div>'+esc(data.grade_level||'')+' · '+esc(data.section||'')+'</div>':'')+'<p style="margin-top:8px">'+esc(REASONS[data.status]||data.status)+'</p><p class="muted">Tell the LSC so it can be fixed.</p></div>';
+      const warn=data.status==='INACTIVE'||data.status==='NOT_ACTIVE';
+      res.innerHTML='<div class="res '+(warn?'warn':'bad')+'"><div class="big" style="color:'+(warn?'var(--orange)':'var(--red)')+'">'+(warn?'⚠️ Not working yet':'❌ ID does not work')+'</div>'+(data.full_name?'<div class="nm">'+esc(data.full_name)+'</div><div>'+esc(data.grade_level||'')+' · '+esc(data.section||'')+'</div>':'')+'<p style="margin-top:8px">'+esc(REASONS[data.status]||data.status)+'</p><p class="muted">Tell your class mayor or the LSC so it can be fixed.</p></div>';
     }
     tally();
   }catch(e){res.innerHTML='<div class="res bad"><div class="big">Could not check</div><p class="muted">'+esc(e.message||'Network error')+'</p></div>';}
