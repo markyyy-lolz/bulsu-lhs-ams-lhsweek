@@ -56,6 +56,16 @@ async function verifySession(){
   }
   state.user=session.user;state.role=role.role;state.classId=role.class_id; await loadData();render();
 }
+async function refreshLogs(){
+ if(state.demo||!state.user)return false;
+ const noYear='00000000-0000-0000-0000-000000000000';
+ const r=await sb.from('lsc_attendance_events').select('id,student_id,class_id,school_year_id,student_number_snapshot,student_name_snapshot,grade_level_snapshot,section_snapshot,event_type,event_date,recorded_at,recorded_by,recorded_by_email,recorded_by_role,lsc_students(student_id,full_name,grade_level,section)').eq('event_date',state.recordDate).eq('school_year_id',state.recordSchoolYearId||state.activeSchoolYearId||noYear).order('recorded_at',{ascending:false}).limit(1000);
+ if(r.error)return false;
+ const next=r.data||[];
+ const sig=a=>a.length+':'+(a[0]?.id||'')+':'+(a[a.length-1]?.id||'');
+ if(sig(next)===sig(state.logs||[]))return false;
+ state.logs=next;return true;
+}
 async function loadData(){
  if(state.demo)return;
  const meta=await sb.rpc('lsc_active_school_year');
@@ -181,7 +191,7 @@ function recordsHTML(){
  const q=state.query.trim().toLowerCase();
  const rows=state.logs.filter(x=>{let s=getStudent(x);return !q||(s.full_name||'').toLowerCase().includes(q)||(s.student_id||'').includes(q);});
  const yearField=state.role==='official'?'<label class="field">School year<select name="school_year_id">'+state.schoolYears.map(y=>'<option value="'+esc(y.id)+'"'+(y.id===state.recordSchoolYearId?' selected':'')+'>'+esc(y.label)+' · '+esc(y.status)+'</option>').join('')+'</select></label>':'';
- return header('Attendance Records','Review daily attendance by date and school year. Historical records use saved student and class details.', '<button class="btn btn-secondary" data-act="refresh">↻ Refresh</button>')+
+ return header('Attendance Records','Review daily attendance by date and school year. Historical records use saved student and class details.', '<span class="muted small" style="margin-right:10px">● Live · updates every 5 seconds</span><button class="btn btn-secondary" data-act="refresh">↻ Refresh</button>')+
  '<div class="card pad"><form id="filterForm" class="toolbar">'+yearField+'<label class="field">School date (PHT)<input type="date" name="date" id="dateField" value="'+esc(state.recordDate)+'" required></label><label class="field search">Search student<input type="search" name="search" id="recordSearch" placeholder="Student ID or name" value="'+esc(state.query)+'"></label><button type="submit" class="btn">Apply</button><button type="button" data-act="export" class="btn btn-secondary">↓ Export CSV</button></form><div class="section-title"><h3>Attendance Log</h3><span class="muted small">'+rows.length+' displayed · up to 1,000 records per date</span></div>'+logTable(rows)+'</div>';
 }
 function masterlistHTML(){
@@ -1039,6 +1049,14 @@ window.addEventListener('hashchange',async()=>{
  const page=location.hash.slice(1);
  if(['overview','students','live','settings','corrections','masterlist','records','classes','schoolyears','officials','idcards','classlists','security'].includes(page)&&state.user&&page!==state.page){state.page=page;state.query='';if(page==='live')await loadLive();if(page==='settings')await loadSettings();if(page==='corrections')await loadCorrections();render();}
 });
+let recPoll=false;
+setInterval(async()=>{
+ if(recPoll||state.page!=='records'||!state.user||state.demo||document.hidden||!navigator.onLine)return;
+ const ae=document.activeElement;if(ae&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))return;
+ recPoll=true;
+ try{if(await refreshLogs()&&state.page==='records'){const y=window.scrollY;render();window.scrollTo(0,y);}}catch{}
+ recPoll=false;
+},5000);
 setInterval(async()=>{if(state.page==='live'&&state.user&&!document.hidden){await loadLive();if(state.page==='live')render();}},30000);
 setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=stampPH()+' PHT';},15000);
 state.page=['overview','students','live','settings','masterlist','records','classes','schoolyears','officials','security'].includes(location.hash.slice(1))?location.hash.slice(1):'overview';
