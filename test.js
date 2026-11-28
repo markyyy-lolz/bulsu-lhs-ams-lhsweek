@@ -52,8 +52,8 @@ async function check(id){
       if(!pub)photo(id).then(u=>{const w=$('phw');if(!w)return;if(u){st.photoUrl=u;w.innerHTML='<img class="ph" alt="Student photo" src="'+u+'">';}else w.innerHTML='<div class="ph empty">No photo on file</div>';});
     }else{
       if(first){st.bad++;st.probs.push(id+' — '+(REASONS[data.status]||data.status)+(data.full_name?' ('+data.full_name+')':''));}
-      const warn=data.status==='INACTIVE'||data.status==='NOT_ACTIVE';
-      res.innerHTML='<div class="res '+(warn?'warn':'bad')+'"><div class="big" style="color:'+(warn?'var(--orange)':'var(--red)')+'">'+(warn?'⚠️ Not working yet':'❌ ID does not work')+'</div>'+(data.full_name?'<div class="nm">'+esc(data.full_name)+'</div><div>'+esc(data.grade_level||'')+' · '+esc(data.section||'')+'</div>':'')+'<p style="margin-top:8px">'+esc(REASONS[data.status]||data.status)+'</p><p class="muted">Tell your class mayor or the LSC so it can be fixed.</p></div>';
+      const warn=data.status==='INACTIVE'||data.status==='NOT_ACTIVE'||data.status==='OFF'||data.status==='RATE_LIMITED'||data.status==='ERROR';
+      res.innerHTML='<div class="res '+(warn?'warn':'bad')+'"><div class="big" style="color:'+(warn?'var(--orange)':'var(--red)')+'">'+(data.status==='OFF'||data.status==='RATE_LIMITED'||data.status==='ERROR'?'⚠️ Cannot check right now':warn?'⚠️ Not working yet':'❌ ID does not work')+'</div>'+(data.full_name?'<div class="nm">'+esc(data.full_name)+'</div><div>'+esc(data.grade_level||'')+' · '+esc(data.section||'')+'</div>':'')+'<p style="margin-top:8px">'+esc(REASONS[data.status]||data.status)+'</p><p class="muted">Tell your class mayor or the LSC so it can be fixed.</p></div>';
     }
     tally();
   }catch(e){res.innerHTML='<div class="res bad"><div class="big">Could not check</div><p class="muted">'+esc(e.message||'Network error')+'</p></div>';}
