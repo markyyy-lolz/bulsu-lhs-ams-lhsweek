@@ -1,0 +1,63 @@
+<!doctype html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#152645"><meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="./assets/lsc-glass-logo.png?v=2">
+<title>ID Test &amp; Practice | LSC Attendance</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#152645;--blue:#315ec8;--ink:#172a47;--muted:#62728f;--green:#087f63;--red:#b3261e;--orange:#a65e17;--edge:#dde5f3}
+*{box-sizing:border-box}body{margin:0;font-family:Poppins,system-ui,sans-serif;color:var(--ink);background:radial-gradient(900px 600px at 10% 0,#cfe0ff 0,transparent 60%),radial-gradient(800px 600px at 100% 100%,#d9f3ec 0,transparent 55%),#e9f0fa;min-height:100vh}
+.banner{background:#a65e17;color:#fff;text-align:center;padding:8px 12px;font-weight:600;font-size:13px;letter-spacing:.04em}
+.wrap{max-width:560px;margin:0 auto;padding:16px}
+.brand{display:flex;align-items:center;gap:10px;margin:6px 0 14px}.brand img{width:42px;height:42px;object-fit:contain}.brand b{display:block;font-size:17px}.brand small{color:var(--muted)}
+.card{background:rgba(255,255,255,.82);backdrop-filter:blur(14px);border:1px solid #fff;border-radius:22px;box-shadow:0 14px 40px rgba(36,66,117,.13);padding:16px;margin-bottom:14px}
+h2{margin:0 0 8px;font-size:17px}p{margin:0 0 8px}.muted{color:var(--muted);font-size:13px}
+.row{display:flex;gap:8px}input{flex:1;min-width:0;border:1px solid var(--edge);border-radius:14px;padding:13px;font:600 18px Poppins,sans-serif;letter-spacing:.06em;text-align:center}
+button{font:600 15px Poppins,sans-serif;border-radius:14px;border:1px solid #cfd9ee;background:#fff;color:#193a68;padding:12px 16px;cursor:pointer}
+button.p{background:linear-gradient(135deg,#315ec8,#264aa3);color:#fff;border:0}
+#reader{width:100%;border-radius:16px;overflow:hidden;margin-top:10px}
+.res{text-align:center;border-radius:20px;padding:18px 14px}.res.ok{background:#e6f6f0;border:2px solid #12a37f}.res.bad{background:#fdeceb;border:2px solid var(--red)}.res.warn{background:#fff4e5;border:2px solid #e18c27}
+.ph{width:150px;height:150px;border-radius:50%;object-fit:cover;margin:6px auto;display:block;background:#dbe4f4;border:4px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+.ph.empty{display:grid;place-items:center;color:#7a88a3;font-size:12px}
+.big{font-size:22px;font-weight:700;margin:4px 0}.nm{font-size:19px;font-weight:700}
+.tally{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}.tally div{background:#f1f5fc;border-radius:14px;padding:10px}.tally b{font-size:22px;display:block}
+.bar{height:10px;border-radius:99px;background:#e1e8f6;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:linear-gradient(90deg,#315ec8,#12a37f);width:0;transition:width .3s}
+ul{margin:6px 0 0;padding-left:18px;font-size:14px}li{margin:4px 0}.bad-li{color:var(--red)}
+[hidden]{display:none!important}
+</style></head><body>
+<div class="banner">TEST MODE — nothing is recorded. No Time IN / Time OUT is saved here.</div>
+<div class="wrap">
+ <div class="brand"><img src="./assets/lsc-crest-transparent.png" alt=""><div><b>ID Test &amp; Practice</b><small>LSC Attendance · for class mayors</small></div></div>
+ <div class="card" id="authCard"><p id="authMsg">Checking your sign-in…</p><a id="loginLink" href="./login.html" hidden><button class="p" type="button">Sign in</button></a></div>
+ <div id="app" hidden>
+  <div class="card">
+   <h2>Check a student ID</h2>
+   <p class="muted">Scan the QR on the student ID, or type the number. This shows if the ID works and whose photo comes up.</p>
+   <form id="f" class="row"><input id="sid" inputmode="numeric" maxlength="12" placeholder="Student ID" autocomplete="off"><button class="p" type="submit">Check</button></form>
+   <div class="row" style="margin-top:8px"><button id="camBtn" type="button" style="flex:1">📷 Scan with camera</button></div>
+   <div id="reader" hidden></div>
+  </div>
+  <div class="card" id="resCard" hidden><div id="res"></div></div>
+  <div class="card">
+   <h2>Practice drill</h2>
+   <p class="muted">Check 5 different students to finish the drill. Real attendance is not touched.</p>
+   <div class="bar"><i id="bar"></i></div><p class="muted" id="drill">0 / 5 checked</p>
+   <div class="tally"><div><b id="tN">0</b>Checked</div><div><b id="tOk" style="color:var(--green)">0</b>Working</div><div><b id="tBad" style="color:var(--red)">0</b>Problems</div></div>
+   <ul id="probs"></ul>
+   <div class="row" style="margin-top:10px"><button id="copy" type="button" hidden style="flex:1">Copy problem list</button><button id="reset" type="button" style="flex:1">Reset drill</button></div>
+  </div>
+  <div class="card">
+   <h2>Mayor reminders</h2>
+   <ul>
+    <li>Open the Attendance page and take the selfie first.</li>
+    <li>Scan each ID once. Holding the same ID in view will not make an accidental Time OUT.</li>
+    <li>The same student scanned again within 45 seconds is ignored (ALREADY SCANNED).</li>
+    <li>"Not available" means the ID is wrong or not in your class. Tell the LSC.</li>
+    <li>"Not activated yet" means the ID is still waiting for school verification.</li>
+   </ul>
+   <p style="margin-top:10px"><a href="./student.html">Go to the real Attendance page →</a></p>
+  </div>
+ </div>
+</div>
+<script type="module" src="./test.js?v=1"></script>
+</body></html>
